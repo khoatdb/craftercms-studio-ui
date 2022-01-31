@@ -50,6 +50,7 @@ CStudioAuthoring.Module.requireModule(
   {
     moduleLoaded: function () {
       const YDom = YAHOO.util.Dom;
+      const tinymce = window.tinymce;
       YAHOO.extend(CStudioForms.Controls.RTETINYMCE5, CStudioForms.CStudioFormField, {
         getLabel: function () {
           return CMgs.format(langBundle, 'rteTinyMCE5');
@@ -219,16 +220,78 @@ CStudioAuthoring.Module.requireModule(
         },
 
         /**
+         * Tinymce extended options from config `extendedOptions` in the config file
+         */
+        _getTinymceExtendedOptions: function (rteConfig) {
+          const rteReadonlyOptions = [
+            'target', // Target can't be changed
+            'inline', // Not using inline view doesn't behave well on pageBuilder, this setting shouldn't be changed.
+            'setup',
+            'base_url',
+            'encoding',
+            'autosave_ask_before_unload', // Autosave options are removed since it is not supported in control.
+            'autosave_interval',
+            'autosave_prefix',
+            'autosave_restore_when_empty',
+            'autosave_retention',
+            'file_picker_callback', // No file picker is set by default, and functions are not supported in config file.
+            'height', // Height is set to the size of content
+            'file_picker_callback', // Files/images handlers currently not supported
+            'paste_postprocess',
+            'images_upload_handler',
+            'code_editor_inline'
+          ];
+
+          let extendedOptions = {};
+          try {
+            // extend options
+            extendedOptions = rteConfig.extendedOptions ? JSON.parse(rteConfig.extendedOptions) : {};
+          } catch (e) {
+            // If there are multiple RTEs on the page, when the form loads, it would show N number
+            // of dialogs. One is sufficient. Also, in 3.1.x, triggering multiple dialogs causes the
+            // backdrop not to get clean out when the dialog is closed.
+            if (!CStudioForms.Controls.RTETINYMCE5.extendedOptionsParseErrorShown) {
+              CStudioForms.Controls.RTETINYMCE5.extendedOptionsParseErrorShown = true;
+              let bundle = CStudioAuthoring.Messages.getBundle('forms', CStudioAuthoringContext.lang);
+              CStudioAuthoring.Operations.showSimpleDialog(
+                'message-dialog',
+                CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                CStudioAuthoring.Messages.format(bundle, 'notification'),
+                `<div>${CStudioAuthoring.Messages.format(
+                  bundle,
+                  'rteConfigJSONParseError',
+                  'extendedOptions',
+                  `<code>${e.message}</code>`
+                )}</div><pre>${rteConfig.extendedOptions}</pre>`,
+                null,
+                YAHOO.widget.SimpleDialog.ICON_BLOCK,
+                'studioDialog'
+              );
+            }
+
+            return {};
+          }
+
+          const options = {};
+          const keys = Object.keys(extendedOptions);
+          for (let i = 0; i < keys.length; i += 1) {
+            if (rteReadonlyOptions.indexOf(keys[i]) === -1) {
+              options[keys[i]] = extendedOptions[keys[i]];
+            }
+          }
+
+          return options;
+        },
+
+        /**
          * render and initialization of editor
          */
         _initializeRte: function (config, rteConfig, containerEl) {
           var _thisControl = this,
-            editor,
             callback,
             rteId = CStudioAuthoring.Utils.generateUUID(),
             inputEl,
             pluginList,
-            extendedElements,
             rteStylesheets,
             rteStyleOverride,
             toolbarConfig1,
@@ -292,8 +355,7 @@ CStudioAuthoring.Module.requireModule(
           templates = rteConfig.templates && rteConfig.templates.template ? rteConfig.templates.template : null;
 
           // https://www.tiny.cloud/docs/plugins/
-          pluginList = rteConfig.plugins;
-          pluginList = this.autoGrow ? pluginList + ' autoresize' : pluginList;
+          pluginList = [rteConfig.plugins, this.autoGrow && 'autoresize'].filter(Boolean).join(' ');
 
           extendedValidElements = rteConfig.extendedElements ? rteConfig.extendedElements : '';
 
@@ -331,7 +393,8 @@ CStudioAuthoring.Module.requireModule(
                 CStudioAuthoring.Messages.format(bundle, 'notification'),
                 `<div>${CStudioAuthoring.Messages.format(
                   bundle,
-                  'styleFormatsParseError',
+                  'rteConfigJSONParseError',
+                  'styleFormats',
                   `<code>${e.message}</code>`
                 )}</div><pre>${rteConfig.styleFormats}</pre>`,
                 null,
@@ -346,8 +409,10 @@ CStudioAuthoring.Module.requireModule(
           const codeEditorWrap = rteConfig.codeEditorWrap ? rteConfig.codeEditorWrap === 'true' : false;
 
           const external = {
-            acecode: '/studio/static-assets/js/tinymce-plugins/ace/plugin.min.js'
+            acecode: '/studio/static-assets/js/tinymce-plugins/ace/plugin.min.js',
+            craftercms_paste_extension: '/studio/static-assets/js/tinymce-plugins/craftercms_paste_extension/plugin.js'
           };
+
           if (rteConfig.external_plugins) {
             Object.entries(rteConfig.external_plugins).forEach((entry) => {
               external[entry[0]] = CStudioAuthoring.StringUtils.keyFormat(entry[1], {
@@ -356,7 +421,7 @@ CStudioAuthoring.Module.requireModule(
             });
           }
 
-          editor = tinymce.init({
+          tinymce.init({
             selector: '#' + rteId,
             width: _thisControl.rteWidth,
             // As of 3.1.14, the toolbar is moved to be part of the editor text field (not stuck/floating at the top of the window).
@@ -386,6 +451,7 @@ CStudioAuthoring.Module.requireModule(
             extended_valid_elements: extendedValidElements,
             browser_spellcheck: this.enableSpellCheck,
             contextmenu: !this.enableSpellCheck,
+            craftercms_paste_cleanup: rteConfig.craftercmsPasteCleanup?.trim() !== 'false',
 
             menu: {
               tools: { title: 'Tools', items: 'tinymcespellchecker code acecode wordcount' }
@@ -410,15 +476,11 @@ CStudioAuthoring.Module.requireModule(
 
             style_formats_merge: styleFormatsMerge,
 
+            ...this._getTinymceExtendedOptions(rteConfig),
+
             setup: function (editor) {
-              var addPadding = function () {
-                const formHeader = $('#formHeader');
-                if (formHeader.is(':visible')) {
-                  formHeader.addClass('padded-top');
-                } else {
-                  $('#formContainer').addClass('padded-top');
-                }
-              };
+              var pluginManager = tinymce.util.Tools.resolve('tinymce.PluginManager');
+
               editor.on('init', function (e) {
                 amplify.publish('/field/init/completed');
                 _thisControl.editorId = editor.id;
@@ -465,6 +527,30 @@ CStudioAuthoring.Module.requireModule(
                   tinyMCE.activeEditor.execCommand('mceImage');
                 }
               });
+
+              // No point in waiting for `craftercms_tinymce_hooks` if the hook won't be loaded at all.
+              external.craftercms_tinymce_hooks &&
+                pluginManager.waitFor(
+                  'craftercms_tinymce_hooks',
+                  () => {
+                    const hooks = pluginManager.get('craftercms_tinymce_hooks');
+                    if (hooks) {
+                      pluginManager.get('craftercms_tinymce_hooks').setup?.(editor);
+                    } else {
+                      console.error(
+                        "The `craftercms_tinymce_hooks` was configured to be loaded but didn't load. Check the path is correct in the rte configuration file."
+                      );
+                    }
+                  },
+                  'loaded'
+                );
+            },
+
+            paste_preprocess(plugin, args) {
+              _thisControl.editor.plugins.craftercms_paste_extension?.paste_preprocess(plugin, args);
+            },
+            paste_postprocess(plugin, args) {
+              _thisControl.editor.plugins.craftercms_paste_extension?.paste_postprocess(plugin, args);
             }
           });
 
