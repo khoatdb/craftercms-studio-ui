@@ -807,31 +807,6 @@ var nodeOpen = false,
                   ]
                 }
               }
-              if (YDom.get('deleteBtn')) {
-                YDom.get('deleteBtn').value = CMgs.format(formsLangBundle, 'deleteDialogDelete');
-              }
-              this.loadDependencies(items);
-              (function (items) {
-                _self.on('submitComplete', function (evt, args) {
-                  var reloadFn = function () {
-                    //window.location.reload();
-                    eventNS.data = items;
-                    eventNS.typeAction = '';
-                    eventNS.oldPath = null;
-                    document.dispatchEvent(eventNS);
-                  };
-                  dialogue.hideEvent.subscribe(reloadFn);
-                  dialogue.destroyEvent.subscribe(reloadFn);
-                });
-              })(items);
-              // Admin version of the view does not have this events
-              // but then the call is ignored
-              this.on('hideRequest', function (evt, args) {
-                dialogue.destroy();
-              });
-              this.on('showRequest', function (evt, args) {
-                dialogue.show();
-              });
             }
           ]
         });
@@ -5985,14 +5960,6 @@ var nodeOpen = false,
                 if (contentTO.submitted == true) {
                   name = name + ' submitted ';
                 }
-              }
-              if (match) {
-                returnElements.push(current);
-              }
-            }
-            return returnElements;
-          };
-        }
 
                 if (contentTO.scheduled == true) {
                   name = name + ' scheduled ';

@@ -14,8 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// "Items Waiting For Approval" Widget
-
 var YDom = YAHOO.util.Dom;
 var contextPath = location.protocol + '//' + location.hostname + ':' + location.port;
 

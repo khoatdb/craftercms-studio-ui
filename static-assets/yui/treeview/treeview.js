@@ -2395,11 +2395,7 @@ YAHOO.widget.Node.prototype = {
      * @method loadComplete
      */
     loadComplete: function() {
-        const el = this.getChildrenEl();
-        if (el) {
-            el.innerHTML = this.completeRender();
-        }
-
+        this.getChildrenEl().innerHTML = this.completeRender();
         if (this.propagateHighlightDown) {
             if (this.highlightState === 1 && !this.tree.singleNodeHighlight) {
                 for (var i = 0; i < this.children.length; i++) {
@@ -3267,15 +3263,13 @@ YAHOO.extend(HN, YAHOO.widget.Node, {
         if (typeof this.html === "string") {
             return this.html;
         } else {
+
             HN._deferredNodes.push(this);
             if (!HN._timer) {
                 HN._timer = window.setTimeout(function () {
                     var n;
                     while((n = HN._deferredNodes.pop())) {
-                        const el = n.getContentEl();
-                        if (el) {
-                            el.appendChild(n.html);
-                        }
+                        n.getContentEl().appendChild(n.html);
                     }
                     HN._timer = null;
                 },0);
@@ -3965,7 +3959,7 @@ YAHOO.widget.TVFadeIn.prototype = {
         s.filter = "alpha(opacity=10)";
         s.display = "";
 
-        var dur = 0.4;
+        var dur = 0.4; 
         var a = new YAHOO.util.Anim(this.el, {opacity: {from: 0.1, to: 1, unit:""}}, dur);
         a.onComplete.subscribe( function() { tvanim.onComplete(); } );
         a.animate();

@@ -1004,30 +1004,6 @@ var CStudioForms =
                     }
                     break;
                   }
-                } else if (CStudioAuthoring.InContextEdit.unstackDialog(message.editorId)) {
-                  CStudioAuthoring.InContextEdit.getIceCallback(message.editorId).success(
-                    {},
-                    message.editorId,
-                    objectId,
-                    name,
-                    message.draft
-                  );
-                }
-                break;
-              }
-              case FORM_SAVE_REQUEST: {
-                if (message.new) {
-                  amplify.publish('UPDATE_NODE_SELECTOR_NEW', {
-                    key: message.key,
-                    value: message.value,
-                    selectorId: message.selectorId,
-                    ds: message.ds,
-                    order: message.order
-                  });
-                  cfe.engine.saveForm(false, message.draft, false);
-                } else {
-                  amplify.publish('UPDATE_NODE_SELECTOR', message);
-                  cfe.engine.saveForm(false, message.draft, true);
                 }
                 break;
               }
@@ -1767,7 +1743,6 @@ var CStudioForms =
                   }
                 }
               }
-              window.parent.CStudioAuthoring.editDisabled = [];
             }
             return flag;
           };

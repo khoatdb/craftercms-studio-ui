@@ -375,21 +375,6 @@ input[type='checkbox'].content-type-selector--checkbox {
   top: 9px;
 }
 
-.content-type-visual-field-container.disabled {
-  background-color: #fafafa;
-  cursor: default;
-}
-
-.content-type-visual-field-container.disabled .content-field-name {
-  color: #A1A1A1;
-}
-
-.content-type-visual-field-container .control-not-available {
-  position: absolute;
-  right: 20px;
-  top: 9px;
-}
-
 .content-type-visual-repeat-container {
   background: none repeat scroll 0 0 #f2f8fc;
   border: 1px solid #dddddd;
@@ -547,8 +532,6 @@ input[type='checkbox'].content-type-selector--checkbox {
   }
 }
 
-
-
 .site-config-landing-page {
   padding: 20px;
   overflow: auto;
@@ -612,10 +595,6 @@ input[type='checkbox'].content-type-selector--checkbox {
 
 .property-label + input:disabled {
   color: #bbbbbb;
-}
-
-.property-label + input.invalid {
-  border: 1px solid #efa48a;
 }
 
 .property-label + input.invalid {

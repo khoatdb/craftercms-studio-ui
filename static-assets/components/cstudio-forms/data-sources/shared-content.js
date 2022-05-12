@@ -130,7 +130,7 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
           control._renderItems();
         });
       }
-    );
+    });
   },
 
   searchExistingElementAction: function (control, _self) {

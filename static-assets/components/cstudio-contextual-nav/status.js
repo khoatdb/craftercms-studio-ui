@@ -21,7 +21,7 @@ CStudioAuthoring.ContextualNav.StatusNavMod = {
   initialized: false,
 
   /**
-   * Status
+   * initialize module
    */
   initialize: function () {
     CrafterCMSNext.system.getStore().subscribe((store) => {
@@ -33,7 +33,7 @@ CStudioAuthoring.ContextualNav.StatusNavMod = {
   definePlugin: function (store) {
     var CMgs = CStudioAuthoring.Messages;
     /**
-     * initialize module
+     * WCM preview tools Contextual Nav Widget
      */
     CStudioAuthoring.register({
       'ContextualNav.StatusNav': {
@@ -76,9 +76,9 @@ CStudioAuthoring.ContextualNav.StatusNavMod = {
         getStatusMessage: function (contextNavLangBundle, status) {
           return CMgs.format(contextNavLangBundle, status.toLowerCase());
         }
-      });
-    }
-  };
+      }
+    });
+  }
+};
 
-  CStudioAuthoring.Module.moduleLoaded('status', CStudioAuthoring.ContextualNav.StatusNavMod);
-})();
+CStudioAuthoring.Module.moduleLoaded('status', CStudioAuthoring.ContextualNav.StatusNavMod);

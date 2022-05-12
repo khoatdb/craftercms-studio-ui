@@ -194,9 +194,6 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     var nodeItemsContainerEl = document.createElement('div');
     nodeItemsContainerEl.id = this.id + '-target';
     YAHOO.util.Dom.addClass(nodeItemsContainerEl, 'cstudio-form-control-node-selector-items-container');
-    if (this.maxSize === 1) {
-      YAHOO.util.Dom.addClass(nodeItemsContainerEl, 'node-selector-min-height');
-    }
     nodeControlboxEl.appendChild(nodeItemsContainerEl);
     this.itemsContainerEl = nodeItemsContainerEl;
 
@@ -347,10 +344,6 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
       var itemEl = document.createElement('div');
       if (this.readonly != true) {
         var dd = new NodeSelectorDragAndDropDecorator(itemEl);
-      } else {
-        itemEl.onclick = function (e) {
-          e.target._onMouseDown();
-        };
       }
 
       YAHOO.util.Dom.addClass(itemEl, 'cstudio-form-control-node-selector-item');

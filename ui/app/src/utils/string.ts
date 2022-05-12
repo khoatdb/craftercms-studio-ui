@@ -160,12 +160,6 @@ export function legacyUnescapeXml(value: string): string {
   return value;
 }
 
-export function escapeHTML(str: string): string {
-  const element = document.createElement('textarea');
-  element.textContent = str;
-  return element.innerHTML;
-}
-
 export function bytesToSize(bytes: number, separator: string = '') {
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   if (bytes === 0) return 'n/a';

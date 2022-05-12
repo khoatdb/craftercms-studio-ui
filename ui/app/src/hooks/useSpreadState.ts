@@ -14,9 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Dispatch, EffectCallback, SetStateAction, useEffect, useMemo, useReducer, useRef } from 'react';
-import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Dispatch, SetStateAction, useReducer } from 'react';
 
 export function useSpreadState<S>(initialState: S, init?: (args: S) => S): [S, Dispatch<SetStateAction<Partial<S>>>] {
   return useReducer((state, nextState) => ({ ...state, ...nextState }), initialState, init);

@@ -718,7 +718,6 @@
                     tool.id = tool.getFixedId();
                     controlEl.prototypeField = tool;
                     controls[idx].supportedPostFixes = tool.getSupportedPostFixes ? tool.getSupportedPostFixes() : [];
-                    controls[idx].additionalFields = tool.getAdditionalFields?.() ?? [];
 
                     YDom.addClass(controlEl, 'new-control-type');
                     YDom.addClass(

@@ -14,8 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// "Recently Published" Widget
-
 var YDom = YAHOO.util.Dom;
 var contextPath = location.protocol + '//' + location.hostname + ':' + location.port;
 

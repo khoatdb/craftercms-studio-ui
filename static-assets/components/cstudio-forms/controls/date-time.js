@@ -1616,7 +1616,6 @@ YAHOO.extend(CStudioForms.Controls.DateTime, CStudioForms.CStudioFormField, {
         type: 'boolean',
         defaultValue: 'false'
       },
-      { label: CMgs.format(langBundle, 'showTime'), name: 'showTime', type: 'boolean' },
       {
         label: CMgs.format(langBundle, 'populateExpression'),
         name: 'populateDateExp',

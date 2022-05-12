@@ -1937,38 +1937,6 @@ div.acnBox table.acnLiveTable td.acnLiveTableRight {
   margin: 0;
   text-align: left;
 }
-#submitPanel .rejectContainer {
-  background: #f2f2f2;
-  color: #333 !important;
-  padding: 15px !important;
-  max-width: 800px;
-  #title {
-    margin: 0 0 5px;
-  }
-  #subtitle {
-    margin: 0 0 15px;
-  }
-  .table-wrapper {
-    height: 340px;
-    padding: 11px 12px;
-    background-color: #fff;
-    border: 1px solid rgba(0,0,0,.125);
-    overflow-y: scroll;
-  }
-  .field {
-    margin-bottom: 15px;
-  }
-  textarea {
-    height: 211px;
-    margin-bottom: 30px;
-    resize: none;
-  }
-  .acnSubmitButtons {
-    position: absolute;
-    right: 15px;
-    bottom: 15px;
-  }
-}
 
 #schedulePolicyPanel .bd {
   padding: 0;
@@ -2155,6 +2123,7 @@ div.rejectContainer {
 
           &.checkboxTh {
             width: 10%;
+            border-top-left-radius: 6px;
           }
 
           &.itemTh {
@@ -2163,8 +2132,7 @@ div.rejectContainer {
 
           &.submittedTh {
             width: 25%;
-            text-align: right;
-            padding-right: 15px;
+            border-top-right-radius: 6px;
           }
         }
       }

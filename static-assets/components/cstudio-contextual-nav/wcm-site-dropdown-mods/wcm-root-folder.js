@@ -86,7 +86,6 @@
 
         if (config.name === 'wcm-root-folder') {
           var instance = new CStudioAuthoring.ContextualNav.WcmRootFolderInstance(config);
-          this.instances[config.params.path] = instance;
           instance.cannedSearchCache = [];
           instance.excludeCache = [];
           instance.excludeRegexCache = [];
@@ -266,7 +265,7 @@
             }
           };
 
-          setTimeout(openTreeFn, 0, instance, this);
+          setTimeout(openTreeFn, 1000, instance, this);
         }
       },
 
@@ -1408,9 +1407,7 @@
             newEl.searchTO = searchesToWire[i].searchTO;
           }
 
-          if (searchEl) {
-            searchEl.searchTO = searchesToWire[i].searchTO;
-          }
+          searchEl.searchTO = searchesToWire[i].searchTO;
 
           var createCb = {
             success: function () {
@@ -2184,6 +2181,7 @@
         if (treeItem.eventDate != '' && treeItem.eventDate != undefined) {
           var formattedEditDate = CStudioAuthoring.Utils.formatDateFromUTC(treeItem.eventDate, studioTimeZone);
           retTransferObj.editedDate = formattedEditDate;
+          ttFormattedEditDate = CStudioAuthoring.Utils.formatDateFromUTC(treeItem.eventDate, studioTimeZone);
         }
 
         var icon = treeItem.folder
@@ -2202,7 +2200,7 @@
             retTransferObj.contentType,
             retTransferObj.style,
             statusStr,
-            formattedEditDate,
+            ttFormattedEditDate,
             retTransferObj.modifier,
             retTransferObj.lockOwner,
             itemNameLabel,
@@ -2215,7 +2213,7 @@
             retTransferObj.contentType,
             retTransferObj.style,
             statusStr,
-            formattedEditDate,
+            ttFormattedEditDate,
             retTransferObj.modifier,
             retTransferObj.lockOwner,
             itemNameLabel,
@@ -2384,9 +2382,6 @@
         (highlightVisible = $highlightEl.is(':visible')), (treeExists = $('#pages-tree + div').children().length > 0);
 
         if (!highlightVisible && treeExists && reload) {
-          // destroy current instance's context menu.
-          self.instances[config.params.path].tree.oContextMenu.destroy();
-
           var $container = $(config.containerEl).empty();
           CStudioAuthoring.ContextualNav.WcmRootFolder.initialize(
             Object.assign({}, config, { containerEl: $container[0] })

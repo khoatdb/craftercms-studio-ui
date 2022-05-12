@@ -1253,6 +1253,8 @@ div#footerLogin {
   height: 20px;
   left: 1px;
   position: relative;
+  _position: none;
+  *position: none;
   vertical-align: middle;
   width: 18px;
 }

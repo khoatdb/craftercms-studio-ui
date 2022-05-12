@@ -686,9 +686,6 @@ crafterDefine(
                     aNotFound.push({ path: path, name: name });
                   }
                 }
-                if (!repeated) {
-                  aNotFound.push({ path: path, name: name });
-                }
               }
             } else {
               noObjectid++;
@@ -722,15 +719,11 @@ crafterDefine(
                     aNotFound.push({ path: path, name: name });
                   }
                 }
-                if (!repeated) {
-                  aNotFound.push({ path: path, name: name });
-                }
+                index++;
               }
             } else {
               noObjectid++;
             }
-          } else {
-            noObjectid++;
           }
         }
       });

@@ -877,14 +877,6 @@ var storage = CStudioAuthoring.Storage;
           break;
         }
       }
-      for (var i = 0; i < instance.openArray[num].length; i++) {
-        if (
-          instance.openArray[num].length > 1 &&
-          instance.openArray[num][i] &&
-          instance.openArray[num][i].indexOf('root-folder') > -1
-        ) {
-          instance.openArray[num].splice(i, 1);
-        }
 
       CStudioAuthoring.ContextualNav.WcmAssetsFolder.storage.write(
         RootFolder().getStoredPathKey(instance),
