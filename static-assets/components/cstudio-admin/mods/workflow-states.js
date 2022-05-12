@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -36,26 +36,46 @@ YAHOO.extend(CStudioAdminConsole.Tool.WorkflowStates, CStudioAdminConsole.Tool, 
 
     var actions = [];
 
-    CStudioAuthoring.ContextualNav.AdminConsoleNav.initActions(actions);
+    CStudioAuthoring.ContextualNav.AdminConsoleNav &&
+      CStudioAuthoring.ContextualNav.AdminConsoleNav.initActions(actions);
 
     this.renderJobsList();
   },
 
   renderJobsList: function () {
-    var actions = [
-      {
-        name: CMgs.format(formsLangBundle, 'setStatedDialogSetStates'),
-        context: this,
-        method: this.setStates
-      }
-    ];
-    CStudioAuthoring.ContextualNav.AdminConsoleNav.initActions(actions);
-
+    this.initActions();
     this.renderStatesTable();
+  },
+
+  initActions: function () {
+    const isEmbedded = $('body').hasClass('embedded');
+
+    if (isEmbedded) {
+      const me = this;
+      const btnLabel = CMgs.format(formsLangBundle, 'setStatedDialogSetStates');
+
+      $(`<button type="button" class="mt35 ml40 btn btn-default">${btnLabel}</button>`)
+        .prependTo('#cstudio-admin-console-workarea')
+        .on('click', function () {
+          me.setStates();
+        });
+    } else {
+      var actions = [
+        {
+          name: CMgs.format(formsLangBundle, 'setStatedDialogSetStates'),
+          context: this,
+          method: this.setStates
+        }
+      ];
+
+      CStudioAuthoring.ContextualNav.AdminConsoleNav &&
+        CStudioAuthoring.ContextualNav.AdminConsoleNav.initActions(actions);
+    }
   },
 
   renderStatesTable: function () {
     var stateLisEl = document.getElementById('state-list');
+    stateLisEl.className = 'cstudio-admin-console-workarea-container';
     stateLisEl.innerHTML =
       "<table id='statesTable' class='cs-statelist'>" +
       '<tr>' +
@@ -74,14 +94,17 @@ YAHOO.extend(CStudioAdminConsole.Tool.WorkflowStates, CStudioAdminConsole.Tool, 
       '</tr>' +
       '</table>';
 
-    cb = {
-      success: function (response) {
-        var states = eval('(' + response.responseText + ')');
-        wfStates = states.items;
+    const site = CStudioAuthoringContext.site;
+    CrafterCMSNext.util.ajax
+      .get(`/studio/api/1/services/api/1/content/get-item-states.json?site=${site}&state=ALL`)
+      .subscribe((response) => {
+        const items = response.response.items;
+
+        wfStates = items;
 
         var statesTableEl = document.getElementById('statesTable');
-        for (var i = 0; i < states.items.length; i++) {
-          var state = states.items[i];
+        for (var i = 0; i < items.length; i++) {
+          var state = items[i];
           var trEl = document.createElement('tr');
 
           var rowHTML =
@@ -100,15 +123,7 @@ YAHOO.extend(CStudioAdminConsole.Tool.WorkflowStates, CStudioAdminConsole.Tool, 
           trEl.innerHTML = rowHTML;
           statesTableEl.appendChild(trEl);
         }
-      },
-      failure: function (response) {},
-      self: this
-    };
-
-    var serviceUri =
-      '/api/1/services/api/1/content/get-item-states.json?site=' + CStudioAuthoringContext.site + '&state=ALL';
-
-    YConnect.asyncRequest('GET', CStudioAuthoring.Service.createServiceUri(serviceUri), cb);
+      });
   },
 
   setStates: function () {
@@ -172,16 +187,9 @@ YAHOO.extend(CStudioAdminConsole.Tool.WorkflowStates, CStudioAdminConsole.Tool, 
           processing;
         var callback;
 
-        if (maxList <= i) {
-          callback = {
-            success: function () {
-              CStudioAdminConsole.Tool.WorkflowStates.prototype.renderStatesTable();
-            },
-            failure: function () {}
-          };
-        }
-        YConnect.initHeader(CStudioAuthoringContext.xsrfHeaderName, CrafterCMSNext.util.auth.getRequestForgeryToken());
-        YConnect.asyncRequest('POST', CStudioAuthoring.Service.createServiceUri(serviceUri), callback);
+        CrafterCMSNext.util.ajax.post(CStudioAuthoring.Service.createServiceUri(serviceUri)).subscribe(() => {
+          CStudioAdminConsole.Tool.WorkflowStates.prototype.renderStatesTable();
+        });
       }
 
       this.destroy();
@@ -192,8 +200,8 @@ YAHOO.extend(CStudioAdminConsole.Tool.WorkflowStates, CStudioAdminConsole.Tool, 
     };
 
     var myButtons = [
-      { text: CMgs.format(formsLangBundle, 'setStatedDialogSetStates'), handler: handleSet },
-      { text: CMgs.format(formsLangBundle, 'cancel'), handler: handleCancel, isDefault: true }
+      { text: CMgs.format(formsLangBundle, 'cancel'), handler: handleCancel, isDefault: true },
+      { text: CMgs.format(formsLangBundle, 'setStatedDialogSetStates'), handler: handleSet }
     ];
 
     CStudioAuthoring.Operations.showSimpleDialog(

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -54,7 +54,7 @@ var storage = CStudioAuthoring.Storage;
       // When initializing, check if it's in preview and set the current previewed item into tree cookie
       if (CStudioAuthoringContext.isPreview && config.params.path === '/static-assets') {
         var selectedContent = CStudioAuthoring.SelectedContent.getSelectedContent()[0];
-        //check if selected content is type asset
+        // check if selected content is type asset
         if (selectedContent != null && selectedContent.isAsset) {
           CStudioAuthoring.Operations.updateTreeCookiePath('staticassets', 'static-assets', selectedContent.uri);
         }
@@ -92,7 +92,7 @@ var storage = CStudioAuthoring.Storage;
           }
         };
 
-        //Setup child folders icon configuration
+        // Setup child folders icon configuration
         if (config.params['child-icon-open'] && config.params['child-icon-open'].class) {
           WcmAssets.customIcons[key].childIcons.open.icon.class = config.params['child-icon-open'].class;
         } else {
@@ -112,7 +112,7 @@ var storage = CStudioAuthoring.Storage;
 
         var module = key.toLowerCase();
 
-        //setup root folder icon configuration
+        // setup root folder icon configuration
         if (config.params['module-icon-open'] && config.params['module-icon-open'].class) {
           WcmAssets.customIcons[key].moduleIcons.open.icon.class = config.params['module-icon-open'].class;
         } else {
@@ -163,7 +163,7 @@ var storage = CStudioAuthoring.Storage;
       var labelLangBundle = CMgs.format(siteDropdownLangBundle, label);
       label = labelLangBundle == label ? instance.label : labelLangBundle;
 
-      //add custom icon class
+      // add custom icon class
       var key = instance.label;
       key = key.replace(/\s/g, '');
 
@@ -223,9 +223,6 @@ var storage = CStudioAuthoring.Storage;
 
           CStudioAuthoring.ContextualNav.WcmAssetsFolder.drawTree(items, tree, path, instance);
 
-          //add hover effect to nodes
-          CStudioAuthoring.ContextualNav.WcmAssetsFolder.nodeHoverEffects(this);
-
           YDom.removeClass(label, 'loading');
         },
         failure: function () {
@@ -235,7 +232,7 @@ var storage = CStudioAuthoring.Storage;
     },
 
     getStoredPathKey: function (instance) {
-      return CStudioAuthoringContext.site + '-' + instance.label.replace(' ', '').toLowerCase() + '-opened';
+      return `${CStudioAuthoringContext.site}-${instance.label.replace(' ', '').toLowerCase()}-opened`;
     },
 
     /**
@@ -346,102 +343,9 @@ var storage = CStudioAuthoring.Storage;
         return true;
       });
 
-      var contextMenu = new YAHOO.widget.ContextMenu(contextMenuId, {
-        container: 'acn-context-menu',
-        trigger: 'acn-dropdown-menu-wrapper',
-        shadow: false,
-        lazyload: true,
-        zIndex: 1030
-      });
-
-      if (instance.IsContentMenuCreated == false) {
-        instance.IsContentMenuCreated = true;
-        contextMenu.subscribe(
-          'beforeShow',
-          function () {
-            CStudioAuthoring.ContextualNav.WcmAssetsFolder.onTriggerContextMenu(tree, this, contextMenuId);
-          },
-          tree,
-          false
-        );
-      }
-
-      //if(uniquePath) {
       var WcmAssetsFolder = CStudioAuthoring.ContextualNav.WcmAssetsFolder;
       nodeOpen = true;
       WcmAssetsFolder.treePaths.push(tree.id);
-      (function (t, inst) {
-        document.addEventListener(
-          'crafter.refresh',
-          function (e) {
-            /*document.dispatchEvent(eventCM);*/
-            try {
-              if (e.data && e.data.length) {
-                for (var i = 0; i < e.data.length; i++) {
-                  RootFolder().refreshNodes(
-                    e.data[i]
-                      ? e.data[i]
-                      : oCurrentTextNode != null
-                      ? oCurrentTextNode
-                      : CStudioAuthoring.SelectedContent.getSelectedContent()[0],
-                    true,
-                    e.parent == false ? false : true,
-                    t,
-                    inst,
-                    e.changeStructure,
-                    e.typeAction
-                  );
-                }
-              } else {
-                RootFolder().refreshNodes(
-                  e.data
-                    ? e.data
-                    : oCurrentTextNode != null
-                    ? oCurrentTextNode
-                    : CStudioAuthoring.SelectedContent.getSelectedContent()[0],
-                  true,
-                  e.parent == false ? false : true,
-                  t,
-                  inst,
-                  e.changeStructure,
-                  e.typeAction
-                );
-              }
-            } catch (er) {
-              if (CStudioAuthoring.SelectedContent.getSelectedContent()[0]) {
-                RootFolder().refreshNodes(
-                  CStudioAuthoring.SelectedContent.getSelectedContent()[0],
-                  true,
-                  e.parent == false ? false : true,
-                  t,
-                  inst,
-                  e.changeStructure,
-                  e.typeAction
-                );
-              }
-            }
-
-            if (typeof WcmDashboardWidgetCommon != 'undefined') {
-              WcmDashboardWidgetCommon.refreshAllDashboards();
-            }
-          },
-          false
-        );
-      })(tree, instance);
-      //}
-
-      contextMenu.subscribe(
-        'show',
-        function () {
-          if (!YDom.isAncestor(tree.id, this.contextEventTarget)) {
-            this.hide();
-          }
-          var idTree = tree.id.toString().replace(/-/g, '');
-          RootFolder().myTree = RootFolder().myTreePages[idTree];
-        },
-        tree,
-        false
-      );
 
       tree.draw();
 
@@ -467,6 +371,96 @@ var storage = CStudioAuthoring.Storage;
         RootFolder().currentTextNode = treeNodeTO;
         RootFolder().myTreeAssets = tree;
       }
+      CrafterCMSNext.system
+        .getHostToHostBus()
+        .pipe(
+          CrafterCMSNext.rxjs.filter((e) =>
+            [
+              'ITEM_CUT',
+              'ITEMS_PASTED',
+              'ITEM_DUPLICATED',
+              'ITEM_CREATED',
+              'ITEM_UPDATED',
+              'ITEMS_DELETED',
+              'FOLDER_RENAMED',
+              'FOLDER_CREATED'
+            ].includes(e.type)
+          )
+        )
+        .subscribe(({ type, payload }) => {
+          const Self = RootFolder();
+          const tree = RootFolder().myTreePages[treeId];
+          switch (type) {
+            case 'ITEM_CUT': {
+              const node = tree.getNodeByProperty('path', CrafterCMSNext.util.path.withoutIndex(payload.target));
+              if (node) {
+                const parentTreeNode = node.getEl();
+                const treeInner = YDom.get('acn-dropdown-menu-inner');
+                const previousCutEl = YDom.getElementsByClassName('status-icon', null, treeInner);
+                for (let i = 0; i < previousCutEl.length; i++) {
+                  if (
+                    previousCutEl[i].style.color == Self.CUT_STYLE_RGB ||
+                    previousCutEl[i].style.color == Self.CUT_STYLE
+                  ) {
+                    previousCutEl[i].style.color = '';
+                  }
+                }
+
+                document.getElementById(node.labelElId).style.cssText += 'color: ' + Self.CUT_STYLE + ' !important';
+
+                if (node.hasChildren()) {
+                  const getTextNodes = YDom.getElementsByClassName('status-icon', null, parentTreeNode);
+                  for (let i = 0; i < getTextNodes.length; i++) {
+                    getTextNodes[i].style.cssText += 'color: ' + Self.CUT_STYLE + ' !important';
+                  }
+                }
+              }
+              break;
+            }
+            case 'ITEMS_PASTED': {
+              const targetNode = tree.getNodeByProperty('path', CrafterCMSNext.util.path.withoutIndex(payload.target));
+              if (targetNode) {
+                if (payload.clipboard.type === 'COPY') {
+                  Self.refreshNodes(targetNode, true, false, tree, null, true);
+                } else {
+                  const sourceNode = tree.getNodeByProperty(
+                    'path',
+                    CrafterCMSNext.util.path.withoutIndex(payload.clipboard.sourcePath)
+                  );
+                  Self.refreshNodes(targetNode, true, false, tree, null, true);
+                  Self.refreshNodes(sourceNode.parent, true, false, tree, null, true);
+                }
+              }
+              break;
+            }
+            case 'ITEM_UPDATED':
+            case 'FOLDER_RENAMED':
+            case 'ITEM_DUPLICATED':
+            case 'ITEM_CREATED': {
+              const targetNode = tree.getNodeByProperty('path', CrafterCMSNext.util.path.getParentPath(payload.target));
+              if (targetNode) {
+                Self.refreshNodes(targetNode, true, false, tree, null, true);
+              }
+              break;
+            }
+            case 'FOLDER_CREATED': {
+              const targetNode = tree.getNodeByProperty('path', CrafterCMSNext.util.path.withoutIndex(payload.target));
+              if (targetNode) {
+                Self.refreshNodes(targetNode, true, false, tree, null, true);
+              }
+              break;
+            }
+            case 'ITEMS_DELETED': {
+              payload.targets.forEach((path) => {
+                let targetNode = tree.getNodeByProperty('path', CrafterCMSNext.util.path.getParentPath(path));
+                if (targetNode) {
+                  Self.refreshNodes(targetNode, true, false, tree, null, true);
+                }
+              });
+              break;
+            }
+          }
+        });
     },
 
     /**
@@ -546,14 +540,18 @@ var storage = CStudioAuthoring.Storage;
       if (treeNodeTO.container == true || treeNodeTO.name != 'index.xml') {
         var nodeSpan = document.createElement('span');
 
-        if (treeNodeTO.style.match(/\bfolder\b/)) {
+        if (treeNodeTO.contentType === 'folder') {
           var key = instance.label;
           key = key.replace(/\s/g, '');
 
-          //create spans for icons
-          var childIcons = WcmAssets.customIcons[key].childIcons,
-            childClosed = CStudioAuthoring.Utils.createIcon(childIcons.closed, '', 'on-closed'),
-            childOpen = CStudioAuthoring.Utils.createIcon(childIcons.open, '', 'on-open');
+          // create spans for icons
+
+          var childIcons = WcmAssets.customIcons[key].childIcons;
+          var closedConfig = childIcons.closed;
+          var openConfig = childIcons.open;
+
+          var childClosed = CStudioAuthoring.Utils.createIcon(closedConfig, '', 'on-closed');
+          var childOpen = CStudioAuthoring.Utils.createIcon(openConfig, '', 'on-open');
 
           nodeSpan.appendChild(childClosed);
           nodeSpan.appendChild(childOpen);
@@ -580,6 +578,51 @@ var storage = CStudioAuthoring.Storage;
           nodeSpan.dataset.uri = treeNodeTO.uri;
         }
 
+        const path = treeNodeTO.uri;
+
+        const loaderItems = CrafterCMSNext.util.content.getNumOfMenuOptionsForItem(
+          CrafterCMSNext.util.content.parseLegacyItemToDetailedItem(treeNodeTO)
+        );
+
+        const openItemMenu = () => {
+          CrafterCMSNext.system.store.dispatch({
+            type: 'BATCH_ACTIONS',
+            payload: [
+              {
+                type: 'COMPLETE_DETAILED_ITEM',
+                payload: {
+                  path
+                }
+              },
+              {
+                type: 'FETCH_USER_PERMISSIONS',
+                payload: {
+                  path
+                }
+              },
+              {
+                type: 'SHOW_ITEM_MEGA_MENU',
+                payload: {
+                  path,
+                  loaderItems,
+                  anchorReference: 'anchorPosition',
+                  anchorPosition: { top: event.clientY - 10, left: event.clientX - 10 }
+                }
+              }
+            ]
+          });
+        };
+
+        // Adding ItemMenu Icon and Trigger
+        const menuIcon = document.createElement('i');
+        menuIcon.className = 'fa fa-ellipsis-v item-menu-trigger';
+        menuIcon.onclick = function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          openItemMenu();
+        };
+        nodeSpan.appendChild(menuIcon);
+
         treeNodeTO.html = nodeSpan;
         var treeNode = new YAHOO.widget.HTMLNode(treeNodeTO, root, false);
 
@@ -594,6 +637,11 @@ var storage = CStudioAuthoring.Storage;
         treeNode.treeNodeTO = treeNodeTO;
         treeNode.renderHidden = true;
         treeNode.nowrap = true;
+
+        treeNode.html.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          openItemMenu();
+        });
 
         if (highlight) {
           window.setTimeout(function () {
@@ -677,9 +725,6 @@ var storage = CStudioAuthoring.Storage;
           );
 
           args.fnLoadComplete();
-
-          //add hove effect to nodes
-          CStudioAuthoring.ContextualNav.WcmAssetsFolder.nodeHoverEffects(this);
         },
 
         failure: function (err, args) {
@@ -832,6 +877,14 @@ var storage = CStudioAuthoring.Storage;
           break;
         }
       }
+      for (var i = 0; i < instance.openArray[num].length; i++) {
+        if (
+          instance.openArray[num].length > 1 &&
+          instance.openArray[num][i] &&
+          instance.openArray[num][i].indexOf('root-folder') > -1
+        ) {
+          instance.openArray[num].splice(i, 1);
+        }
 
       CStudioAuthoring.ContextualNav.WcmAssetsFolder.storage.write(
         RootFolder().getStoredPathKey(instance),
@@ -866,6 +919,7 @@ var storage = CStudioAuthoring.Storage;
             var cont = j == 0 ? 0 : counter[key][j] + 1;
             return pathTrace[key][j] + '/' + paths[key][j][counter[key][j]];
           };
+
         var YSelector = YAHOO.util.Selector.query;
         var label = instance.rootFolderEl.previousElementSibling;
         YDom.addClass(label, 'loading');
@@ -897,8 +951,6 @@ var storage = CStudioAuthoring.Storage;
               } else {
                 YDom.removeClass(label, 'loading');
                 YDom.removeClass(YSelector('.ygtvloading', treeEl), 'ygtvloading');
-                // Add hover effect to nodes
-                CStudioAuthoring.ContextualNav.WcmAssetsFolder.nodeHoverEffects(this);
                 RootFolder().firePathLoaded(instance);
               }
             } else {
@@ -937,8 +989,6 @@ var storage = CStudioAuthoring.Storage;
 
               YDom.removeClass(label, 'loading');
               YDom.removeClass(YSelector('.ygtvloading', treeEl), 'ygtvloading');
-              // Add hover effect to nodes
-              CStudioAuthoring.ContextualNav.WcmAssetsFolder.nodeHoverEffects(this);
               RootFolder().firePathLoaded(instance);
             }
           });
@@ -969,7 +1019,7 @@ var storage = CStudioAuthoring.Storage;
                   (paths[key] = []), (counter[key] = []), (recursiveCalls[key] = []), (tmp[key] = {});
                   (k[key] = 0), (pathTrace[key] = []), (rooth[key] = treeData.item.path);
 
-                  //if(servPath == "/site/website")
+                  // if(servPath == "/site/website")
                   window.treeData = treeData;
 
                   var items = treeData.item.children;
@@ -1043,6 +1093,7 @@ var storage = CStudioAuthoring.Storage;
                 failure: function () {}
               });
             }
+
             treePrint(servPath);
           })(ind);
         }
@@ -1096,9 +1147,9 @@ var storage = CStudioAuthoring.Storage;
       treeItem.component = true;
 
       retTransferObj.status = CStudioAuthoring.Utils.getContentItemStatus(treeItem).string;
-      retTransferObj.style = CStudioAuthoring.Utils.getContentItemClassName(treeItem); //, treeItem.container
+      retTransferObj.style = CStudioAuthoring.Utils.getContentItemClassName(treeItem); // treeItem.container
 
-      //spilt status and made it as comma seperated items.
+      // spilt status and made it as comma seperated items.
       var statusStr = retTransferObj.status;
       if (retTransferObj.status.indexOf(' and ') != -1) {
         var statusArray = retTransferObj.status.split(' and ');
@@ -1266,755 +1317,6 @@ var storage = CStudioAuthoring.Storage;
         console.log(err);
       }
       return toolTip;
-    },
-
-    onTriggerContextMenu: function (tree, p_aArgs, contextMenuId) {
-      target = p_aArgs.contextEventTarget;
-      var aMenuItems;
-      var menuWidth = '80px';
-      var menuItems = {
-        'separator-asset': {
-          text: '<div>&nbsp;</div>',
-          disabled: true,
-          classname: 'menu-separator'
-        },
-        separator: [{ text: '<div>&nbsp;</div>', disabled: true, classname: 'menu-separator' }],
-        assetsFolderMenu: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'upload'),
-            onclick: { fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.uploadAsset, obj: tree }
-          },
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'createFolder'),
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.createContainer,
-              obj: tree
-            }
-          },
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'renameFolder'),
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.renameContainer,
-              obj: tree
-            }
-          },
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'delete'),
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.deleteContainer,
-              obj: tree
-            }
-          }
-        ],
-        assetsFolderMenuNoDelete: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'upload'),
-            onclick: { fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.uploadAsset, obj: tree }
-          },
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'createFolder'),
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.createContainer,
-              obj: tree
-            }
-          }
-        ],
-        assetsFolderMenuNoCreateFolder: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'upload'),
-            onclick: { fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.uploadAsset, obj: tree }
-          },
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'delete'),
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.deleteContainer,
-              obj: tree
-            }
-          }
-        ],
-        assetsFolderMenuNoDeleteNoCreateFolder: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'upload'),
-            onclick: { fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.uploadAsset, obj: tree }
-          }
-        ],
-        assetsMenu: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'delete'),
-            onclick: { fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.deleteContent, obj: tree }
-          }
-        ],
-        assetsMenuNoDelete: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'upload'),
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.overwriteAsset,
-              obj: tree
-            }
-          }
-        ],
-        assetsFolderMenuRead: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'noActionsAvailable'),
-            disabled: true,
-            onclick: { fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.uploadAsset, obj: tree }
-          }
-        ],
-
-        assetsFolderTemplate: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'createTemplate'),
-            disabled: false,
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.createNewTemplate,
-              obj: tree
-            }
-          }
-        ],
-
-        assetsFolderScript: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'createController'),
-            disabled: false,
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.createNewScript,
-              obj: tree
-            }
-          }
-        ],
-
-        assetsMenuRead: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'upload'),
-            disabled: true,
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.overwriteAsset,
-              obj: tree
-            }
-          },
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'delete'),
-            disabled: true,
-            onclick: { fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.deleteContent, obj: tree }
-          }
-        ],
-
-        assetsMenuView: [
-          {
-            text: CMgs.format(siteDropdownLangBundle, 'view'),
-            disabled: false,
-            onclick: {
-              fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.editTemplate,
-              obj: 'read'
-            }
-          }
-        ]
-      };
-
-      var targetNode = tree.getNodeByElement(target);
-
-      if (targetNode != null && YDom.isAncestor(tree.id, p_aArgs.contextEventTarget)) {
-        // Get the TextNode instance that that triggered the display of the ContextMenu instance.
-        oCurrentTextNode = targetNode;
-
-        var CSA = CStudioAuthoring;
-        var formPath = oCurrentTextNode.data.formPagePath;
-        var isContainer = oCurrentTextNode.data.isContainer;
-        var isComponent = oCurrentTextNode.data.isComponent;
-        var isLevelDescriptor = oCurrentTextNode.data.isLevelDescriptor;
-        var menuId = YDom.get(contextMenuId);
-        var isAssetsFolder = oCurrentTextNode.instance.type == 'wcm-assets-folder' ? true : false;
-        p_aArgs.clearContent();
-
-        //Get user permissions to get read write operations
-        var checkPermissionsCb = {
-          success: function (results) {
-            var perms = results.permissions,
-              isWrite = CSA.Service.isWrite(perms),
-              isDeleteAllowed = CSA.Service.isDeleteAllowed(perms),
-              isCreateFolder = CSA.Service.isCreateFolder(perms);
-
-            if (isWrite == true) {
-              RootFolder().IS_WRITE = true;
-              if (this.isContainer) {
-                this.menuWidth = '130px';
-                if (isDeleteAllowed) {
-                  if (isCreateFolder) {
-                    this.aMenuItems = this.menuItems['assetsFolderMenu'].slice();
-                  } else {
-                    this.aMenuItems = this.menuItems['assetsFolderMenuNoCreateFolder'].slice();
-                  }
-                } else {
-                  if (isCreateFolder) {
-                    this.aMenuItems = this.menuItems['assetsFolderMenuNoDelete'].slice();
-                  } else {
-                    this.aMenuItems = this.menuItems['assetsFolderMenuNoDeleteNoCreateFolder'].slice();
-                  }
-                }
-              } else {
-                this.menuWidth = '130px';
-                if (isDeleteAllowed) {
-                  this.aMenuItems = this.menuItems['assetsMenu'].slice();
-                } else {
-                  this.aMenuItems = this.menuItems['assetsMenuNoDelete'].slice();
-                }
-              }
-
-              if (oCurrentTextNode.data.uri.indexOf('/templates') != -1) {
-                this.aMenuItems.push(this.menuItems['separator']);
-                this.aMenuItems.push(this.menuItems['assetsFolderTemplate']);
-              }
-
-              if (oCurrentTextNode.data.uri.indexOf('/scripts') != -1) {
-                this.aMenuItems.push(this.menuItems['assetsFolderScript']);
-              }
-
-              if (
-                oCurrentTextNode.data.uri.indexOf('.ftl') != -1 ||
-                oCurrentTextNode.data.uri.indexOf('.js') != -1 ||
-                oCurrentTextNode.data.uri.indexOf('.css') != -1 ||
-                oCurrentTextNode.data.uri.indexOf('.groovy') != -1 ||
-                oCurrentTextNode.data.uri.indexOf('.html') != -1 ||
-                oCurrentTextNode.data.uri.indexOf('.hbs') != -1 ||
-                oCurrentTextNode.data.uri.indexOf('.xml') != -1 ||
-                oCurrentTextNode.data.uri.indexOf('.tmpl') != -1 ||
-                oCurrentTextNode.data.uri.indexOf('.htm') != -1
-              ) {
-                // item is a template
-
-                this.aMenuItems.push({
-                  text: CMgs.format(siteDropdownLangBundle, 'edit'),
-                  disabled: false,
-                  onclick: { fn: CSA.ContextualNav.WcmAssetsFolder.editTemplate }
-                });
-              }
-            } else {
-              if (this.isContainer) {
-                // this.menuWidth = "130px";
-                // this.aMenuItems = this.menuItems["assetsFolderMenuRead"].slice();
-                this.aMenuItems = [];
-              } else {
-                this.menuWidth = '100px';
-                this.aMenuItems = this.menuItems['assetsMenuView'].slice();
-              }
-            }
-
-            if (CSA.Utils.hasPerm(CSA.Constants.PERMISSION_WRITE, perms) && oCurrentTextNode.data.isContainer) {
-              this.aMenuItems.push({
-                text: CMgs.format(siteDropdownLangBundle, 'bulkUploadAssets'),
-                onclick: { fn: CSA.ContextualNav.WcmAssetsFolder.bulkUpload }
-              });
-            }
-
-            var isRelevant = !(oCurrentTextNode.data.status.toLowerCase().indexOf('live') !== -1);
-            var isAssetsFolder = !oCurrentTextNode.isLeaf;
-
-            if (isRelevant && !isAssetsFolder) {
-              if (CStudioAuthoring.Service.isPublishAllowed(perms)) {
-                this.aMenuItems.push({
-                  text: CMgs.format(siteDropdownLangBundle, 'wcmContentApprove'),
-                  onclick: {
-                    fn: function () {
-                      var callback = {
-                        success: function (contentTO) {
-                          var selectedContent = [];
-                          selectedContent.push(contentTO.item);
-
-                          CStudioAuthoring.Operations.approveCommon(
-                            CStudioAuthoringContext.site,
-                            selectedContent,
-                            false
-                          );
-                        },
-                        failure: function () {}
-                      };
-
-                      CStudioAuthoring.Service.lookupContentItem(
-                        CStudioAuthoringContext.site,
-                        oCurrentTextNode.data.uri,
-                        callback,
-                        false,
-                        false
-                      );
-                    }
-                  }
-                });
-              } else {
-                this.aMenuItems.push({
-                  text: CMgs.format(siteDropdownLangBundle, 'wcmContentSubmit'),
-                  onclick: {
-                    fn: function () {
-                      var callback = {
-                        success: function (contentTO) {
-                          var selectedContent = [];
-                          selectedContent.push(contentTO.item);
-
-                          CStudioAuthoring.Operations.submitContent(CStudioAuthoringContext.site, selectedContent);
-                        },
-                        failure: function () {}
-                      };
-
-                      CStudioAuthoring.Service.lookupContentItem(
-                        CStudioAuthoringContext.site,
-                        oCurrentTextNode.data.uri,
-                        callback,
-                        false,
-                        false
-                      );
-                    }
-                  }
-                });
-              }
-            }
-
-            if (!this.isContainer) {
-              this.aMenuItems.push({
-                text: CMgs.format(siteDropdownLangBundle, 'history'),
-                onclick: {
-                  fn: CStudioAuthoring.ContextualNav.WcmAssetsFolder.revertContent,
-                  obj: tree
-                }
-              });
-            }
-
-            this.aMenuItems.push({
-              text: CMgs.format(siteDropdownLangBundle, 'wcmContentDependencies'),
-              onclick: {
-                fn: function () {
-                  var callback = {
-                    success: function (contentTO) {
-                      var selectedContent = [];
-                      selectedContent.push(contentTO.item);
-
-                      CStudioAuthoring.Operations.viewDependencies(
-                        CStudioAuthoringContext.site,
-                        selectedContent,
-                        false
-                      );
-                    },
-                    failure: function () {}
-                  };
-
-                  CStudioAuthoring.Service.lookupContentItem(
-                    CStudioAuthoringContext.site,
-                    oCurrentTextNode.data.uri,
-                    callback,
-                    false,
-                    false
-                  );
-                }
-              }
-            });
-
-            if (isWrite == true) {
-              this.aMenuItems.push(this.menuItems['separator-asset']);
-
-              this.aMenuItems.push({
-                text: CMgs.format(siteDropdownLangBundle, 'copy'),
-                onclick: { fn: RootFolder().copyTree, obj: tree }
-              });
-
-              this.aMenuItems.push({
-                text: CMgs.format(siteDropdownLangBundle, 'cut'),
-                onclick: { fn: RootFolder().cutContent, obj: tree }
-              });
-
-              var checkClipboardCb = {
-                success: function (collection) {
-                  if (oCurrentTextNode.data.isContainer) {
-                    if (collection.count > 0) {
-                      if (isWrite == true) {
-                        this.menuItems.push({
-                          text: CMgs.format(siteDropdownLangBundle, 'paste'),
-                          onclick: { fn: RootFolder().pasteContent }
-                        });
-                      } else {
-                        this.menuItems.push({
-                          text: CMgs.format(siteDropdownLangBundle, 'paste'),
-                          disabled: true,
-                          onclick: { fn: RootFolder().pasteContent }
-                        });
-                      }
-                    }
-                  }
-
-                  this.args.addItems(this.menuItems);
-                  this.menuEl.style.display = 'block';
-                  this.menuEl.style.minWidth = this.menuWidth;
-                  this.args.render();
-                  this.args.show();
-                },
-
-                failure: function () {},
-
-                args: this.p_aArgs,
-                menuItems: this.aMenuItems,
-                menuEl: this.menuId,
-                menuWidth: this.menuWidth
-              };
-
-              /* Removing Paste option until copy/cut are implemented */
-              CSA.Clipboard.getClipboardContent(checkClipboardCb);
-              /* Remove these when add paste option */
-
-              /*if(0 < this.aMenuItems.length){
-             this.p_aArgs.addItems(this.aMenuItems);
-             this.menuId.style.display = "block";
-             this.menuId.style.minWidth = this.menuWidth;
-             this.p_aArgs.render();
-             this.p_aArgs.show();
-             }*/
-
-              if (!oCurrentTextNode.data.isContainer) {
-                this.aMenuItems.push({
-                  text: CMgs.format(siteDropdownLangBundle, 'duplicate'),
-                  onclick: { fn: RootFolder().duplicateContent, obj: tree }
-                });
-              }
-            }
-          },
-          failure: function () {}
-        };
-        checkPermissionsCb.menuItems = menuItems;
-        checkPermissionsCb.aMenuItems = aMenuItems;
-        checkPermissionsCb.menuWidth = menuWidth;
-        checkPermissionsCb.menuId = menuId;
-        checkPermissionsCb.p_aArgs = p_aArgs;
-        checkPermissionsCb.oCurrentTextNode = oCurrentTextNode;
-        checkPermissionsCb.isContainer = isContainer;
-        CSA.Service.getUserPermissions(CStudioAuthoringContext.site, oCurrentTextNode.data.uri, checkPermissionsCb);
-      }
-    },
-
-    /**
-     * Creates new container, Opens a dialog box to enter folder name
-     */
-    createContainer: function () {
-      var createCb = {
-        success: function () {
-          RootFolder().refreshNodes(this.tree, false, false, null, null, true);
-        },
-
-        failure: function () {},
-
-        callingWindow: window,
-        tree: oCurrentTextNode
-      };
-
-      CStudioAuthoring.Operations.createFolder(
-        CStudioAuthoringContext.site,
-        oCurrentTextNode.data.uri,
-        window,
-        createCb
-      );
-    },
-
-    renameContainer: function () {
-      var createCb = {
-        success: function () {
-          RootFolder().refreshNodes(this.tree.parent, false, false, null, null, true);
-        },
-
-        failure: function () {},
-
-        callingWindow: window,
-        tree: oCurrentTextNode
-      };
-
-      CStudioAuthoring.Operations.renameFolder(
-        CStudioAuthoringContext.site,
-        oCurrentTextNode.data.uri,
-        window,
-        createCb
-      );
-    },
-
-    /**
-     * Edits the label of the TextNode that was the target of the
-     * "contextmenu" event that triggered the display of the
-     * ContextMenu instance.
-     */
-    editContent: function (contentTO, editorId, name, value, draft) {
-      var path = oCurrentTextNode.data.uri;
-
-      var editCb = {
-        success: function () {
-          if (CStudioAuthoringContext.isPreview) {
-            try {
-              CStudioAuthoring.Operations.refreshPreview();
-            } catch (err) {
-              if (!draft) {
-                this.callingWindow.location.reload(true);
-              }
-            }
-          } else {
-            if (!draft) {
-              this.callingWindow.location.reload(true);
-            }
-          }
-          eventNS.data = oCurrentTextNode;
-          eventNS.typeAction = '';
-          document.dispatchEvent(eventNS);
-        },
-
-        failure: function () {},
-
-        callingWindow: window
-      };
-
-      CStudioAuthoring.Operations.editContent(
-        oCurrentTextNode.data.formId,
-        CStudioAuthoringContext.site,
-        path,
-        oCurrentTextNode.data.nodeRef,
-        path,
-        false,
-        editCb
-      );
-    },
-
-    editTemplate: function (p_sType, p_aArgs, mode) {
-      var path = oCurrentTextNode.data.uri;
-
-      this.element.firstChild.style.pointerEvents = 'none';
-      if (typeof CStudioAuthoring.editDisabled === 'undefined') {
-        CStudioAuthoring.editDisabled = [];
-      }
-      CStudioAuthoring.editDisabled.push(this.element.firstChild);
-
-      var editCb = {
-        success: function () {
-          if (CStudioAuthoringContext.isPreview) {
-            try {
-              CStudioAuthoring.Operations.refreshPreview();
-            } catch (err) {
-              this.callingWindow.location.reload(true);
-            }
-          } else {
-            this.callingWindow.location.reload(true);
-          }
-
-          eventNS.data = oCurrentTextNode;
-          eventNS.typeAction = '';
-          document.dispatchEvent(eventNS);
-        },
-
-        failure: function () {},
-
-        callingWindow: window
-      };
-
-      //CStudioAuthoring.Operations.openTemplateEditor(path, "default", editCb);
-      CStudioAuthoring.Operations.editContent(
-        oCurrentTextNode.data.formId,
-        CStudioAuthoringContext.site,
-        path,
-        oCurrentTextNode.data.nodeRef,
-        path,
-        false,
-        editCb,
-        null,
-        mode
-      );
-    },
-
-    createNewTemplate: function () {
-      CStudioAuthoring.Operations.createNewTemplate(oCurrentTextNode.data.uri, {
-        success: function (templatePath) {
-          RootFolder().refreshNodes(this.tree, false, false, null, null, true);
-        },
-        failure: function () {
-          //this.callingWindow.location.reload(true);
-        },
-
-        callingWindow: window,
-        tree: oCurrentTextNode
-      });
-    },
-
-    createNewScript: function () {
-      CStudioAuthoring.Operations.createNewScript(oCurrentTextNode.data.uri, {
-        success: function (templatePath) {
-          RootFolder().refreshNodes(this.tree, false, false, null, null, true);
-        },
-        failure: function () {},
-        tree: oCurrentTextNode
-      });
-    },
-
-    /**
-     *	upload an asset to the target folder if it's a new asset
-     */
-    uploadAsset: function () {
-      var uploadCb = {
-        success: function () {
-          CStudioAuthoring.Operations.refreshPreview();
-          RootFolder().refreshNodes(this.tree, false, false, null, null, true);
-        },
-
-        failure: function () {},
-
-        callingWindow: window,
-        tree: oCurrentTextNode
-      };
-
-      CStudioAuthoring.Operations.uploadAsset(
-        CStudioAuthoringContext.site,
-        oCurrentTextNode.data.uri,
-        'upload',
-        uploadCb
-      );
-    },
-
-    bulkUpload: function () {
-      if (document.querySelector('#bulkUpload')) {
-        const messages = CrafterCMSNext.i18n.messages.bulkUploadConfirmDialogMessages;
-
-        const confirm = document.createElement('div');
-        const onClose = () => {
-          CrafterCMSNext.ReactDOM.unmountComponentAtNode(confirm);
-        };
-        CrafterCMSNext.render(confirm, 'ConfirmDialog', {
-          title: CrafterCMSNext.i18n.intl.formatMessage(messages.title),
-          description: CrafterCMSNext.i18n.intl.formatMessage(messages.description),
-          onClose: onClose,
-          onOk: onClose,
-          open: true
-        });
-      } else {
-        const bulkUpload = document.createElement('div');
-        bulkUpload.setAttribute('id', 'bulkUpload');
-        document.documentElement.append(bulkUpload);
-        const onClose = (dropZoneStatus) => {
-          CrafterCMSNext.ReactDOM.unmountComponentAtNode(bulkUpload);
-          bulkUpload.remove();
-          if (dropZoneStatus.uploadedFiles > 0) {
-            RootFolder().refreshNodes(oCurrentTextNode, false, false, null, null, true);
-          }
-        };
-        CrafterCMSNext.render(bulkUpload, 'BulkUpload', {
-          path: oCurrentTextNode.data.path,
-          site: oCurrentTextNode.data.site,
-          maxSimultaneousUploads: 2,
-          onClose: onClose,
-          open: true
-        });
-      }
-    },
-
-    /**
-     *	upload an asset to the target folder if it's a new asset
-     */
-    overwriteAsset: function () {
-      var uploadCb = {
-        success: function () {
-          RootFolder().refreshNodes(this.tree, false, false, null, null, true);
-        },
-
-        failure: function () {},
-
-        callingWindow: window,
-        tree: oCurrentTextNode
-      };
-
-      CStudioAuthoring.Operations.uploadAsset(
-        CStudioAuthoringContext.site,
-        oCurrentTextNode.data.uri,
-        'overwrite',
-        uploadCb
-      );
-    },
-
-    /**
-     * Deletes the TextNode that was the target of the "contextmenu"
-     * event that triggered the display of the ContextMenu instance.
-     */
-    deleteContent: function (p_sType, p_aArgs, tree) {
-      CStudioAuthoring.Operations.deleteContent([oCurrentTextNode.data]);
-    },
-
-    /**
-     * History
-     *
-     */
-    revertContent: function (p_sType, p_aArgs, tree) {
-      CStudioAuthoring.Operations.viewContentHistory(oCurrentTextNode.data, RootFolder().IS_WRITE);
-    },
-
-    /**
-     *	Deletes a folder and contents in the target folder
-     */
-    deleteContainer: function (p_sType, p_aArgs, tree) {
-      CStudioAuthoring.ContextualNav.WcmAssetsFolder.deleteContent(p_sType, p_aArgs, tree);
-    },
-
-    nodeHoverEffects: function (e) {
-      var YDom = YAHOO.util.Dom,
-        highlightWrpClass = 'highlight-wrapper',
-        highlightColor = '#e2e2e2',
-        overSetClass = 'over-effect-set',
-        spanNodes = YAHOO.util.Selector.query(
-          'span.yui-resize-label:not(.' + overSetClass + ')',
-          'acn-dropdown-menu-wrapper'
-        ),
-        moverFn = function (evt) {
-          var el = this,
-            wrapEl = function (table) {
-              var wrp = document.createElement('div');
-              wrp.setAttribute('style', 'background-color:' + highlightColor);
-              wrp.setAttribute('class', highlightWrpClass);
-              YDom.insertBefore(wrp, table);
-              wrp.appendChild(table);
-              return wrp;
-            };
-          if (YDom.hasClass(el, highlightWrpClass)) {
-            YDom.setStyle(el, 'background-color', highlightColor);
-          } else if (YDom.hasClass(el, 'ygtvitem')) {
-            var firstChild = YDom.getFirstChild(el);
-            YDom.hasClass(firstChild, highlightWrpClass)
-              ? YDom.setStyle(firstChild, 'background-color', highlightColor)
-              : wrapEl(firstChild);
-          } else {
-            var parent = el.parentNode;
-            YDom.hasClass(parent, highlightWrpClass)
-              ? YDom.setStyle(parent, 'background-color', highlightColor)
-              : wrapEl(el);
-          }
-          if (RootFolder().lastSelectedTextNode != null) {
-            var currentlySelectedTextNode = el;
-            if (currentlySelectedTextNode == RootFolder().lastSelectedTextNode) return;
-            (YDom.hasClass(RootFolder().lastSelectedTextNode, highlightWrpClass)
-              ? RootFolder().lastSelectedTextNode
-              : YDom.hasClass(RootFolder().lastSelectedTextNode, 'ygtvitem')
-              ? YDom.getFirstChild(RootFolder().lastSelectedTextNode)
-              : RootFolder().lastSelectedTextNode.parentNode
-            ).style.backgroundColor = '';
-
-            RootFolder().lastSelectedTextNode = null;
-          }
-
-          var nodeId = ('' + el.id).replace('table', 'label');
-          var node = RootFolder().treeNodes[nodeId];
-        },
-        moutFn = function (evt) {
-          if (RootFolder().lastSelectedTextNode != null) return;
-          var el = this;
-          (YDom.hasClass(el, highlightWrpClass)
-            ? el
-            : YDom.hasClass(el, 'ygtvitem')
-            ? YDom.getFirstChild(el)
-            : el.parentNode
-          ).style.backgroundColor = '';
-        };
-      for (var i = 0, l = spanNodes.length, span = spanNodes[0], barItem; i < l; i++, span = spanNodes[i]) {
-        // span -> td -> tr -> tbody -> table
-        barItem = span.parentNode.parentNode.parentNode.parentNode;
-        if (barItem) {
-          YEvent.addListener(barItem, 'mouseover', moverFn);
-          YEvent.addListener(barItem, 'mouseout', moutFn);
-          YDom.addClass(span, overSetClass);
-        }
-      }
     }
   };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,11 +18,11 @@
 
 CStudioAuthoring.Module.requireModule(
   'ace',
-  '/static-assets/components/cstudio-common/ace/ace.js',
+  '/static-assets/libs/ace/ace.js',
   {},
   {
     moduleLoaded: function () {
-      CStudioAuthoring.Utils.addJavascript('/static-assets/components/cstudio-common/ace/ext-language_tools.js');
+      CStudioAuthoring.Utils.addJavascript('/static-assets/libs/ace/ext-language_tools.js');
       CStudioAuthoring.Utils.addCss('/static-assets/themes/cstudioTheme/css/template-editor.css');
 
       var YDom = YAHOO.util.Dom,
@@ -238,7 +238,7 @@ CStudioAuthoring.Module.requireModule(
           editor.contentWindow.frameElement.focus();
           tinymce2.activeEditor.getBody().focus();
 
-          //iefix - when an element with focus disappears programatically focus does not work unless another item is focused
+          // iefix - when an element with focus disappears programatically focus does not work unless another item is focused
           $(editor.codeTextArea).show().focus();
           $('#mce_0_ifr').contents().find('body').focus();
           $(editor.codeTextArea).hide();
@@ -253,9 +253,9 @@ CStudioAuthoring.Module.requireModule(
         getInfo: function () {
           return {
             longname: 'Crafter Studio Edit Code',
-            author: 'Crafter Software',
-            authorurl: 'http://www.craftercms.org',
-            infourl: 'http://www.craftercms.org',
+            author: 'CrafterCMS',
+            authorurl: 'https://craftercms.org',
+            infourl: 'https://craftercms.org',
             version: '1.0'
           };
         }

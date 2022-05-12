@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -39,7 +39,7 @@
 
     close: function () {
       var editorId = this.editorId;
-      var iframeEl = window.top.document.getElementById('in-context-edit-editor-' + editorId);
+      var iframeEl = getTopLegacyWindow().document.getElementById('in-context-edit-editor-' + editorId);
       iframeEl.parentNode.parentNode.style.display = 'none';
     },
 
@@ -50,7 +50,7 @@
      * on error, display the issue and then close the dialog
      */
     initializeContent: function (item, field, site, isEdit, callback, $modal, aux, editorId, isFlattenedInclude) {
-      var iframeEl = window.top.document.getElementById('in-context-edit-editor-' + editorId);
+      var iframeEl = getTopLegacyWindow().document.getElementById('in-context-edit-editor-' + editorId);
       var dialogEl = document.getElementById('viewcontroller-in-context-edit-' + editorId + '_0_c');
       var dialogBodyEl = document.getElementById('viewcontroller-in-context-edit-' + editorId + '_0');
       aux = aux ? aux : {};
@@ -91,8 +91,8 @@
                 html.offsetHeight
               );
 
-              if (max > $(window.top).height()) {
-                max = $(window.top).height() - 100;
+              if (max > $(getTopLegacyWindow()).height()) {
+                max = $(getTopLegacyWindow()).height() - 100;
               }
 
               if (max > 350) {
@@ -115,14 +115,14 @@
      * get the content from the input and send it back to the server
      */
     updateContentActionClicked: function (buttonEl, evt) {
-      //not used
+      // not used
     },
 
     /**
      * cancel the dialog
      */
     cancelActionClicked: function (buttonEl, evt) {
-      //not used
+      // not used
     },
 
     /**
@@ -142,6 +142,7 @@
       var formId = contentType.form;
       var readOnly = false;
       let parentPath = null;
+      let canEdit = false;
 
       for (var j = 0; j < auxParams.length; j++) {
         if (auxParams[j].name == 'changeTemplate') {
@@ -154,6 +155,10 @@
 
         if (auxParams[j].name == 'parentPath') {
           parentPath = auxParams[j].value;
+        }
+
+        if (auxParams[j].name == 'canEdit') {
+          canEdit = auxParams[j].value;
         }
       }
 
@@ -176,17 +181,25 @@
       }
 
       if (field) {
-        windowUrl += '&iceId=' + field;
+        if (typeof field === 'string') {
+          windowUrl += '&iceId=' + field;
+        } else {
+          windowUrl += '&selectedFields=' + encodeURIComponent(JSON.stringify(field));
+        }
       } else {
         windowUrl += '&iceComponent=true';
       }
 
-      if (isEdit == true || isEdit == 'true') {
+      if (isEdit === true || isEdit === 'true') {
         windowUrl += '&edit=' + isEdit;
       }
 
-      if (readOnly == true) {
+      if (readOnly === true) {
         windowUrl += '&readonly=true';
+      }
+
+      if (canEdit === true) {
+        windowUrl += '&canEdit=true';
       }
 
       windowUrl += '&editorId=' + editorId;

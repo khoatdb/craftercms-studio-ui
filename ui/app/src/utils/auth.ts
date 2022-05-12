@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -16,12 +16,52 @@
 
 import Cookies from 'js-cookie';
 import { setGlobalHeaders } from './ajax';
+import { SITE_COOKIE_NAME, XSRF_TOKEN_COOKIE_NAME, XSRF_TOKEN_HEADER_NAME } from './constants';
 
-export function getRequestForgeryToken() {
-  return Cookies.get('XSRF-TOKEN');
+export function getRequestForgeryToken(cookieName = XSRF_TOKEN_COOKIE_NAME): string {
+  return Cookies.get(cookieName);
 }
 
-export function setRequestForgeryToken() {
-  const token = Cookies.get('XSRF-TOKEN');
-  setGlobalHeaders({ 'X-XSRF-TOKEN': token });
+export function getRequestForgeryTokenHeaderName(): string {
+  return XSRF_TOKEN_HEADER_NAME;
+}
+
+export function getRequestForgeryTokenParamName(): string {
+  return '_csrf';
+}
+
+export function setRequestForgeryToken(headerName = XSRF_TOKEN_HEADER_NAME): void {
+  const token = getRequestForgeryToken();
+  setGlobalHeaders({ [headerName]: token });
+}
+
+export function setJwt(token: string): void {
+  setGlobalHeaders(getJwtHeaders(token));
+}
+
+export function getJwtHeaders(token: string): object {
+  return { Authorization: `Bearer ${token}` };
+}
+
+export function getXSRFToken(): string {
+  return Cookies.get(XSRF_TOKEN_COOKIE_NAME);
+}
+
+export function getCookieDomain(): string {
+  return window.location.hostname.includes('.') ? window.location.hostname : '';
+}
+
+export function setSiteCookie(value: string): void {
+  Cookies.set(SITE_COOKIE_NAME, value, {
+    domain: getCookieDomain(),
+    path: '/'
+  });
+}
+
+export function getSiteCookie(cookieName: string = SITE_COOKIE_NAME): string {
+  return Cookies.get(cookieName) || null;
+}
+
+export function removeSiteCookie(): void {
+  Cookies.remove(SITE_COOKIE_NAME);
 }

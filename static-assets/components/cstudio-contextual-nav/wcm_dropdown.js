@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -49,36 +49,49 @@ CStudioAuthoring.ContextualNav.WcmDropDown = CStudioAuthoring.ContextualNav.WcmD
     var mainContainerEl = YDom.get('acn-dropdown-wrapper');
 
     var navBarSiteNameEl = YDom.get('navbar-site-name');
-    navBarSiteNameEl.innerHTML = CStudioAuthoringContext.site;
 
-    if (
-      /*window.location.pathname.indexOf("search") > -1 ||*/ window.location.pathname.indexOf('browse') > -1 ||
-      window.location.pathname.indexOf('site-config') > -1
-    ) {
+    CrafterCMSNext.system.getStore().subscribe((store) => {
+      let site = store.getState().sites.byId[CStudioAuthoringContext.site];
+      const siteName = site.name || site.id;
+      navBarSiteNameEl.innerHTML = siteName;
+      navBarSiteNameEl.setAttribute('title', siteName);
+    });
+
+    if (window.location.pathname.indexOf('browse') > -1 || window.location.pathname.indexOf('site-config') > -1) {
       mainContainerEl.innerHTML = '';
+      CrafterCMSNext.render('#acn-dropdown-wrapper', 'CrafterCMSIcon', {
+        style: { fontSize: '33px', margin: '9px 5px 5px' }
+      });
     } else {
-      mainContainerEl.innerHTML =
-        '<div id="acn-dropdown" class="acn-dropdown">' +
-        '<div id="acn-dropdown-inner" class="acn-dropdown-inner">' +
-        '<a id="acn-dropdown-toggler" href="#" class="acn-dropdown-toggler acn-drop-arrow">' +
-        CMgs.format(contextNavLangBundle, 'sideBar') +
-        '</a>' +
-        '</div>' +
-        '<div id="acn-dropdown-menu-wrapper" style="display:none" class="acn-dropdown-menu-wrapper unselectable">' +
-        '<div id="acn-resize" class="acn-resize">' +
-        '<div class="acn-data">' +
-        '<div id="acn-context-menu" class="acn-context-menu"></div>' +
-        '<div id="acn-context-tooltip" class="acn-context-tooltip"></div>' +
-        '<div id="acn-dropdown-menu" style="height:100%" class="acn-dropdown-menu">' +
-        '<div id="acn-dropdown-menu-inner" class="acn-dropdown-menu-inner unselectable"></div>' +
-        '<div id="acn-dropdown-footer" class="acn-dropdown-footer"><p>' +
-        entitlementValidator +
-        '</p></div>' +
-        '</div>' +
-        '</div>' +
-        '</div>' +
-        '</div>' +
-        '</div>';
+      mainContainerEl.innerHTML = `<div id="acn-dropdown" class="acn-dropdown">
+          <div id="acn-dropdown-inner" class="acn-dropdown-inner">
+            <div id="acn-dropdown-toggler"></div>
+          </div>
+          <div
+            style="display:none"
+            id="acn-dropdown-menu-wrapper"
+            class="acn-dropdown-menu-wrapper unselectable"
+          >
+            <div id="acn-resize" class="acn-resize">
+              <div class="acn-data">
+                <div id="acn-context-menu" class="acn-context-menu"></div>
+                <div id="acn-context-tooltip" class="acn-context-tooltip"></div>
+                <div id="acn-dropdown-menu" style="height:100%" class="acn-dropdown-menu">
+                  <div id="acn-dropdown-menu-inner" class="acn-dropdown-menu-inner unselectable"></div>
+                  <div class="craftercms-entitlement">
+                    <img class="craftercms-entitlement-logo craftercms-logo" src="/studio/static-assets/images/logo.svg" alt="CrafterCMS">
+                    <img class="craftercms-entitlement-logo craftercms-logo-dark" src="/studio/static-assets/images/logo-dark.svg" alt="CrafterCMS">
+                    <p class="craftercms-entitlement-copy">${entitlementValidator}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      CrafterCMSNext.render('#acn-dropdown-toggler', 'LogoAndMenuBundleButton', {
+        style: { margin: '4px 0' }
+      });
 
       /**
        * WCM Site Dropdown Contextual Nav Widget
@@ -387,7 +400,15 @@ CStudioAuthoring.ContextualNav.WcmDropDown = CStudioAuthoring.ContextualNav.WcmD
                   CStudioAuthoringContext.user,
                   {
                     success: function (userRoles) {
-                      for (k = 0, c = modules.length; k < c; k++) this.initDropdownModule(userRoles, modules[k]);
+                      // The new "PagesWidget" requires content types to be loaded
+                      var fetchContentTypes = false;
+                      for (k = 0, c = modules.length; k < c; k++) {
+                        this.initDropdownModule(userRoles, modules[k]);
+                        fetchContentTypes = fetchContentTypes || modules[k].render === 'PagesWidget';
+                      }
+                      if (fetchContentTypes) {
+                        CrafterCMSNext.system.store.dispatch({ type: 'FETCH_CONTENT_TYPES' });
+                      }
                     },
                     failure: function () {},
                     initDropdownModule: this.initDropdownModule
@@ -417,28 +438,18 @@ CStudioAuthoring.ContextualNav.WcmDropDown = CStudioAuthoring.ContextualNav.WcmD
               } else {
                 var allowed = false;
                 var userRoles = userRoles.roles;
-                for (var j = 0; j < userRoles.length; j++) {
-                  var userRole = userRoles[j];
-
-                  for (var i = 0; i < roles.length; i++) {
-                    var role = roles[i];
-
-                    if (userRole == role) {
-                      allowed = true;
-                      break;
-                    }
-                  }
-                }
+                allowed = userRoles.some((role) => roles.includes(role));
               }
             }
             if (allowed) {
               var dropdownInnerEl = YDom.get('acn-dropdown-menu-inner');
               var moduleContainerEl = document.createElement('div');
-              if (module.showDivider && module.showDivider == 'true') {
-                YDom.addClass(moduleContainerEl, 'acn-parent');
-              }
 
-              // THIS CODE ABOVE will be removed when we make the entire nav aware of the users roles and centralize the permissions
+              // Dividers look unwell. Removing support for the old prop and adding a new one.
+              // The old class seemed to have been dropped at some point.
+              if (module.divider === 'true') {
+                YDom.addClass(moduleContainerEl, 'sidebar-module-legacy--with-divider');
+              }
 
               if (dropdownInnerEl) {
                 dropdownInnerEl.appendChild(moduleContainerEl);
@@ -464,7 +475,7 @@ CStudioAuthoring.ContextualNav.WcmDropDown = CStudioAuthoring.ContextualNav.WcmD
                   try {
                     CStudioAuthoring.ContextualNav.WcmRootFolder.treePathOpenedEvt.subscribe(function (evtType, aArgs) {
                       if (aArgs[0] == aArgs[1]) {
-                        // number of instaces == number of times event has fired
+                        // number of instances == number of times event has fired
                         self.handleScroll = true;
                         self.oPreferences.visible && self.updateScrollPosition(true);
                       }
@@ -472,16 +483,32 @@ CStudioAuthoring.ContextualNav.WcmDropDown = CStudioAuthoring.ContextualNav.WcmD
                   } catch (ex) {}
                 });
 
-              CStudioAuthoring.Module.requireModule(
-                module.plugin ? module.plugin.name : module.name,
-                module.plugin
-                  ? `/api/2/plugin/file?siteId=${CStudioAuthoringContext.site}&type=${module.plugin.type}&name=${
-                      module.plugin.name || module.name
-                    }&filename=${module.plugin.file}`
-                  : `/static-assets/components/cstudio-contextual-nav/wcm-site-dropdown-mods/${module.name}.js`,
-                module,
-                cb
-              );
+              const $el = $(moduleContainerEl);
+              if (module.container) {
+                const containerProps = module.container;
+                containerProps.style && $el.css(containerProps.style);
+                containerProps.class && $el.addClass(containerProps.class);
+              }
+
+              // render CrafterCMSNext Components
+              if (module.render) {
+                $el.addClass('sidebar-module-next');
+                CrafterCMSNext.render(moduleContainerEl, module.render, module.props);
+              } else {
+                $(moduleContainerEl).addClass(`sidebar-module-${module.plugin ? 'plugin' : 'legacy'}`);
+                CStudioAuthoring.Module.requireModule(
+                  module.plugin ? module.plugin.name : module.name,
+                  module.plugin
+                    ? `/1/plugin/file?siteId=${CStudioAuthoringContext.site}&type=${module.plugin.type}&name=${
+                        module.plugin.name || module.name
+                      }&filename=${module.plugin.file}${
+                        module.plugin.pluginId ? `&pluginId=${module.plugin.pluginId}` : ''
+                      }`
+                    : `/static-assets/components/cstudio-contextual-nav/wcm-site-dropdown-mods/${module.name}.js`,
+                  module,
+                  cb
+                );
+              }
             }
           },
 
@@ -507,7 +534,6 @@ CStudioAuthoring.ContextualNav.WcmDropDown = CStudioAuthoring.ContextualNav.WcmD
       });
       CStudioAuthoring.Events.widgetScriptLoaded.fire('wcm-site-dropdown');
     }
-
 
     window.addEventListener(
       'hashchange',

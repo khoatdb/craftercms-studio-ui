@@ -1,6 +1,6 @@
 <#assign mode = RequestParameters["mode"] />
 <!--
-  ~ Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+  ~ Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License version 3 as published by
@@ -24,26 +24,25 @@
     <#include "/templates/web/common/page-fragments/studio-context.ftl" />
 
     <link rel="stylesheet" type="text/css" href="/studio/static-assets/styles/browse.css" />
+    <link rel="stylesheet" type="text/css" href="/studio/static-assets/themes/cstudioTheme/base.css" />
 
     <link rel="stylesheet" href="/studio/static-assets/libs/jQuery-contextMenu-master/dist/jquery.contextMenu.css" type="text/css">
 
     <script src="/studio/static-assets/libs/handlebars/handlebars.js"></script>
     <script src="/studio/static-assets/libs/jstree/dist/jstree.js"></script>
 
-  
     <script src="/studio/static-assets/libs/jQuery-contextMenu-master/dist/jquery.contextMenu.js" type="text/javascript"></script>
     <script src="/studio/static-assets/libs/jQuery-contextMenu-master/dist/jquery.ui.position.js" type="text/javascript"></script>
-
 
     <script type="text/javascript" src="/studio/static-assets/components/cstudio-browse/browse.js"></script>
     <link rel="stylesheet" type="text/css" href="/studio/static-assets/libs/jstree/dist/themes/default/style.css" />
     <link href="/studio/static-assets/themes/cstudioTheme/css/icons.css" type="text/css" rel="stylesheet">
 
     <#assign path="/studio/static-assets/components/cstudio-common/resources/" />
-    <script src="${path}en/base.js?version=${UIBuildId!.now?string('Mddyyyy')}"></script>
-    <script src="${path}kr/base.js?version=${UIBuildId!.now?string('Mddyyyy')}"></script>
-    <script src="${path}es/base.js?version=${UIBuildId!.now?string('Mddyyyy')}"></script>
-    <script src="${path}de/base.js?version=${UIBuildId!.now?string('Mddyyyy')}"></script>
+    <script src="${path}en/base.js"></script>
+    <script src="${path}kr/base.js"></script>
+    <script src="${path}es/base.js"></script>
+    <script src="${path}de/base.js"></script>
 
     <script>
         var CMgs = CStudioAuthoring.Messages,
@@ -59,22 +58,24 @@
         <span class="path"></span>
       </p>
 
-      <div id="cstudio-wcm-search-filter-controls">
+      <div class="content">
+        <div id="cstudio-wcm-search-filter-controls">
           <div id="data" class="demo"></div>
-      </div>
+        </div>
 
-      <div id="cstudio-wcm-search-result">
+        <div id="cstudio-wcm-search-result">
 
           <div class="cstudio-results-actions"></div>
-          
+
           <div class="results"></div>
 
           <div id="cstudio-wcm-search-render-finish">
-          
+
           </div>
+        </div>
       </div>
 
-    </div>    
+    </div>
 
       <style>
       #cstudio-wcm-search-result .results > * {
@@ -92,16 +93,16 @@
         </#if>
         <input id="formCancelButton" type="button" class="cstudio-search-btn cstudio-button btn btn-default" value="Cancel">
 
-        
+
       </div>
     </div>
-  
+
     <#-- <#if view == "window" >
      <div id="studioBar" class="studio-view">
          <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
              <div class="container-fluid">
                      <a class="navbar-brand" href="/studio/site-dashboard">
-                         <img src="/studio/static-assets/images/logo.svg" alt="Crafter CMS">
+                         <img src="/studio/static-assets/images/logo.svg" alt="CrafterCMS">
                      </a>
                  </div>
              </div>
@@ -187,7 +188,7 @@
       {{/if}}
       <a class="cstudio-search-btn btn btn-default cstudio-search-clear-selection results-btn" href="#" role="button" style="margin-bottom: 20px;">{{labelClearAll}}</a>
     </script>
-    
+
     <script type="text/javascript">
         Handlebars.registerHelper('equal', function(lvalue, rvalue, options) {
             if (arguments.length < 3)
@@ -205,7 +206,7 @@
         });
 
     </script>
-  
+
    </body>
 
 </html>

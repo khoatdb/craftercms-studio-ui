@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -17,12 +17,12 @@
 DrawingBoard.Control.Download = DrawingBoard.Control.extend({
   name: 'download',
 
-  initialize: function () {
+  initialize: function() {
     this.$el.append('<button class="drawing-board-control-download-button"></button>');
     this.$el.on(
       'click',
       '.drawing-board-control-download-button',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this.board.downloadImg();
         e.preventDefault();
       }, this)

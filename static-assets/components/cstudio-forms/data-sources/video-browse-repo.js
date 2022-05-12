@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -21,6 +21,7 @@ CStudioForms.Datasources.VideoBrowseRepo =
     this.form = form;
     this.properties = properties;
     this.constraints = constraints;
+    this.selectItemsCount = -1;
     this.useSearch = false;
 
     for (var i = 0; i < properties.length; i++) {
@@ -39,9 +40,7 @@ YAHOO.extend(CStudioForms.Datasources.VideoBrowseRepo, CStudioForms.CStudioFormD
     var _self = this;
 
     if (this.useSearch) {
-      var searchContext = {
-        searchId: null,
-        itemsPerPage: 12,
+      const searchContext = {
         keywords: '',
         filters: {
           // map with video-picker.js validExtensions
@@ -49,12 +48,6 @@ YAHOO.extend(CStudioForms.Datasources.VideoBrowseRepo, CStudioForms.CStudioFormD
         },
         sortBy: 'internalName',
         sortOrder: 'asc',
-        numFilters: 1,
-        filtersShowing: 10,
-        currentPage: 1,
-        searchInProgress: false,
-        view: 'grid',
-        lastSelectedFilterSelector: '',
         mode: 'select' // open search not in default but in select mode
       };
 
@@ -67,13 +60,13 @@ YAHOO.extend(CStudioForms.Datasources.VideoBrowseRepo, CStudioForms.CStudioFormD
         true,
         {
           success(searchId, selectedTOs) {
-            var path = selectedTOs[0].uri;
-            var url = this.context.createPreviewUrl(path);
-            var videoData = {};
-            videoData.previewUrl = url;
-            videoData.relativeUrl = path;
-            videoData.fileExtension = path.substring(path.lastIndexOf('.') + 1);
-
+            const path = selectedTOs[0].path;
+            const url = this.context.createPreviewUrl(path);
+            const videoData = {
+              previewUrl: url,
+              relativeUrl: path,
+              fileExtension: path.substring(path.lastIndexOf('.') + 1)
+            };
             callback.success(videoData);
           },
           failure() {},
@@ -82,25 +75,30 @@ YAHOO.extend(CStudioForms.Datasources.VideoBrowseRepo, CStudioForms.CStudioFormD
         null
       );
     } else {
-      CStudioAuthoring.Operations.openBrowse('', _self.processPathsForMacros(_self.repoPath), '-1', 'select', true, {
-        success: function (searchId, selectedTOs) {
-          var item = selectedTOs[0];
-          var url = CStudioAuthoringContext.previewAppBaseUri + item.uri;
-          var videoData = {};
-          videoData.previewUrl = url;
-          videoData.relativeUrl = item.uri;
-          videoData.fileExtension = url.substring(url.lastIndexOf('.') + 1);
-          callback.success(videoData);
-        },
-        failure: function () {}
+      const multiSelect = _self.selectItemsCount === -1 || _self.selectItemsCount > 1;
+      CStudioAuthoring.Operations.openBrowseFilesDialog({
+        path: _self.processPathsForMacros(_self.repoPath),
+        multiSelect,
+        onSuccess: (result) => {
+          const items = Array.isArray(result) ? result : [result];
+          items.forEach(({ path }) => {
+            const url = CStudioAuthoringContext.previewAppBaseUri + path;
+            const videoData = {
+              previewUrl: url,
+              relativeUrl: path,
+              fileExtension: url.substring(url.lastIndexOf('.') + 1)
+            };
+            callback.success(videoData);
+          });
+        }
       });
     }
   },
 
   /**
-  * create preview URL
-  */
-    createPreviewUrl(videoPath) {
+   * create preview URL
+   */
+  createPreviewUrl(videoPath) {
     return CStudioAuthoringContext.previewAppBaseUri + videoPath + '';
   },
 

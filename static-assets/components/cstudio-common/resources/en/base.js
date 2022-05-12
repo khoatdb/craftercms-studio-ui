@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -116,9 +116,7 @@ CStudioAuthoring.Messages.registerBundle('siteDashboard', 'en', {
   dashletIconGuideExcel: 'MS Excel',
   dashletIconGuideZip: 'Zip',
   dashletIconGuideGroovy: 'Groovy',
-  dashletIconGuideOtherFiles: 'Other Files',
-
-  dependenciesLabel: 'Dependencies'
+  dashletIconGuideOtherFiles: 'Other Files'
 });
 
 CStudioAuthoring.Messages.registerBundle('contextnav', 'en', {
@@ -225,7 +223,7 @@ CStudioAuthoring.Messages.registerBundle('previewTools', 'en', {
   general: 'General',
   text: 'text',
 
-  //login
+  // login
   login: 'Login',
   emailUsername: 'Username',
   password: 'Password',
@@ -263,7 +261,7 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'en', {
   templates: 'Templates',
   scripts: 'Scripts',
   adminConsole: 'Admin Console',
-  siteconfig: 'Site Config',
+  siteconfig: 'Project Config',
   previewSync: 'Preview Sync',
   syncrepo: 'Sync From Repository',
   allSites: 'All Sites',
@@ -286,7 +284,7 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'en', {
   renameFolder: 'Rename Folder',
   createTemplate: 'Create Template',
   templateFilename: 'Provide a filename for the template',
-  folderName: 'Provide a new foldername',
+  folderName: 'Provide a new folder name',
   createController: 'Create Controller',
   controllerFilename: 'Provide a filename for the script',
   bulkUploadAssets: 'Bulk Upload Assets',
@@ -328,8 +326,8 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'en', {
 });
 
 CStudioAuthoring.Messages.registerBundle('forms', 'en', {
-  rteConfigJSONParseError:
-    "The RTE `{0}` configuration is malformed: {1}. Check your RTE configuration {0} and make sure it's valid JSON. Configuration content attached below:",
+  styleFormatsParseError:
+    "The RTE `styleFormats` configuration is malformed: {0}. Check your RTE configuration styleFormats and make sure it's valid JSON. Configuration content attached below:",
   new: 'New',
   expandAll: 'Expand All',
   collapseAll: 'Collapse All',
@@ -359,19 +357,18 @@ CStudioAuthoring.Messages.registerBundle('forms', 'en', {
   loading: 'Loading&hellip;',
   viewSample: 'View Sample',
   hideSample: 'Hide Sample',
-  clearCache: 'Clear Cache',
   continueEditing: 'Continue Editing',
   notification: 'Notification',
   previewLoaded: 'Preview Loaded.',
 
   copy: 'Copy',
   copyDescription:
-    'Please select any of the sub-pages you would like to batch copy.<br/> When pasting, any selected sub-pages and their positional heirarchy will be retained.',
+    'Please select any of the sub-pages you would like to batch copy.<br/> When pasting, any selected sub-pages and their positional hierarchy will be retained.',
   page: 'Page',
   loadingContents: 'Loading items...',
   cut: 'Cut',
   cutDescription:
-    'Please select any of the sub-pages you would like to batch cut.<br/> When pasting, any selected sub-pages and their positional heirarchy will be retained.',
+    'Please select any of the sub-pages you would like to batch cut.<br/> When pasting, any selected sub-pages and their positional hierarchy will be retained.',
 
   create: 'Create',
   newFolderTitle: 'Create a New Folder',
@@ -381,7 +378,7 @@ CStudioAuthoring.Messages.registerBundle('forms', 'en', {
 
   chooseContentType: 'Choose Content Type',
   chooseContentTypeBody: 'The following starter templates are available for use within this section.',
-  chooseContentTypeLabel: 'Template Name:',
+  chooseContentTypeLabel: 'Content Type:',
   chooseContentTypePreview: 'Preview:',
 
   cancelDialogHeader: 'Crafter Studio',
@@ -460,11 +457,10 @@ CStudioAuthoring.Messages.registerBundle('forms', 'en', {
 
   requestApproveDialogTitle: 'Request Publish',
   requestApproveDialogSubTitle: 'When would you like the checked item(s) to be published?',
-  requestApproveDialogEmailMe: 'Email me when items are approved for publish.',
+  requestApproveDialogEmailMe: "Email me the reviewer's feedback",
 
   itemsForPublish: 'Items to Publish',
   selectAll: 'Select All',
-  deselectAll: 'Deselect All',
   hardDependencies: 'Hard Dependencies',
   submissionMandatory: 'Submission mandatory',
   softDependencies: 'Soft Dependencies',
@@ -584,7 +580,6 @@ CStudioAuthoring.Messages.registerBundle('search', 'en', {
   videos: 'Videos',
   width: 'Width',
   height: 'Height',
-  path: 'Path',
   'content-type': 'Content Type',
   'mime-type': 'MIME Type',
   'last-edit-date': 'Last Edit Date',
@@ -708,8 +703,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'en', {
   /*Controls*/
   textArea: 'Text Area',
   linkTextarea: 'Link Text Area',
-  richTextEditor: 'Rich Text Editor (TinyMCE 2)',
-  rteTinyMCE5: 'Rich Text Editor (TinyMCE 5)',
+  rte: 'Rich Text Editor',
   input: 'Input',
   numericInput: 'Numeric input',
   uuid: 'UUID',
@@ -759,7 +753,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'en', {
   videoCMISRepository: 'Video From CMIS Repository',
   staticKeyValuePairs: 'Static Key Value Pairs',
   configuredListOfPairs: 'Configured List of Pairs',
-  siteComponent: 'Site Component',
+  siteComponent: 'Project Component',
   fileBrowse: 'File Browse',
   hubspotForms: 'Hubspot Forms',
   imageFromRepository: 'Image From Repository',
@@ -908,7 +902,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'en', {
   confTabConfigurations: 'Configurations',
   confTabConfDesc: 'Defines this list of configurations',
   confTabContextualNavigationConf: 'Contextual Navigation Configuration',
-  confTabContextualNavigationConfDesc: 'Defines modules on the site contextual navigation bar',
+  confTabContextualNavigationConfDesc: 'Defines modules on the project contextual navigation bar',
   confTabSidebarConf: 'Sidebar Configuration',
   confTabSidebarConfDesc: 'Defines modules on the sidebar',
   confTabEndpointsConf: 'Endpoints Configuration',
@@ -939,8 +933,8 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'en', {
   confTabRoleMappingsDesc: 'Defines a list of roles available in site',
   confTabSiteConfiguration: 'Site Configuration',
   confTabSiteConfigurationDesc: 'Defines the general site configuration',
-  confTabSiteConf: 'Site Config Tools',
-  confTabSiteConfDesc: 'Defines the list of admin tools available',
+  confTabSiteConf: 'Content Type Editor Config',
+  confTabSiteConfDesc: 'Defines controls and datasources available for content type editing',
   confTabWorkflowConf: 'Workflow Configuration',
   confTabWorkflowConfDesc: 'Defines workflows available in the system',
   confCacheCleared: 'Configuration cache cleared.',
@@ -954,8 +948,42 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'en', {
     'This files configures 0 or more CMIS-capable repositories as data-sources for content authors to pick from',
   confTabEngineSiteConfiguration: 'Engine Site Configuration',
   confTabEngineSiteConfigurationDesc: 'Site configuration used by Crafter Engine',
+  confTabEngineSiteConfigurationPreview: 'Engine Site Configuration - Preview',
+  confTabEngineSiteConfigurationStaging: 'Engine Site Configuration - Staging',
+  confTabEngineSiteConfigurationLive: 'Engine Site Configuration - Live',
   confTabEngineSiteAppContextConfiguration: 'Engine Site Application Context',
   confTabEngineSiteAppContextConfigurationDesc: 'Site application context used by Crafter Engine',
+  confTabEngineSiteAppContextConfigurationPreview: 'Engine Site Application Context - Preview',
+  confTabEngineSiteAppContextConfigurationStaging: 'Engine Site Application Context - Staging',
+  confTabEngineSiteAppContextConfigurationLive: 'Engine Site Application Context - Live',
+  confTabTranslationConf: 'Translation Configuration',
+  confTabTranslationConfDesc: 'Defines supported languages and how to resolve them',
+  confTabSitePolicyConf: 'Site Policy Configuration',
+  confTabSitePolicyConfDesc: 'Defines policies to validate content operations',
+  confTabUiConf: 'User Interface Configuration',
+  confTabUiConfDesc: 'Defines the widgets shown in the user interface',
+  confTabMimeTypes: 'Mime Types',
+  confTabMimeTypesDesc: 'This file configures the mime types icons overrides for this site/blueprint.',
+  confTabEngineUrlRewriteConf: 'Engine URL Rewrite Configuration (XML Style)',
+  confTabEngineUrlRewriteConfDesc: 'This file configures project properties used by Crafter Engine',
+  confTabEngineUrlRewriteConfPreview: 'Engine URL Rewrite Configuration (XML Style) - Preview',
+  confTabEngineUrlRewriteConfStaging: 'Engine URL Rewrite Configuration (XML Style) - Staging',
+  confTabEngineUrlRewriteConfLive: 'Engine URL Rewrite Configuration (XML Style) - Live',
+  confTabDependencyResolverConf: 'Dependency Resolver Configuration',
+  confTabDependencyResolverConfDesc:
+    'This file configures what file paths Crafter considers a dependency and how they should be extracted.',
+  confTabAWSProfiles: 'AWS Profiles',
+  confTabAWSProfilesDesc: 'AWS profiles configuration file.',
+  confTabBoxProfiles: 'Box Profiles',
+  confTabBoxProfilesDesc: 'Box profiles configuration file.',
+  confTabWebDAVProfiles: 'WebDAV Profiles',
+  confTabWebDAVProfilesDesc: 'WebDAV profiles configuration file.',
+  confTabAssetProcessing: 'Asset Processing',
+  confTabAssetProcessingDesc: 'Asset processing configuration file.',
+  confTabBlobStores: 'Blob Stores',
+  confTabBlobStoresDesc: 'Blob stores configuration file.',
+  confTabProxyConfig: 'Proxy Config',
+  confTabProxyConfigDesc: 'This file configures the proxy servers for preview.',
 
   /* Image */
   constraintsError: 'The uploaded file does not meet the specified width & height constraints',
@@ -989,7 +1017,6 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'en', {
   contentTypeNotFound: "Component's content type not found.",
   failConfig: 'Failed to load configuration.',
   noConfPathError: 'No configuration path is defined.',
-  clearCacheError: 'Failed to clear configuration cache',
   endpointsError: 'Failed to load endpoints.',
   jobsError: 'Failed to load jobs.',
   cancelDeploymentError: 'Failed to cancel deployment.',

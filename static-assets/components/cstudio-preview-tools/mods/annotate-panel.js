@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -18,9 +18,6 @@ CStudioAuthoring.Utils.addJavascript(
   '/static-assets/components/cstudio-preview-tools/mods/annotate/dist/drawingboard.js'
 );
 CStudioAuthoring.Utils.addCss('/static-assets/components/cstudio-preview-tools/mods/annotate/dist/drawingboard.css');
-
-//CStudioAuthoring.Utils.addJavascript("http://127.0.0.1:8080/static-assets/sui/scripts/social.js");
-//CStudioAuthoring.Utils.addCss("http://127.0.0.1:8080/static-assets/sui/styles/main.css");
 
 var crafterSocial_cfg = {
   // The SUI base URL
@@ -79,7 +76,7 @@ CStudioAuthoring.AnnotatePanel = CStudioAuthoring.AnnotatePanel || {
       boardEl.style.width = '100%';
       boardEl.style.height = '80%';
       boardEl.style.position = 'absolute';
-      boardEl.style.top = '0px';
+      boardEl.style.top = '0';
       boardEl.style.zIndex = 10;
 
       boardEl.id = 'default-board';
@@ -166,7 +163,7 @@ setTimeout(function () {
 			 var commentEl = document.createElement("div");
 			 commentEl.id = id;
 			 document.body.appendChild(commentEl);
-			
+
 			commentEl.style.position = "absolute";
 			commentEl.style.top = ""+this.board.coords.current.y+"px";
 			commentEl.style.left = ""+this.board.coords.current.x+"px";

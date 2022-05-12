@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -193,7 +193,7 @@ YAHOO.extend(CStudioForms.Controls.AWSVideoUpload, CStudioForms.CStudioFormField
     var validEl = document.createElement('span');
     YAHOO.util.Dom.addClass(validEl, 'validation-hint');
     YAHOO.util.Dom.addClass(validEl, 'cstudio-form-control-validation fa fa-check');
-    controlWidgetContainerEl.appendChild(validEl);
+    containerEl.appendChild(validEl);
 
     this.fileEl = document.createElement('span');
     controlWidgetContainerEl.appendChild(this.fileEl);

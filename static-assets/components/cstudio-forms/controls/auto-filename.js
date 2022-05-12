@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -65,13 +65,12 @@ YAHOO.extend(CStudioForms.Controls.AutoFilename, CStudioForms.CStudioFormField, 
     if (this.contentAsFolder == true || this.contentAsFolder == 'true') {
       this.form.updateModel('file-name', 'index.xml');
       this.form.updateModel('folder-name', this.form.model['objectId']);
-      //this.value = "index.xml";
     } else if (changeTemplate == 'true') {
       this.form.updateModel('file-name', this.form.model['objectId'] + '.xml');
-      obj.form.updateModel('folder-name', '');
+      this.form.updateModel('folder-name', '');
     } else {
       this.form.updateModel('file-name', filename);
-      obj.form.updateModel('folder-name', '');
+      this.form.updateModel('folder-name', '');
     }
   },
 

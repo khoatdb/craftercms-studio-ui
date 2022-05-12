@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -17,21 +17,30 @@
 import { LookupTable } from './LookupTable';
 
 export interface User {
+  id: number;
   firstName: string;
   lastName: string;
   email: string;
   username: string;
-  authType: string;
+  enabled: boolean;
+  externallyManaged: boolean;
+  authenticationType?: 'db' | 'ldap' | 'headers' | 'saml';
+}
+
+export interface EnhancedUser extends User {
   rolesBySite: LookupTable<string[]>;
+  permissionsBySite: LookupTable<string[]>;
   sites: string[];
   preferences: LookupTable;
 }
 
-export interface Credentials {
+export interface NewUser {
+  firstName: string;
+  lastName: string;
+  email: string;
   username: string;
+  enabled: boolean;
   password: string;
 }
 
-export interface LegacyUser extends Omit<User, 'authType'> {
-  authenticationType: string;
-}
+export default User;

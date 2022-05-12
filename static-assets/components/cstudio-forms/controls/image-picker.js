@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -111,69 +111,15 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
    * create dialog
    */
   createDialog: function () {
-    YDom.removeClass('cstudio-wcm-popup-div', 'yui-pe-content');
-
-    var newdiv = YDom.get('cstudio-wcm-popup-div');
-    if (newdiv === undefined || newdiv === null) {
-      newdiv = document.createElement('div');
-      document.body.appendChild(newdiv);
-    }
-
-    var divIdName = 'cstudio-wcm-popup-div';
-    newdiv.setAttribute('id', divIdName);
-    newdiv.className = 'yui-pe-content';
-
-    var imgObj = this.calculateAspectRatioFit(
-        this.originalWidth,
-        this.originalHeight,
-        window.innerWidth - 10,
-        window.innerHeight - 20
-      ),
-      imgWidth = imgObj.width,
-      imgHeight = imgObj.height,
-      width = imgWidth ? imgWidth : 500,
-      height = imgHeight ? imgHeight : 500,
-      url = !this.external ? CStudioAuthoringContext.previewAppBaseUri : '' + this.inputEl.value;
-    newdiv.innerHTML =
-      '<img width="' +
-      width +
-      'px" height="' +
-      height +
-      'px" src="' +
-      url +
-      '"></img>' +
-      '<input type="button" class="zoom-button btn btn-primary cstudio-form-control-asset-picker-zoom-cancel-button" id="zoomCancelButton" value="Close"/>' +
-      '<input type="button" class="zoom-button btn btn-primary cstudio-form-control-asset-picker-zoom-full-button" id="zoomFullButton" value="Full"/>';
-
-    // Instantiate the Dialog
-    upload_dialog = new YAHOO.widget.Dialog('cstudio-wcm-popup-div', {
-      fixedcenter: true,
-      visible: false,
-      modal: true,
-      close: true,
-      constraintoviewport: true,
-      underlay: 'none',
-      keylisteners: new YAHOO.util.KeyListener(
-        document,
-        { ctrl: false, keys: 27 },
-        { fn: this.uploadPopupCancel, correctScope: true }
-      )
+    let url = this.inputEl.value;
+    craftercms.getStore().dispatch({
+      type: 'SHOW_PREVIEW_DIALOG',
+      payload: {
+        type: 'image',
+        title: CrafterCMSNext.util.path.getFileNameFromPath(url),
+        url
+      }
     });
-
-    // Render the Dialog
-    upload_dialog.render();
-    YAHOO.util.Event.addListener('zoomCancelButton', 'click', this.uploadPopupCancel, this, true);
-    YAHOO.util.Event.addListener(
-      'zoomFullButton',
-      'click',
-      function () {
-        this.fullImageTab(!this.external ? CStudioAuthoringContext.previewAppBaseUri : '' + this.inputEl.value);
-      },
-      this,
-      true
-    );
-    this.upload_dialog = upload_dialog;
-    upload_dialog.show();
   },
 
   /**
@@ -225,6 +171,8 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
   },
 
   setImageData: function (imagePicker, imageData) {
+    let CMgs = CStudioAuthoring.Messages;
+    let langBundle = CMgs.getBundle('contentTypes', CStudioAuthoringContext.lang);
     imagePicker.inputEl.value = imageData.relativeUrl;
 
     imagePicker.previewEl.src = imageData.previewUrl.replace(/ /g, '%20') + '?' + new Date().getTime();
@@ -232,9 +180,10 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     imagePicker.downloadEl.href = imageData.previewUrl;
     imagePicker.remote = imageData.remote && imageData.remote === true ? true : false;
 
-    imagePicker.addEl.value = 'Replace';
+    imagePicker.$addBtn.text(CMgs.format(langBundle, 'replace'));
 
     imagePicker.noPreviewEl.style.display = 'none';
+    imagePicker.noPreviewEl.parentElement.classList.remove('no-selection');
     imagePicker.previewEl.style.display = 'inline';
     YAHOO.util.Dom.addClass(imagePicker.previewEl, 'cstudio-form-control-asset-picker-preview-content');
 
@@ -257,12 +206,6 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     var _self = this;
     var imageManagerNames = this.datasources;
 
-    if (this.addContainerEl) {
-      this.ctrlOptionsEl.removeChild(this.addContainerEl);
-      this.addContainerEl = null;
-      return false;
-    }
-
     imageManagerNames = !imageManagerNames
       ? ''
       : Array.isArray(imageManagerNames)
@@ -271,50 +214,27 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     var datasourceMap = this.form.datasourceMap,
       datasourceDef = this.form.definition.datasources;
 
-    if (imageManagerNames !== '' && imageManagerNames.indexOf(',') !== -1) {
-      addContainerEl = document.createElement('div');
-      this.ctrlOptionsEl.appendChild(addContainerEl);
-      YAHOO.util.Dom.addClass(addContainerEl, 'cstudio-form-control-image-picker-add-container');
-      this.addContainerEl = addContainerEl;
-
-      addContainerEl.style.left = this.addEl.offsetLeft + 'px';
-      addContainerEl.style.top = this.addEl.offsetTop + 22 + 'px';
-
+    if (imageManagerNames !== '') {
       // The datasource title is only found in the definition.datasources. It'd make more sense to have all
       // the information in just one place.
-
-      var addMenuOption = function (el) {
+      datasourceDef.forEach(function (el) {
         // We want to avoid possible substring conflicts by using a reg exp (a simple indexOf
         // would fail if a datasource id string is a substring of another datasource id)
         var mapDatasource;
-
-        //if (imageManagerNames.search(regexpr) > -1) {
         if (imageManagerNames.indexOf(el.id) !== -1) {
           mapDatasource = datasourceMap[el.id];
-
-          var itemEl = document.createElement('div');
-          YAHOO.util.Dom.addClass(itemEl, 'cstudio-form-control-image-picker-add-container-item');
-          itemEl.textContent = el.title;
-          addContainerEl.appendChild(itemEl);
-
+          const $itemEl = $(`<li><a class="cstudio-form-control-image-picker-add-container-item">${el.title}</a></li>`);
+          _self.$dropdownMenu.append($itemEl);
           YAHOO.util.Event.on(
-            itemEl,
+            $itemEl[0],
             'click',
             function () {
-              _self.addContainerEl = null;
-              _self.ctrlOptionsEl.removeChild(addContainerEl);
-
               _self._addImage(mapDatasource);
             },
-            itemEl
+            $itemEl[0]
           );
         }
-      };
-      datasourceDef.forEach(addMenuOption);
-      //}
-    } else if (imageManagerNames !== '') {
-      imageManagerNames = imageManagerNames.replace('["', '').replace('"]', '');
-      this._addImage(datasourceMap[imageManagerNames]);
+      });
     }
   },
 
@@ -337,7 +257,6 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
 
             if (!valid) {
               this.imagePicker.showAlert(message);
-              //this.imagePicker.deleteImage();
             } else {
               var image = new Image();
               var imagePicker = this.imagePicker;
@@ -351,7 +270,6 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
                   var widthConstrains = JSON.parse(self.width);
                   var heightConstrains = JSON.parse(self.height);
                   message = 'The uploaded file does not meet the specified width & height constraints';
-                  //imagePicker.deleteImage();
                   if (
                     (widthConstrains.min && imagePicker.originalWidth < widthConstrains.min) ||
                     (heightConstrains.min && imagePicker.originalHeight < heightConstrains.min) ||
@@ -391,11 +309,8 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
                       );
                     })(self);
                   }
-
-                  //this.isUploadOverwrite = isUploadOverwrite;
                 } else {
                   var formContainer = this.form ? this.form.containerEl : self.form.containerEl;
-                  // $(self.form.containerEl).find("#ice-body .cstudio-form-field-container")
                   if ($(formContainer).find('#ice-body .cstudio-form-field-container').length > 1) {
                     if (this.setImageData) {
                       this.setImageData(imagePicker, imageData);
@@ -450,7 +365,8 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
       this.previewEl.style.display = 'none';
       this.previewEl.src = '';
       this.noPreviewEl.style.display = 'inline';
-      this.addEl.value = CMgs.format(langBundle, 'add');
+      this.noPreviewEl.parentElement.classList.add('no-selection');
+      this.$addBtn.text(CMgs.format(langBundle, 'add'));
       this.remote = false;
 
       this.downloadEl.style.display = 'none';
@@ -460,8 +376,6 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
       this.originalHeight = null;
 
       YAHOO.util.Dom.addClass(this.previewEl, 'cstudio-form-control-asset-picker-preview-content');
-      YAHOO.util.Dom.setStyle(this.imageEl, 'width', this.previewBoxWidth + 'px');
-      YAHOO.util.Dom.setStyle(this.imageEl, 'height', this.previewBoxHeight + 'px');
 
       this._onChangeVal(null, this);
     }
@@ -491,12 +405,13 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     var validEl = document.createElement('span');
     YAHOO.util.Dom.addClass(validEl, 'validation-hint');
     YAHOO.util.Dom.addClass(validEl, 'cstudio-form-control-validation fa fa-check');
-    controlWidgetContainerEl.appendChild(validEl);
 
     var inputEl = document.createElement('input');
     this.inputEl = inputEl;
-    inputEl.style.display = 'none';
-    YAHOO.util.Dom.addClass(inputEl, 'datum');
+    inputEl.disabled = true;
+    inputEl.placeholder = '(Path)';
+    YAHOO.util.Dom.addClass(inputEl, 'datum cstudio-form-control-input');
+    inputEl.style.marginBottom = '5px';
     controlWidgetContainerEl.appendChild(inputEl);
 
     var imgInfoContainer = document.createElement('div');
@@ -506,6 +421,7 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     var urlEl = document.createElement('div');
     this.urlEl = urlEl;
     urlEl.textContent = this.inputEl.value;
+    urlEl.style.display = 'none';
     YAHOO.util.Dom.addClass(urlEl, 'info');
     imgInfoContainer.appendChild(urlEl);
 
@@ -517,12 +433,11 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     this.imageEl = imageEl;
     imageEl.id = divPrefix + 'cstudio-form-image-picker';
     YAHOO.util.Dom.addClass(imageEl, 'cstudio-form-control-asset-picker-preview-block');
-    YAHOO.util.Dom.addClass(imageEl, 'cstudio-form-control-asset-picker-no-preview-image');
     bodyEl.appendChild(imageEl);
 
     var noPreviewEl = document.createElement('span');
     this.noPreviewEl = noPreviewEl;
-    noPreviewEl.innerHTML = 'No Image Available';
+    noPreviewEl.innerHTML = 'No Image Selected';
     YAHOO.util.Dom.addClass(noPreviewEl, 'cstudio-form-control-asset-picker-no-preview-content');
     imageEl.appendChild(noPreviewEl);
 
@@ -559,26 +474,34 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
 
     this.ctrlOptionsEl = ctrlOptionsEl;
 
-    var addEl = document.createElement('input');
-    this.addEl = addEl;
-    addEl.type = 'button';
-    addEl.style.position = 'relative';
-    addEl.id = 'add-image';
+    let dropdownLabel;
+
     if (this.inputEl.value === null || this.inputEl.value === '') {
-      addEl.value = CMgs.format(langBundle, 'add');
+      dropdownLabel = CMgs.format(langBundle, 'add');
     } else {
-      addEl.value = CMgs.format(langBundle, 'replace');
+      dropdownLabel = CMgs.format(langBundle, 'replace');
     }
 
-    YAHOO.util.Dom.addClass(addEl, 'cstudio-button');
-    ctrlOptionsEl.appendChild(addEl);
+    // dropdownBtn and dropdownMenu
+    const $addBtn = $(
+      `<button id="add-image" class="cstudio-button btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">${dropdownLabel}</button>`
+    );
+    const $dropdown = $('<div class="dropdown"></div>');
+    const $dropdownMenu = $('<ul class="dropdown-menu pull-left"></ul>');
+    this.$dropdown = $dropdown;
+    this.$dropdownMenu = $dropdownMenu;
+    this.$addBtn = $addBtn;
+    $dropdown.append($addBtn);
+    $dropdown.append($dropdownMenu);
+
+    $(ctrlOptionsEl).append($dropdown);
 
     var delEl = document.createElement('input');
     this.delEl = delEl;
     delEl.type = 'button';
     delEl.value = CMgs.format(langBundle, 'delete');
     delEl.style.position = 'relative';
-    YAHOO.util.Dom.addClass(delEl, 'cstudio-button');
+    YAHOO.util.Dom.addClass(delEl, 'btn btn-default btn-sm');
 
     ctrlOptionsEl.appendChild(delEl);
 
@@ -620,9 +543,6 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
       }
     }
 
-    YAHOO.util.Dom.setStyle(this.imageEl, 'height', this.previewBoxHeight + 'px');
-    YAHOO.util.Dom.setStyle(this.imageEl, 'width', this.previewBoxWidth + 'px');
-
     var helpContainerEl = document.createElement('div');
     YAHOO.util.Dom.addClass(helpContainerEl, 'cstudio-form-field-help-container');
     ctrlOptionsEl.appendChild(helpContainerEl);
@@ -638,13 +558,14 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     descriptionEl.style.position = 'relative';
 
     containerEl.appendChild(titleEl);
+    containerEl.appendChild(validEl);
     containerEl.appendChild(controlWidgetContainerEl);
     containerEl.appendChild(descriptionEl);
 
     if (this.readonly === true) {
-      addEl.disabled = true;
+      this.$addBtn.attr('disabled', 'true');
+      this.$addBtn.addClass('cstudio-button-disabled');
       delEl.disabled = true;
-      YAHOO.util.Dom.addClass(addEl, 'cstudio-button-disabled');
       YAHOO.util.Dom.addClass(delEl, 'cstudio-button-disabled');
     }
 
@@ -657,16 +578,22 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
       this,
       true
     );
+
+    // adding options to $dropdownMenu;
+    if (!this.$addBtn.attr('disabled')) {
+      this.addImage();
+    }
+
     YAHOO.util.Event.addListener(
-      addEl,
+      $addBtn[0],
       'click',
       function (evt, context) {
         context.form.setFocusedField(context);
-        this.addImage();
       },
       this,
       true
     );
+
     YAHOO.util.Event.addListener(
       delEl,
       'click',
@@ -687,7 +614,7 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     if (this.value !== '') {
       if (this.originalWidth > this.previewBoxWidth || this.originalHeight > this.previewBoxHeight) {
         this.zoomEl.style.display = 'inline-block';
-        this.downloadEl.style.marginLeft = '0px';
+        this.downloadEl.style.marginLeft = '0';
       } else {
         this.downloadEl.style.marginLeft = '-20px';
       }
@@ -785,33 +712,33 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
   },
 
   adjustImage: function () {
-    var wImg = this.originalWidth || 0;
-    var hImg = this.originalHeight || 0;
-    var wThb = parseInt(this.previewBoxWidth, 10);
-    var hThb = parseInt(this.previewBoxHeight, 10);
-    var adjustedWidth = 0;
-    var adjustedHeight = 0;
-
-    YAHOO.util.Dom.setStyle(this.previewEl, 'height', '100%');
-    YAHOO.util.Dom.setStyle(this.previewEl, 'width', '100%');
-
-    if (wImg < wThb && hImg < hThb) {
-      YAHOO.util.Dom.removeClass(this.previewEl, 'cstudio-form-control-asset-picker-preview-content');
-      YAHOO.util.Dom.setStyle(this.imageEl, 'height', hImg + 'px');
-      YAHOO.util.Dom.setStyle(this.imageEl, 'width', wImg + 'px');
-    } else {
-      if (wImg && hImg) {
-        var conversionFactor = wImg / wThb > hImg / hThb ? wImg / wThb : hImg / hThb;
-        adjustedHeight = Math.floor(hImg / conversionFactor);
-        adjustedWidth = Math.floor(wImg / conversionFactor);
-
-        YAHOO.util.Dom.setStyle(this.imageEl, 'height', adjustedHeight + 'px');
-        YAHOO.util.Dom.setStyle(this.imageEl, 'width', adjustedWidth + 'px');
-      } else {
-        YAHOO.util.Dom.setStyle(this.imageEl, 'height', hThb + 'px');
-        YAHOO.util.Dom.setStyle(this.imageEl, 'width', wThb + 'px');
-      }
-    }
+    // var wImg = this.originalWidth || 0;
+    // var hImg = this.originalHeight || 0;
+    // var wThb = parseInt(this.previewBoxWidth, 10);
+    // var hThb = parseInt(this.previewBoxHeight, 10);
+    // var adjustedWidth = 0;
+    // var adjustedHeight = 0;
+    //
+    // YAHOO.util.Dom.setStyle(this.previewEl, 'height', '100%');
+    // YAHOO.util.Dom.setStyle(this.previewEl, 'width', '100%');
+    //
+    // if (wImg < wThb && hImg < hThb) {
+    //   YAHOO.util.Dom.removeClass(this.previewEl, 'cstudio-form-control-asset-picker-preview-content');
+    //   YAHOO.util.Dom.setStyle(this.imageEl, 'height', hImg + 'px');
+    //   YAHOO.util.Dom.setStyle(this.imageEl, 'width', wImg + 'px');
+    // } else {
+    //   if (wImg && hImg) {
+    //     var conversionFactor = wImg / wThb > hImg / hThb ? wImg / wThb : hImg / hThb;
+    //     adjustedHeight = Math.floor(hImg / conversionFactor);
+    //     adjustedWidth = Math.floor(wImg / conversionFactor);
+    //
+    //     YAHOO.util.Dom.setStyle(this.imageEl, 'height', adjustedHeight + 'px');
+    //     YAHOO.util.Dom.setStyle(this.imageEl, 'width', adjustedWidth + 'px');
+    //   } else {
+    //     YAHOO.util.Dom.setStyle(this.imageEl, 'height', hThb + 'px');
+    //     YAHOO.util.Dom.setStyle(this.imageEl, 'width', wThb + 'px');
+    //   }
+    // }
   },
 
   setValue: function (value, attribute) {
@@ -827,6 +754,7 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
 
     if (value === null || value === '') {
       this.noPreviewEl.style.display = 'inline';
+      this.noPreviewEl.parentElement.classList.add('no-selection');
     } else {
       if (this.external) {
         this.previewEl.src = value.replace(/ /g, '%20');
@@ -835,10 +763,11 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
       }
       this.previewEl.style.display = 'inline';
       this.noPreviewEl.style.display = 'none';
+      this.noPreviewEl.parentElement.classList.remove('no-selection');
       this.urlEl.textContent = this.external ? value.replace('?crafterCMIS=true', '') : value;
       this.downloadEl.href = this.external ? value.replace('?crafterCMIS=true', '') : value;
 
-      this.addEl.value = CMgs.format(langBundle, 'replace');
+      this.$addBtn.text(CMgs.format(langBundle, 'replace'));
 
       var loaded = false;
       var image = new Image();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -120,21 +120,16 @@
     }
 
     Communicator.prototype = {
-      addOrigin: addOrigin,
-
-      addTargetWindow: addTargetWindow,
-
-      removeTargetWindow: removeTargetWindow,
-
+      addOrigin,
+      addTargetWindow,
+      removeTargetWindow,
       isAllowedOrigin: isAllowedOrigin,
-
-      publish: publish,
+      publish,
       pub: publish,
-
-      subscribe: subscribe,
+      subscribe,
       on: subscribe,
-
-      unsubscribe: unsubscribe
+      unsubscribe,
+      dispatch
     };
 
     /*public*/
@@ -230,8 +225,17 @@
     function sendMessage(message, targetWindows) {
       !targetWindows && (targetWindows = this.getTargetWindows());
 
+      message.meta = { craftercms: true, source: 'legacy' };
+
       for (var i = 0, l = targetWindows.length; i < l; ++i) {
         targetWindows[i].window.postMessage(message, targetWindows[i].origin);
+      }
+    }
+
+    function dispatch(action) {
+      var targetWindows = this.getTargetWindows();
+      for (var i = 0, l = targetWindows.length; i < l; ++i) {
+        targetWindows[i].window.postMessage(action, targetWindows[i].origin);
       }
     }
 
@@ -239,22 +243,33 @@
     function receiveMessage(event) {
       if (this.isAllowedOrigin(event.origin)) {
         var data = event.data;
-        if (data != null && typeof data === 'object' && 'topic' in data) {
-          doLocalPublish(data.topic, data.scope, data.message);
+        if (data != null && typeof data === 'object') {
+          if ('topic' in data) {
+            doLocalPublish(data.topic, data.scope, data.message);
+          } else if (
+            // This is the signature of ui4 messages
+            'type' in data &&
+            'meta' in data
+          ) {
+            doLocalPublish(data.type, null, data.payload);
+          }
         }
       }
     }
 
-    /*private*/
+    /* private */
     function getScopeSpecificTopic(topic, scope) {
       return topic + (scope ? ':' + scope : '');
     }
 
-    /*private*/
+    /* private */
     function doLocalPublish(topic, scope, message) {
       amplify.publish(ALL_TOPICS, topic, message, scope);
       amplify.publish(topic, message, scope);
-      amplify.publish(getScopeSpecificTopic(topic, scope), message, scope);
+      if (scope) {
+        const scoped = getScopeSpecificTopic(topic, scope);
+        amplify.publish(scoped, message, scope);
+      }
     }
 
     Communicator.SCOPE_LOCAL = SCOPE_LOCAL;

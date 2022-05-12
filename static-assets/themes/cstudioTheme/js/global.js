@@ -14,9 +14,12 @@
     g,
     y = l.jQuery,
     p = l.$,
-    o = (l.jQuery = l.$ = function (E, F) {
-      return new o.fn.init(E, F);
-    }),
+    o =
+      (l.jQuery =
+      l.$ =
+        function (E, F) {
+          return new o.fn.init(E, F);
+        }),
     D = /^[^<]*(<(.|\s)+>)[^>]*$|^#([\w-]+)$/,
     f = /^.[^:#\[\.,]*$/;
   o.fn = o.prototype = {
@@ -1085,7 +1088,8 @@
    *  More information: http://sizzlejs.com/
    */
   (function () {
-    var R = /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?/g,
+    var R =
+        /((?:\((?:\([^()]+\)|[^()]+)+\)|\[(?:\[[^[\]]*\]|['"][^'"]*['"]|[^[\]'"]+)+\]|\\.|[^ >+~,(\[\\]+)+|[>+~])(\s*,\s*)?/g,
       L = 0,
       H = Object.prototype.toString;
     var F = function (Y, U, ab, ac) {
@@ -2167,9 +2171,10 @@
         }
       }
     },
-    props: 'altKey attrChange attrName bubbles button cancelable charCode clientX clientY ctrlKey currentTarget data detail eventPhase fromElement handler keyCode metaKey newValue originalTarget pageX pageY prevValue relatedNode relatedTarget screenX screenY shiftKey srcElement target toElement view wheelDelta which'.split(
-      ' '
-    ),
+    props:
+      'altKey attrChange attrName bubbles button cancelable charCode clientX clientY ctrlKey currentTarget data detail eventPhase fromElement handler keyCode metaKey newValue originalTarget pageX pageY prevValue relatedNode relatedTarget screenX screenY shiftKey srcElement target toElement view wheelDelta which'.split(
+        ' '
+      ),
     fix: function (H) {
       if (H[h]) {
         return H;

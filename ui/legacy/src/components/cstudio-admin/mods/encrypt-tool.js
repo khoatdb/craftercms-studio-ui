@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-(function () {
+(function() {
   class EncryptTool {
     constructor(config, el) {
       this.containerEl = el;
@@ -29,6 +29,7 @@
     renderWorkarea() {
       const workarea = document.querySelector('#cstudio-admin-console-workarea');
       const el = document.createElement('div');
+      el.className = 'cstudio-admin-console-workarea-container';
 
       $(workarea).html('');
       workarea.appendChild(el);
@@ -36,6 +37,8 @@
       CrafterCMSNext.render(el, 'EncryptTool', {
         site: CStudioAuthoringContext.site
       });
+      // TODO: This should be removed when ContentTypes and WorkflowStates are Reactified
+      CStudioAuthoring.ContextualNav.AdminConsoleNav.initActions([]);
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -116,9 +116,7 @@ CStudioAuthoring.Messages.registerBundle('siteDashboard', 'de', {
   dashletIconGuideExcel: 'MS Excel',
   dashletIconGuideZip: 'ZIP',
   dashletIconGuideGroovy: 'Groovy',
-  dashletIconGuideOtherFiles: 'sonstige Datei',
-
-  dependenciesLabel: 'Abhängigkeiten'
+  dashletIconGuideOtherFiles: 'sonstige Datei'
 });
 
 CStudioAuthoring.Messages.registerBundle('contextnav', 'de', {
@@ -225,7 +223,7 @@ CStudioAuthoring.Messages.registerBundle('previewTools', 'de', {
   general: 'Allgemein',
   text: 'Text',
 
-  //login
+  // login
   login: 'Anmeldung',
   emailUsername: 'Email/Nutzername',
   password: 'Passwort',
@@ -241,7 +239,7 @@ CStudioAuthoring.Messages.registerBundle('previewTools', 'de', {
   sites: 'Projekte',
   help: 'Hilfe',
   documentation: 'Dokumentation',
-  about: 'Über Crafter CMS',
+  about: 'Über CrafterCMS',
   settings: 'Einstellungen',
   signOut: 'Abmelden',
   mainMenu: 'Hauptmenü',
@@ -264,7 +262,7 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'de', {
   templates: 'Templates',
   scripts: 'Scripts',
   adminConsole: 'Adminbereich',
-  siteconfig: 'Konfiguration',
+  siteconfig: 'Projektkonfiguration',
   previewSync: 'Vorschau Sync',
   syncrepo: 'Sync aus Repository',
   allSites: 'Alle Projekte',
@@ -329,8 +327,8 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'de', {
 });
 
 CStudioAuthoring.Messages.registerBundle('forms', 'de', {
-  rteConfigJSONParseError:
-    'Die RTE-`{0}`-Konfiguration ist fehlerhaft: {1}. Überprüfen Sie Ihre RTE-Konfiguration {0} und stellen Sie sicher, dass es sich um gültiges JSON handelt. Konfigurationsinhalt unten angehängt:',
+  styleFormatsParseError:
+    'Die RTE-`styleFormats`-Konfiguration ist fehlerhaft: {0}. Überprüfen Sie Ihre RTE-Konfiguration styleFormats und stellen Sie sicher, dass es sich um gültiges JSON handelt. Konfigurationsinhalt unten angehängt:',
   new: 'Neu',
   expandAll: 'Alle aufklappen',
   collapseAll: 'Alle zuklappen',
@@ -360,7 +358,6 @@ CStudioAuthoring.Messages.registerBundle('forms', 'de', {
   loading: 'Lädt&hellip;',
   viewSample: 'Beispiel einblenden',
   hideSample: 'Beispiel ausblenden',
-  clearCache: 'Cache löschen',
   continueEditing: 'Weiter bearbeiten',
   notification: 'Benachrichtigung',
   previewLoaded: 'Vorschau geladen.',
@@ -713,8 +710,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'de', {
   /*Controls*/
   textArea: 'Textarea',
   linkTextarea: 'Link Textarea',
-  richTextEditor: 'Rich Text Editor (TinyMCE 2)',
-  rteTinyMCE5: 'Rich Text Editor (TinyMCE 5)',
+  rte: 'Rich Text Editor',
   input: 'Eingabefeld',
   numericInput: 'Numerische Eingabe',
   uuid: 'UUID',
@@ -942,8 +938,9 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'de', {
   confTabRoleMappingsDesc: 'Definiert Benutzerrollen im Projekt',
   confTabSiteConfiguration: 'Projekt Konfiguration',
   confTabSiteConfigurationDesc: 'Definiert allgemeine Projekteinstellungen',
-  confTabSiteConf: 'Projekt Administration',
-  confTabSiteConfDesc: 'Konfiguriert administrative Werkzeuge im Projekt',
+  confTabSiteConf: 'Inhaltstyp-Editor-Konfig',
+  confTabSiteConfDesc:
+    'Definiert Steuerelemente und Datenquellen, die für die Bearbeitung von Inhaltstypen verfügbar sind',
   confTabWorkflowConf: 'Workflow',
   confTabWorkflowConfDesc: 'Definiert den Workflow für das Projekt',
   confCacheCleared: 'Konfigurationsdateien neu eingelesen.',
@@ -955,8 +952,43 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'de', {
   confTabCMISConfigurationDesc: 'In dieser Datei werden alle im Projekt verwendeten CMIS-Schnittstellen konfiguriert',
   confTabEngineSiteConfiguration: 'Crafter Engine',
   confTabEngineSiteConfigurationDesc: 'Konfigurationsdatei für Crafter Engine',
-  confTabEngineSiteAppContextConfiguration: 'Crafter Engine Application Context',
+  confTabEngineSiteConfigurationPreview: 'Konfigurationsdatei für Crafter Engine - Vorschau',
+  confTabEngineSiteConfigurationStaging: 'Konfigurationsdatei für Crafter Engine - Inszenierung',
+  confTabEngineSiteConfigurationLive: 'Konfigurationsdatei für Crafter Engine - Leben',
+  confTabEngineSiteAppContextConfiguration: 'Anwendungskontext der Crafter Engine',
   confTabEngineSiteAppContextConfigurationDesc: 'ApplicationContext Datei für Crafter Engine',
+  confTabEngineSiteAppContextConfigurationPreview: 'Anwendungskontext der Crafter Engine - Vorschau',
+  confTabEngineSiteAppContextConfigurationStaging: 'Anwendungskontext der Crafter Engine - Inszenierung',
+  confTabEngineSiteAppContextConfigurationLive: 'Anwendungskontext der Crafter Engine - Leben',
+  confTabTranslationConf: 'Übersetzungskonfiguration',
+  confTabTranslationConfDesc: 'Definiert unterstützte Sprachen und deren Lösung',
+  confTabSitePolicyConf: 'Site-Richtlinienkonfiguration',
+  confTabSitePolicyConfDesc: 'Definiert Richtlinien zum Überprüfen von Inhaltsvorgängen',
+  confTabUiConf: 'Konfiguration der Benutzeroberfläche',
+  confTabUiConfDesc: 'Definiert die in der Benutzeroberfläche angezeigten Widgets',
+  confTabMimeTypes: 'Mime-Typen',
+  confTabMimeTypesDesc:
+    'Diese Datei konfiguriert die Mime-Typen, die Symbole für diese Site / Blaupause überschreiben.',
+  confTabEngineUrlRewriteConf: 'Konfiguration zum Umschreiben der Engine-URL (XML-Stil)',
+  confTabEngineUrlRewriteConfDesc: 'Diese Datei konfiguriert die von Crafter Engine verwendeten Site-Eigenschaften',
+  confTabEngineUrlRewriteConfPreview: 'Konfiguration zum Umschreiben der Engine-URL (XML-Stil) - Vorschau',
+  confTabEngineUrlRewriteConfStaging: 'Konfiguration zum Umschreiben der Engine-URL (XML-Stil) - Inszenierung',
+  confTabEngineUrlRewriteConfLive: 'Konfiguration zum Umschreiben der Engine-URL (XML-Stil) - Leben',
+  confTabDependencyResolverConf: 'Konfiguration des Abhängigkeitsauflösers',
+  confTabDependencyResolverConfDesc:
+    'Diese Datei konfiguriert, welche Dateipfade Crafter als Abhängigkeit betrachtet und wie sie extrahiert werden sollen.',
+  confTabAWSProfiles: 'AWS-Profile',
+  confTabAWSProfilesDesc: 'Konfigurationsdatei für AWS-Profile.',
+  confTabBoxProfiles: 'Box-Profile',
+  confTabBoxProfilesDesc: 'Konfigurationsdatei für Box-Profile.',
+  confTabWebDAVProfiles: 'WebDAV-Profile',
+  confTabWebDAVProfilesDesc: 'Konfigurationsdatei für WebDAV-Profile.',
+  confTabAssetProcessing: 'Asset-Verarbeitung',
+  confTabAssetProcessingDesc: 'Konfigurationsdatei für die Asset-Verarbeitung.',
+  confTabBlobStores: 'Blob Stores',
+  confTabBlobStoresDesc: 'Blob speichert die Konfigurationsdatei.',
+  confTabProxyConfig: 'Proxy-Konfiguration',
+  confTabProxyConfigDesc: 'Diese Datei konfiguriert die Proxyserver für die Vorschau.',
 
   /* Image */
   constraintsError: 'Das Bild entspricht nicht den geforderten Maßen',
@@ -990,7 +1022,6 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'de', {
   contentTypeNotFound: 'Der Content-Typ für die Komponente wurde nicht gefunden.',
   failConfig: 'Fehler beim Laden der Konfiguration.',
   noConfPathError: 'Der Pfad für die Konfiguration ist nicht definiert.',
-  clearCacheError: 'Fehler beim Versuch, die Konfigurationsdateien neu einzulesen',
   endpointsError: 'Fehler beim Laden der Endpunkte.',
   jobsError: 'Fehler beim Laden der Jobs.',
   cancelDeploymentError: 'Fehler beim Versuch, das Deployment abzubrechen.',

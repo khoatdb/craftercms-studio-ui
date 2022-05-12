@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -30,7 +30,6 @@ CStudioAuthoring.Dialogs.panelPageNavOrder = CStudioAuthoring.Dialogs.panelPageN
 
   create: function (id) {
     reorderPageMap['dirty'] = false;
-    //YAHOO.namespace("cstudio.container");
 
     reorderPanel = new YAHOO.widget.Panel(id, {
       width: '600px',
@@ -47,7 +46,7 @@ CStudioAuthoring.Dialogs.panelPageNavOrder = CStudioAuthoring.Dialogs.panelPageN
     reorderPanel.render();
     reorderPanel.show();
 
-    //set scroll bar position to set "This Page" element in view
+    // set scroll bar position to set "This Page" element in view
     var scrlDivObj = YAHOO.util.Dom.get('submitxformscroll');
     if (scrlDivObj && scrlDivObj.clientHeight < scrlDivObj.scrollHeight) {
       var sortableObj = YAHOO.util.Dom.get('sortable');
@@ -153,7 +152,6 @@ CStudioAuthoring.Dialogs.panelPageNavOrder = CStudioAuthoring.Dialogs.panelPageN
       // Added ~ to create a unique key. Order could be same for a new page
       orderToPageMap[orderNum + '~' + orderDetails.id] = orderDetails;
       orderArray[i] = orderNum + '~' + orderDetails.id;
-      delete orderDetails;
     }
 
     orderArray.sort(function (a, b) {
@@ -180,7 +178,7 @@ CStudioAuthoring.Dialogs.panelPageNavOrder = CStudioAuthoring.Dialogs.panelPageN
       var txt;
 
       if (thisPageObject.id == orderToPageMap[orderNumber].id) {
-        //if this page then change text on element
+        // if this page then change text on element
         txt = document.createTextNode(orderToPageMap[orderNumber].internalName);
         li.style.color = '#006699';
         li.style.backgroundColor = '#D5E6F2';
@@ -217,15 +215,16 @@ CStudioAuthoring.Dialogs.panelPageNavOrder = CStudioAuthoring.Dialogs.panelPageN
     dndOKButtonDiv.className = 'cstudio-xform-button btn btn-primary';
     dndOKButtonDiv.setAttribute('type', 'submit');
     dndOKButtonDiv.setAttribute('value', 'OK');
-    YAHOO.util.Dom.get('reorderButtonWrapper').appendChild(dndOKButtonDiv);
+    dndOKButtonDiv.style.marginLeft = '15px';
 
     var dndCancelButtonDiv = document.createElement('input');
     dndCancelButtonDiv.id = 'dndCancelButton';
     dndCancelButtonDiv.className = 'cstudio-xform-button btn btn-default';
-    dndCancelButtonDiv.style.marginLeft = '15px';
     dndCancelButtonDiv.setAttribute('type', 'submit');
     dndCancelButtonDiv.setAttribute('value', 'Cancel');
+
     YAHOO.util.Dom.get('reorderButtonWrapper').appendChild(dndCancelButtonDiv);
+    YAHOO.util.Dom.get('reorderButtonWrapper').appendChild(dndOKButtonDiv);
 
     if (config.control.readonly != true) {
       new YAHOO.util.DDTarget('sortable');
@@ -234,7 +233,7 @@ CStudioAuthoring.Dialogs.panelPageNavOrder = CStudioAuthoring.Dialogs.panelPageN
         new CStudioForms.DDList('li1_' + eval(j + 1), draggableItemId); // set item to be dragged
       }
     } else {
-      dndOKButtonDiv.style.visibility = 'hidden'; //Hidden the ok button
+      dndOKButtonDiv.style.visibility = 'hidden'; // Hidden the ok button
     }
 
     YAHOO.util.Event.addListener('dndOKButton', 'click', function () {
@@ -258,7 +257,7 @@ CStudioAuthoring.Dialogs.panelPageNavOrder = CStudioAuthoring.Dialogs.panelPageN
 
       var prevPath = reorderPageMap['prevPath'];
       if (prevPath) {
-        //prev path not null
+        // prev path not null
         // remove li1_ from prevPath and nextPath
         prevPathIdx = prevPath.indexOf('li1_');
         prevPath = prevPath.substring(prevPathIdx + 4);
@@ -266,7 +265,7 @@ CStudioAuthoring.Dialogs.panelPageNavOrder = CStudioAuthoring.Dialogs.panelPageN
 
       var nextPath = reorderPageMap['nextPath'];
       if (nextPath) {
-        //next path not null
+        // next path not null
         nextPathIdx = nextPath.indexOf('li1_');
         nextPath = nextPath.substring(nextPathIdx + 4);
       }

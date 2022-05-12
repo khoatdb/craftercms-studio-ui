@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -13,6 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+import Person from '../models/Person';
 
 /**
  * Converts a string separated by dashes into a
@@ -28,8 +30,8 @@ export function camelize(str: string) {
 /**
  * Capitalizes the first letter of a string and down-cases all the others.
  **/
-export function capitalize(str: string) {
-  return str.charAt(0).toUpperCase() + str.substring(1).toLowerCase();
+export function capitalize(str: string): string {
+  return `${str.charAt(0).toUpperCase()}${str.substr(1)}`;
 }
 
 /**
@@ -51,14 +53,111 @@ export function dasherize(str: string) {
   return str.replace(/_/g, '-');
 }
 
+export function removeSpaces(str: string) {
+  return str.replace(/\s+/g, '');
+}
+
+export function removeLastPiece(str: string, splitChar: string = '.'): string {
+  return (str = `${str}`).substr(0, str.lastIndexOf(splitChar));
+}
+
+export function popPiece(str: string, splitChar: string = '.'): string {
+  return String(str).split(splitChar).pop();
+}
+
+export function isJSON(str: string): boolean {
+  throw new Error('[isJSON] Not implemented.');
+}
+
+export function hasUppercaseChars(str: string) {
+  return /[A-Z]/.test(str);
+}
+
+export function getInitials(str: string): string;
+export function getInitials(person: Person): string;
+export function getInitials(str: string | Person): string {
+  if (!str) {
+    return '';
+  } else if (typeof str === 'string') {
+    const pieces = (str ?? '').split(' ');
+    return `${pieces[0].substr(0, 1)}${pieces[1] ? pieces[1].substr(0, 1) : ''}`.toUpperCase();
+  } else {
+    return `${str.firstName.substr(0, 1)}${str.lastName.substr(0, 1)}`.toUpperCase();
+  }
+}
+
+export function formatBytes(bytes: number, decimals: number = 2) {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
 export function isBlank(str: string): boolean {
-  return str === '';
+  return (str ?? '').trim() === '';
+}
+
+export function dataUriToBlob(dataURI: string) {
+  // convert base64 to raw binary data held in a string
+  // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+  const byteString = atob(dataURI.split(',')[1]);
+
+  // separate out the mime component
+  const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+  // write the bytes of the string to an ArrayBuffer
+  const ab = new ArrayBuffer(byteString.length);
+
+  // create a view into the buffer
+  const ia = new Uint8Array(ab);
+
+  // set the bytes of the buffer to the correct values
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+
+  // write the ArrayBuffer to a blob, and you're done
+  const blob = new Blob([ab], { type: mimeString });
+  return blob;
+}
+
+export function fileNameFromPath(path: string) {
+  return path.substr(path.lastIndexOf('/') + 1).replace(/\.xml/, '');
+}
+
+export function escapeHTML(str: string): string {
+  const element = document.createElement('textarea');
+  element.textContent = str;
+  return element.innerHTML;
 }
 
 export function unescapeHTML(html: string): string {
-  const txt = document.createElement('textarea');
-  txt.innerHTML = html;
-  return txt.value;
+  const element = document.createElement('textarea');
+  element.innerHTML = html;
+  return element.textContent;
+}
+
+export function legacyEscapeXml(value: string): string {
+  if (typeof value === 'string') {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  return value;
+}
+
+export function legacyUnescapeXml(value: string): string {
+  if (typeof value === 'string') {
+    return value
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&');
+  }
+  return value;
 }
 
 export function escapeHTML(str: string): string {
@@ -82,3 +181,29 @@ export function bytesToSize(bytes: number, separator: string = '') {
 export function insureSingleSlash(url: string): string {
   return /^(http|https):\/\//g.test(url) ? url.replace(/([^:]\/)\/+/g, '$1') : url.replace(/\/+/g, '/');
 }
+
+export function getSimplifiedVersion(version: string, options: { minor?: boolean; patch?: boolean } = {}) {
+  if (!version) {
+    return version;
+  }
+  const { minor = true, patch = false } = options;
+  const pieces = version.split('.');
+  !patch && pieces.pop();
+  !minor && pieces.pop();
+  return pieces.join('.');
+}
+
+export function preFill(str: string | number, minLength: number = 2, char: string = '0'): string {
+  str = `${str}`;
+  return str.length >= minLength ? str : `${new Array(minLength - str.length).fill(char).join('')}${str}`;
+}
+
+export function postFill(str: string | number, minLength: number = 2, char: string = '0'): string {
+  str = `${str}`;
+  return str.length >= minLength ? str : `${str}${new Array(minLength - str.length).fill(char).join('')}`;
+}
+
+export const isSimple = (str: string | number, separator = '.') => String(str).split(separator).length === 1;
+
+export const isSymmetricCombination = (string1: string | number, string2: string | number, separator = '.') =>
+  String(string1).split(separator).length === String(string2).split(separator).length;

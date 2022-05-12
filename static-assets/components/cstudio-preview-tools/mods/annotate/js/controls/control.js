@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-DrawingBoard.Control = function (drawingBoard, opts) {
+DrawingBoard.Control = function(drawingBoard, opts) {
   this.board = drawingBoard;
   this.opts = $.extend({}, this.defaults, opts);
 
@@ -32,28 +32,28 @@ DrawingBoard.Control.prototype = {
 
   defaults: {},
 
-  initialize: function () {},
+  initialize: function() {},
 
-  addToBoard: function () {
+  addToBoard: function() {
     this.board.addControl(this);
   },
 
-  onBoardReset: function (opts) {}
+  onBoardReset: function(opts) {}
 };
 
-//extend directly taken from backbone.js
-DrawingBoard.Control.extend = function (protoProps, staticProps) {
+// extend directly taken from backbone.js
+DrawingBoard.Control.extend = function(protoProps, staticProps) {
   var parent = this;
   var child;
   if (protoProps && protoProps.hasOwnProperty('constructor')) {
     child = protoProps.constructor;
   } else {
-    child = function () {
+    child = function() {
       return parent.apply(this, arguments);
     };
   }
   $.extend(child, parent, staticProps);
-  var Surrogate = function () {
+  var Surrogate = function() {
     this.constructor = child;
   };
   Surrogate.prototype = parent.prototype;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -125,7 +125,6 @@ CStudioAuthoringWidgets.RecentlyMadeLiveDashboard = function (widgetId, pageId) 
     liLoadingEl.appendChild(imgEl);
     containerEl.appendChild(liLoadingEl);
     var filterBydiv = document.createElement('li');
-    //YDom.addClass(filterBydiv, "widget-FilterBy");
 
     var widgetFilterBy = CStudioAuthoring.Service.getWindowState(
       CStudioAuthoringContext.user,
@@ -180,7 +179,7 @@ CStudioAuthoringWidgets.RecentlyMadeLiveDashboard = function (widgetId, pageId) 
         name = name.replace(/Z$/, '+00:00');
         const match = name.match(/(\d{4}-\d{2}-\d{2})(([+\-])\d{2}:\d{2})/);
         const dateUTC = `${match[1]}T00:00:00${match[2]}`;
-        const formattedDate = CStudioAuthoring.Utils.formatDateFromUTC(dateUTC, studioTimeZone, 'date');
+        const formattedDate = CStudioAuthoring.Utils.formatDateFromUTC(dateUTC, studioTimeZone);
 
         html.push('<td colspan="6">');
 
@@ -233,7 +232,6 @@ CStudioAuthoringWidgets.RecentlyMadeLiveDashboard = function (widgetId, pageId) 
         this.tooltipLabels.push(ttSpanId);
 
         var itemIconStatus = CStudioAuthoring.Utils.getIconFWClasses(item);
-
         itemIconStatus += item.disabled && !item.previewable ? ' non-previewable-disabled' : '';
 
         // this API will replace double quotes with ASCII character
@@ -268,7 +266,7 @@ CStudioAuthoringWidgets.RecentlyMadeLiveDashboard = function (widgetId, pageId) 
             item.previewable ? ' previewLink' : ' non-previewable-link'
           }" ${
             item.previewable
-              ? `href="/studio/preview/#/?page=${currentBrowserUri}&site=${CStudioAuthoringContext.site}"`
+              ? `href="/studio/preview#/?page=${currentBrowserUri}&site=${CStudioAuthoringContext.site}"`
               : ''
           }>`,
           displayName,

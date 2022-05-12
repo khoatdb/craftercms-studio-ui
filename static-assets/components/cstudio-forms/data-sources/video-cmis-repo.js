@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -78,13 +78,13 @@ YAHOO.extend(CStudioForms.Datasources.VideoCMISRepo, CStudioForms.CStudioFormDat
               previewUrl;
 
             if (item.clone) {
-              //clone
+              // clone
               relativeUrl = _self.studioPath.endsWith('/')
                 ? _self.studioPath + fileName
                 : _self.studioPath + '/' + fileName;
               previewUrl = CStudioAuthoringContext.previewAppBaseUri + relativeUrl;
             } else {
-              //link
+              // link
               previewUrl = repo['download-url-regex'].replace('{item_id}', item.itemId);
               relativeUrl = repo['download-url-regex'].replace('{item_id}', item.itemId) + '?crafterCMIS=true';
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -17,11 +17,11 @@
 DrawingBoard.Control.Color = DrawingBoard.Control.extend({
   name: 'colors',
 
-  initialize: function () {
+  initialize: function() {
     this.initTemplate();
 
     var that = this;
-    this.$el.on('click', '.drawing-board-control-colors-picker', function (e) {
+    this.$el.on('click', '.drawing-board-control-colors-picker', function(e) {
       var color = $(this).attr('data-color');
       that.board.setColor(color);
       that.$el
@@ -30,21 +30,17 @@ DrawingBoard.Control.Color = DrawingBoard.Control.extend({
         .attr('data-color', color);
 
       that.board.ev.trigger('color:changed', color);
-      that.$el
-        .find('.drawing-board-control-colors-rainbows')
-        .addClass('drawing-board-utils-hidden');
+      that.$el.find('.drawing-board-control-colors-rainbows').addClass('drawing-board-utils-hidden');
 
       e.preventDefault();
     });
 
-    this.$el.on('click', '.drawing-board-control-colors-current', function (e) {
-      that.$el
-        .find('.drawing-board-control-colors-rainbows')
-        .toggleClass('drawing-board-utils-hidden');
+    this.$el.on('click', '.drawing-board-control-colors-current', function(e) {
+      that.$el.find('.drawing-board-control-colors-rainbows').toggleClass('drawing-board-utils-hidden');
       e.preventDefault();
     });
 
-    $('body').on('click', function (e) {
+    $('body').on('click', function(e) {
       var $target = $(e.target);
       var $relatedButton = $target.hasClass('drawing-board-control-colors-current')
         ? $target
@@ -59,7 +55,7 @@ DrawingBoard.Control.Color = DrawingBoard.Control.extend({
     });
   },
 
-  initTemplate: function () {
+  initTemplate: function() {
     var tpl =
       '<div class="drawing-board-control-inner">' +
       '<div class="drawing-board-control-colors-current" style="background-color: {{color}}" data-color="{{color}}"></div>' +
@@ -70,7 +66,7 @@ DrawingBoard.Control.Color = DrawingBoard.Control.extend({
     var rainbows = '';
     $.each(
       [0.75, 0.5, 0.25],
-      $.proxy(function (key, val) {
+      $.proxy(function(key, val) {
         var i = 0;
         var additionalColor = null;
         rainbows += '<div class="drawing-board-control-colors-rainbow">';
@@ -88,46 +84,44 @@ DrawingBoard.Control.Color = DrawingBoard.Control.extend({
       }, this)
     );
 
-    this.$el.append(
-      $(DrawingBoard.Utils.tpl(tpl, { color: this.board.color, rainbows: rainbows }))
-    );
+    this.$el.append($(DrawingBoard.Utils.tpl(tpl, { color: this.board.color, rainbows: rainbows })));
     this.$el.find('.drawing-board-control-colors-rainbows').addClass('drawing-board-utils-hidden');
   },
 
-  onBoardReset: function (opts) {
+  onBoardReset: function(opts) {
     this.board.setColor(this.$el.find('.drawing-board-control-colors-current').attr('data-color'));
   },
 
-  _rgba: function (r, g, b, a) {
+  _rgba: function(r, g, b, a) {
     return {
       r: r,
       g: g,
       b: b,
       a: a,
-      toString: function () {
+      toString: function() {
         return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')';
       }
     };
   },
 
-  _hsl: function (h, s, l) {
+  _hsl: function(h, s, l) {
     return {
       h: h,
       s: s,
       l: l,
-      toString: function () {
+      toString: function() {
         return 'hsl(' + h + ', ' + s * 100 + '%, ' + l * 100 + '%)';
       }
     };
   },
 
-  _hex2Rgba: function (hex) {
+  _hex2Rgba: function(hex) {
     var num = parseInt(hex.substring(1), 16);
     return this._rgba(num >> 16, (num >> 8) & 255, num & 255, 1);
   },
 
   //conversion function (modified a bit) taken from http://mjijackson.com/2008/02/rgb-to-hsl-and-rgb-to-hsv-color-model-conversion-algorithms-in-javascript
-  _hsl2Rgba: function (hsl) {
+  _hsl2Rgba: function(hsl) {
     var h = hsl.h / 360,
       s = hsl.s,
       l = hsl.l,

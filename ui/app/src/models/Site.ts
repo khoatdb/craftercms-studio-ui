@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Blueprint } from './Blueprint';
+import { MarketplacePlugin } from './MarketplacePlugin';
 
 interface View {
   title: string;
@@ -27,13 +27,13 @@ export interface Views {
 }
 
 export interface SiteState {
-  [key: string]: string | boolean | Blueprint | number | object;
-  blueprint: Blueprint;
+  blueprint: MarketplacePlugin;
   siteId: string;
+  siteName: string;
   siteIdExist: boolean;
+  siteNameExist: boolean;
   invalidSiteId: boolean;
   description: string;
-  pushSite: boolean;
   useRemote: boolean;
   createAsOrphan: boolean;
   repoUrl: string;
@@ -47,7 +47,7 @@ export interface SiteState {
   repoKey: string;
   submitted: boolean;
   selectedView: number;
-  details: { blueprint: Blueprint; index: number };
+  details: { blueprint: MarketplacePlugin; index: number };
   blueprintFields?: {
     [key: string]: string;
   };
@@ -57,11 +57,13 @@ export interface SiteState {
     key: boolean;
   };
   showIncompatible: boolean;
+
+  [key: string]: string | boolean | MarketplacePlugin | number | object;
 }
 
-export interface Site {
-  [key: string]: any;
+export interface CreateSiteMeta {
   siteId: string;
+  siteName?: string;
   description?: string;
   singleBranch?: boolean;
   authenticationType?: string;
@@ -80,11 +82,12 @@ export interface Site {
   siteParams?: {
     [key: string]: string;
   };
+  createAsOrphan: boolean;
 }
 
 export interface MarketplaceSite {
-  [key: string]: any;
   siteId: string;
+  name?: string;
   blueprintId: string;
   blueprintVersion: {
     major: number;
@@ -94,4 +97,44 @@ export interface MarketplaceSite {
   siteParams?: {
     [key: string]: string;
   };
+  sandboxBranch?: string;
+  description: string;
+}
+
+export interface Site {
+  id: string;
+  uuid: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+}
+
+export interface BackendSite {
+  siteId: string;
+  uuid: string;
+  name: string;
+  desc: string;
+}
+
+export interface LegacySite {
+  siteId: string;
+  desc: string;
+}
+
+export interface Action {
+  type: 'CREATE' | 'RENAME' | 'MOVE' | 'COPY';
+  source?: string;
+  target: string;
+  recursive?: boolean;
+  contentMetadata?: {
+    fileSize?: number;
+    contentType?: string;
+  };
+}
+
+export interface ContentValidationResult {
+  type: string;
+  target: string;
+  allowed: boolean;
+  modifiedValue: string;
 }

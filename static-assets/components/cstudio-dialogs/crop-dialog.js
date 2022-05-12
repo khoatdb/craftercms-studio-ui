@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -153,8 +153,9 @@ CStudioAuthoring.Dialogs.CropDialog = CStudioAuthoring.Dialogs.CropDialog || {
       '</div>' +
       '</div>' +
       '<div class="contentTypePopupBtn" id="crop-popup-btns"> ' +
+      '<input type="button" class="btn btn-default cstudio-xform-button" id="uploadCancelButton" value="Cancel" />' +
       '<input type="button" class="btn btn-primary cstudio-xform-button ok" id="cropButton" value="Crop" />' +
-      '<input type="button" class="btn btn-default cstudio-xform-button" id="uploadCancelButton" value="Cancel" /></div>' +
+      '</div>' +
       '</div>' +
       '</div> ' +
       '</div>';
@@ -255,12 +256,10 @@ CStudioAuthoring.Dialogs.CropDialog = CStudioAuthoring.Dialogs.CropDialog || {
             $('#zoomMessage').removeClass('hidden');
             $dataWidth.addClass('error');
             $dataHeight.addClass('error');
-            //$('#cropButton').prop('disabled',true);
           } else {
             $('#zoomMessage').addClass('hidden');
             $dataWidth.removeClass('error');
             $dataHeight.removeClass('error');
-            //$('#cropButton').prop('disabled',false);
           }
         } else {
           inputValidation(parseInt(minHeightCropBox), parseInt(maxHeightCropBox), $dataHeight, $dataWidth);
@@ -277,7 +276,6 @@ CStudioAuthoring.Dialogs.CropDialog = CStudioAuthoring.Dialogs.CropDialog || {
         $('#zoomMessage').addClass('hidden');
         $dataHeight.removeClass('error');
         $dataWidth.removeClass('error');
-        //$('#cropButton').prop('disabled',false);
       }
     });
 
@@ -302,14 +300,13 @@ CStudioAuthoring.Dialogs.CropDialog = CStudioAuthoring.Dialogs.CropDialog || {
       ) {
         $('#zoomMessage').addClass('hidden');
         input.removeClass('error');
-        //$('#cropButton').prop('disabled',false);
+        // $('#cropButton').prop('disabled',false);
       } else {
         $('#zoomMessage').removeClass('hidden');
         input.addClass('error');
         // $('#cropButton').prop('disabled',true);
       }
       if (input.hasClass('error') || auxInput.hasClass('error')) {
-        //$('#cropButton').prop('disabled',true);
         $('#zoomMessage').removeClass('hidden');
       }
     }
@@ -341,7 +338,7 @@ CStudioAuthoring.Dialogs.CropDialog = CStudioAuthoring.Dialogs.CropDialog || {
 
       if (newName) {
         var re = /(?:\.([^.]+))?$/,
-          ext = re.exec(imageData.relativeUrl)[1], //get original image extension
+          ext = re.exec(imageData.relativeUrl)[1], // get original image extension
           relativeUrlLastSlashIndex = imageData.relativeUrl.lastIndexOf('/'),
           previewUrlLastSlashIndex = imageData.previewUrl.lastIndexOf('/'),
           relativeFolder = imageData.relativeUrl.substring(0, relativeUrlLastSlashIndex + 1),

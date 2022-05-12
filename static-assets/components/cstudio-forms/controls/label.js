@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -58,6 +58,7 @@ YAHOO.extend(CStudioForms.Controls.Label, CStudioForms.CStudioFormField, {
     var renderAsHTML = false;
     for (var i = 0; i < config.properties.length; i++) {
       var prop = config.properties[i];
+
       if (prop.name === 'text') {
         text = prop.value;
       } else if (prop.name === 'renderAsHTML') {
@@ -86,10 +87,10 @@ YAHOO.extend(CStudioForms.Controls.Label, CStudioForms.CStudioFormField, {
 
   getSupportedProperties: function () {
     return [
-      { 
-        label: CMgs.format(langBundle, 'text'), 
-        name: 'text', 
-        type: 'string' 
+      {
+        label: CMgs.format(langBundle, 'text'),
+        name: 'text',
+        type: 'string'
       },
       {
         label: CMgs.format(langBundle, 'renderAsHTML'),

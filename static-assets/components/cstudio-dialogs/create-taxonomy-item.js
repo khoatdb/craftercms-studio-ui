@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -82,8 +82,8 @@ CStudioAuthoring.Dialogs.DialogCreateTaxonomy = CStudioAuthoring.Dialogs.DialogC
       '</div> ' +
       '<div style="width:100%; text-align:center; margin:0; position:absolute; left:0; bottom:15px;">' +
       '<div class="contentTypePopupBtn"> ' +
+      '<input type="submit" class="cstudio-xform-button cancel" id="closeWCMPopup" value="Cancel" />' +
       '<input type="submit" class="cstudio-xform-button ok" id="submitWCMPopup" value="OK" />' +
-      '<input type="submit" class="cstudio-xform-button cancel" id="closeWCMPopup" value="Cancel /">' +
       '</div></div>' +
       '</form> ' +
       '</div> ' +
@@ -126,7 +126,7 @@ CStudioAuthoring.Dialogs.DialogCreateTaxonomy = CStudioAuthoring.Dialogs.DialogC
             dialogWraper.style.width = newWidth + 10 + 'px';
             dialogWraper.style.height = newHeight + 10 + 'px';
 
-            //reset content type drop down and preview image size
+            // reset content type drop down and preview image size
             var widthDiff = parseInt((newWidth - 600) / 2, 10);
             var heightDiff = newHeight - 240;
 
@@ -147,7 +147,7 @@ CStudioAuthoring.Dialogs.DialogCreateTaxonomy = CStudioAuthoring.Dialogs.DialogC
         YDom.get('cstudio-wcm-popup-div').parentNode.style.zIndex = oPropertyValue + siteContextNavZIndex;
       }
 
-      //set focus on OK Button.
+      // set focus on OK Button.
       if (YDom.get('submitWCMPopup')) {
         YDom.get('submitWCMPopup').focus();
       }
@@ -172,7 +172,6 @@ CStudioAuthoring.Dialogs.DialogCreateTaxonomy = CStudioAuthoring.Dialogs.DialogC
     var taxonomyType = document.getElementById('taxonomyTypeVal').value;
     var taxonomyPath = document.getElementById('taxonomyPathVal').value;
     var taxonomyLabel = document.getElementById('taxonomyLabelVal').value;
-    //var taxonomyDisabled = document.getElementById("taxonomyDisabled").checked;
 
     var createCb = {
       success: function (response) {

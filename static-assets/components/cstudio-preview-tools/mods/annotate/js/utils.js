@@ -7,7 +7,7 @@ DrawingBoard.Utils = {}; /*
 /*!
  * Tim (lite)
  *   github.com/premasagar/tim
- */ DrawingBoard.Utils.tpl = (function () {
+ */ DrawingBoard.Utils.tpl = (function() {
   'use strict';
 
   var start = '{{',
@@ -16,9 +16,9 @@ DrawingBoard.Utils = {}; /*
     pattern = new RegExp(start + '\\s*(' + path + ')\\s*' + end, 'gi'),
     undef;
 
-  return function (template, data) {
+  return function(template, data) {
     // Merge data into the template string
-    return template.replace(pattern, function (tag, token) {
+    return template.replace(pattern, function(tag, token) {
       var path = token.split('.'),
         len = path.length,
         lookup = data,
@@ -52,20 +52,20 @@ DrawingBoard.Utils = {}; /*
  * - create a MicroEventDebug with goodies to debug
  *   - make it safer to use
  */
-DrawingBoard.Utils.MicroEvent = function () {};
+DrawingBoard.Utils.MicroEvent = function() {};
 
 DrawingBoard.Utils.MicroEvent.prototype = {
-  bind: function (event, fct) {
+  bind: function(event, fct) {
     this._events = this._events || {};
     this._events[event] = this._events[event] || [];
     this._events[event].push(fct);
   },
-  unbind: function (event, fct) {
+  unbind: function(event, fct) {
     this._events = this._events || {};
     if (event in this._events === false) return;
     this._events[event].splice(this._events[event].indexOf(fct), 1);
   },
-  trigger: function (event /* , args... */) {
+  trigger: function(event /* , args... */) {
     this._events = this._events || {};
     if (event in this._events === false) return;
     for (var i = 0; i < this._events[event].length; i++) {
@@ -74,8 +74,8 @@ DrawingBoard.Utils.MicroEvent.prototype = {
   }
 };
 
-//I know.
-DrawingBoard.Utils._boxBorderSize = function ($el, withPadding, withMargin, direction) {
+// I know.
+DrawingBoard.Utils._boxBorderSize = function($el, withPadding, withMargin, direction) {
   withPadding = !!withPadding || true;
   withMargin = !!withMargin || false;
   var width = 0,
@@ -89,31 +89,27 @@ DrawingBoard.Utils._boxBorderSize = function ($el, withPadding, withMargin, dire
     if (withPadding) props.push('padding-top', 'padding-bottom');
     if (withMargin) props.push('margin-top', 'margin-bottom');
   }
-  for (var i = props.length - 1; i >= 0; i--)
-    width += parseInt($el.css(props[i]).replace('px', ''), 10);
+  for (var i = props.length - 1; i >= 0; i--) width += parseInt($el.css(props[i]).replace('px', ''), 10);
   return width;
 };
 
-DrawingBoard.Utils.boxBorderWidth = function ($el, withPadding, withMargin) {
+DrawingBoard.Utils.boxBorderWidth = function($el, withPadding, withMargin) {
   return DrawingBoard.Utils._boxBorderSize($el, withPadding, withMargin, 'width');
 };
 
-DrawingBoard.Utils.boxBorderHeight = function ($el, withPadding, withMargin) {
+DrawingBoard.Utils.boxBorderHeight = function($el, withPadding, withMargin) {
   return DrawingBoard.Utils._boxBorderSize($el, withPadding, withMargin, 'height');
 };
 
-DrawingBoard.Utils.isColor = function (string) {
+DrawingBoard.Utils.isColor = function(string) {
   if (!string || !string.length) return false;
-  return (
-    /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(string) ||
-    $.inArray(string.substring(0, 3), ['rgb', 'hsl']) !== -1
-  );
+  return /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(string) || $.inArray(string.substring(0, 3), ['rgb', 'hsl']) !== -1;
 };
 
 /**
  * Packs an RGB color into a single integer.
  */
-DrawingBoard.Utils.RGBToInt = function (r, g, b) {
+DrawingBoard.Utils.RGBToInt = function(r, g, b) {
   var c = 0;
   c |= (r & 255) << 16;
   c |= (g & 255) << 8;
@@ -124,7 +120,7 @@ DrawingBoard.Utils.RGBToInt = function (r, g, b) {
 /**
  * Returns informations on the pixel located at (x,y).
  */
-DrawingBoard.Utils.pixelAt = function (image, x, y) {
+DrawingBoard.Utils.pixelAt = function(image, x, y) {
   var i = (y * image.width + x) * 4;
   var c = DrawingBoard.Utils.RGBToInt(image.data[i], image.data[i + 1], image.data[i + 2]);
 
@@ -139,7 +135,7 @@ DrawingBoard.Utils.pixelAt = function (image, x, y) {
 /**
  * Compares two colors with the given tolerance (between 0 and 255).
  */
-DrawingBoard.Utils.compareColors = function (a, b, tolerance) {
+DrawingBoard.Utils.compareColors = function(a, b, tolerance) {
   if (tolerance === 0) {
     return a === b;
   }
@@ -151,20 +147,15 @@ DrawingBoard.Utils.compareColors = function (a, b, tolerance) {
     ba = a & 255,
     bb = b & 255;
 
-  return (
-    Math.abs(ra - rb) <= tolerance &&
-    Math.abs(ga - gb) <= tolerance &&
-    Math.abs(ba - bb) <= tolerance
-  );
+  return Math.abs(ra - rb) <= tolerance && Math.abs(ga - gb) <= tolerance && Math.abs(ba - bb) <= tolerance;
 };
 
-(function () {
+(function() {
   var lastTime = 0;
   var vendors = ['ms', 'moz', 'webkit', 'o'];
   for (var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
     window.requestAnimationFrame = window[vendors[x] + 'RequestAnimationFrame'];
     window.cancelAnimationFrame =
-      window[vendors[x] + 'CancelAnimationFrame'] ||
-      window[vendors[x] + 'CancelRequestAnimationFrame'];
+      window[vendors[x] + 'CancelAnimationFrame'] || window[vendors[x] + 'CancelRequestAnimationFrame'];
   }
 })();

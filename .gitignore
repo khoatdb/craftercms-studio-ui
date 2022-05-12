@@ -1,5 +1,81 @@
+#Vscode
+.vscode
+
+# JetBrains IDEs >>>
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
+# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# Generated files
+.idea/**/contentModel.xml
+.bic_cache
+
+# Sensitive or high-churn files
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+
+# Gradle
+.idea/**/gradle.xml
+.idea/**/libraries
+
+# Gradle and Maven with auto-import
+# When using Gradle or Maven with auto-import, you should exclude module files,
+# since they will be recreated, and may cause churn.  Uncomment if using
+# auto-import.
+# .idea/artifacts
+# .idea/compiler.xml
+# .idea/jarRepositories.xml
+# .idea/modules.xml
+# .idea/*.iml
+# .idea/modules
+# *.iml
+# *.ipr
+
+# CMake
+cmake-build-*/
+
+# Mongo Explorer plugin
+.idea/**/mongoSettings.xml
+
+# File-based project format
+*.iws
+
 # IntelliJ
-.idea
+out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# JIRA plugin
+atlassian-ide-plugin.xml
+
+# Cursive Clojure plugin
+.idea/replstate.xml
+
+# Crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# Editor-based Rest Client
+.idea/httpRequests
+
+# Android studio 3.1+ serialized cache file
+.idea/caches/build_file_checksums.ser
+
+# <<< JetBrains IDEs
 
 # sass
 .sass-cache
@@ -7,25 +83,74 @@
 # node
 node_modules
 build
+build_tsc
 
+#
 # builds
+#
 static-assets/next
+static-assets/styles/browse.css
+static-assets/styles/forms-engine.css
+static-assets/styles/graphiql.css
 static-assets/styles/guest.css
 static-assets/styles/main.css
 static-assets/styles/search.css
 static-assets/styles/temp.css
-static-assets/styles/forms-engine.css
-static-assets/styles/browse.css
-static-assets/styles/graphiql.css
 static-assets/styles/tinymce-ace.css
-static-assets/styles/fonts.css
-static-assets/components/cstudio-admin/mods/encrypt-tool.js
+static-assets/styles/typography.css
+static-assets/styles/typography.css.map
+static-assets/styles/uppy.css
+static-assets/styles/browse.css.map
+static-assets/styles/forms-engine.css.map
+static-assets/styles/graphiql.css.map
+static-assets/styles/guest.css.map
+static-assets/styles/main.css.map
+static-assets/styles/search.css.map
+static-assets/styles/temp.css.map
+static-assets/styles/tinymce-ace.css.map
+static-assets/styles/uppy.css.map
+static-assets/themes/cstudioTheme/base.css
+static-assets/themes/cstudioTheme/base.css.map
 static-assets/themes/cstudioTheme/css/global.css
+static-assets/themes/cstudioTheme/css/global.css.map
 templates/web/common/js-next-scripts.ftl
+static-assets/scripts/craftercms-xb.umd.js
+static-assets/scripts/preview-landing.umd.js
+ui/app/public/craftercms-xb.umd.js
+ui/app/public/preview-landing.umd.js
+ui/app/public/shared-worker.js
+ui/guest/dist
+ui/app/src/test
+ui/app/src/tests
+static-assets/components/cstudio-admin/mods/encrypt-tool.js
+static-assets/components/cstudio-admin/mods/content-type-propsheet/contentTypes.js
+static-assets/components/cstudio-admin/mods/content-type-propsheet/content-path-input.js
+static-assets/components/cstudio-forms/controls/locale-selector.js
+static-assets/components/cstudio-forms/data-sources/receptacles.js
+static-assets/libs/monaco
+static-assets/libs/ace
+static-assets/images/blueprints
+static-assets/libs/js-yaml
+static-assets/components/cstudio-admin/mods/plugin-management.js
+static-assets/components/cstudio-forms/data-sources/dropTargets.js
 
-ui/app/.bic_cache
-ui/legacy/.bic_cache
-ui/scss/.bic_cache
+# misc
+*.ignore.*
+scripts/settings_local.sh
 
+target/
+
+ui/app/.env.development
+
+# Ignore irrelevant generated translation system files
 ui/app/src/translations/src
 ui/app/src/translations/whitelists
+
+# Yarn
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions

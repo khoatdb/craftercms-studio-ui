@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -68,7 +68,7 @@ YAHOO.extend(CStudioForms.Controls.Dropdown, CStudioForms.CStudioFormField, {
   },
 
   onDatasourceLoaded: function (data) {
-    //TODO: is this being called? forms-engine 1439
+    // TODO: is this being called? forms-engine 1439
     if (this.datasourceName === data.name && !this.datasource) {
       var datasource = this.form.datasourceMap[this.datasourceName];
       this.datasource = datasource;
@@ -121,7 +121,6 @@ YAHOO.extend(CStudioForms.Controls.Dropdown, CStudioForms.CStudioFormField, {
           var validEl = document.createElement('span');
           YAHOO.util.Dom.addClass(validEl, 'validation-hint');
           YAHOO.util.Dom.addClass(validEl, 'cstudio-form-control-validation fa fa-check');
-          controlWidgetContainerEl.appendChild(validEl);
 
           var inputEl = document.createElement('select');
           _self.inputEl = inputEl;
@@ -158,6 +157,7 @@ YAHOO.extend(CStudioForms.Controls.Dropdown, CStudioForms.CStudioFormField, {
           descriptionEl.textContent = config.description;
 
           containerEl.appendChild(titleEl);
+          containerEl.appendChild(validEl);
           containerEl.appendChild(_self.controlWidgetContainerEl);
           containerEl.appendChild(descriptionEl);
         }
@@ -218,7 +218,6 @@ YAHOO.extend(CStudioForms.Controls.Dropdown, CStudioForms.CStudioFormField, {
     var datasource = datasources[0];
     if (datasource) {
       this.datasource = datasource;
-      //datasource.getList(cb);
     } else {
       this.callback = cb;
     }

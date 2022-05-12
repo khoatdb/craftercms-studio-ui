@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -73,6 +73,10 @@
       Topics: {
         ALL: '*',
 
+        // UI4
+        GUEST_CHECK_IN: 'GUEST_CHECK_IN',
+        LEGACY_CHECK_IN: 'LEGACY_CHECK_IN',
+
         GUEST_CHECKIN: 'GUEST_CHECKIN',
         GUEST_CHECKOUT: 'GUEST_CHECKOUT',
         GUEST_SITE_LOAD: 'GUEST_SITE_LOAD',
@@ -98,8 +102,8 @@
         DND_ZONES_MODEL_REQUEST: 'DND_ZONES_MODEL_REQUEST',
         LOAD_MODEL_REQUEST: 'LOAD_MODEL_REQUEST',
         DND_COMPONENTS_PANEL_ON: 'DND_COMPONENTS_PANEL_ON',
-        DND_COMPONENTS_PANEL_OFF: 'DND_COMPONENTS_PANEL_OFF', // preview panel
-        DND_PANEL_OFF: 'DND_PANEL_OFF', // dnd panel
+        DND_COMPONENTS_PANEL_OFF: 'DND_COMPONENTS_PANEL_OFF', //preview panel
+        DND_PANEL_OFF: 'DND_PANEL_OFF', //dnd panel
         ICE_TOOLS_ON: 'ICE_TOOLS_ON',
         ICE_TOOLS_OFF: 'ICE_TOOLS_OFF',
         REPAINT_PENCILS: 'REPAINT_PENCILS',

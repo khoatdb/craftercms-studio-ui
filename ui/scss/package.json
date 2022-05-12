@@ -1,18 +1,16 @@
 {
-  "name": "studio-scss",
+  "name": "@craftercms/studio-ui-styles",
   "version": "1.0.0",
   "description": "SASS for studio",
   "private": true,
-  "main": "index.js",
   "scripts": {
-    "build": "node index.js",
-    "watch": "node watch.js"
-  },
-  "dependencies": {
-    "node-sass": "^5.0.0",
-    "rxjs": "^6.5.2"
+    "start": "node scripts/watch.js",
+    "build": "node scripts/index.js",
+    "dev-build": "node scripts/withSourceMaps.js"
   },
   "devDependencies": {
-    "build-if-changed": "^1.5.5"
+    "build-if-changed": "^1.5.5",
+    "npm-run-all": "^4.1.5",
+    "sass": "^1.49.7"
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -26,12 +26,9 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
 
   types: ['dropdown', 'range'],
 
-  initialize: function () {
+  initialize: function() {
     if (this.opts.type == 'auto') this.opts.type = this._iHasRangeInput() ? 'range' : 'dropdown';
-    var tpl =
-      $.inArray(this.opts.type, this.types) > -1
-        ? this['_' + this.opts.type + 'Template']()
-        : false;
+    var tpl = $.inArray(this.opts.type, this.types) > -1 ? this['_' + this.opts.type + 'Template']() : false;
     if (!tpl) return false;
 
     this.val = this.board.opts.size;
@@ -43,7 +40,7 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
     var that = this;
 
     if (this.opts.type == 'range') {
-      this.$el.on('change', '.drawing-board-control-size-range-input', function (e) {
+      this.$el.on('change', '.drawing-board-control-size-range-input', function(e) {
         that.val = $(this).val();
         that.updateView();
 
@@ -57,14 +54,12 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
       this.$el.on(
         'click',
         '.drawing-board-control-size-dropdown-current',
-        $.proxy(function (e) {
-          this.$el
-            .find('.drawing-board-control-size-dropdown')
-            .toggleClass('drawing-board-utils-hidden');
+        $.proxy(function(e) {
+          this.$el.find('.drawing-board-control-size-dropdown').toggleClass('drawing-board-utils-hidden');
         }, this)
       );
 
-      this.$el.on('click', '[data-size]', function (e) {
+      this.$el.on('click', '[data-size]', function(e) {
         that.val = parseInt($(this).attr('data-size'), 0);
         that.updateView();
 
@@ -75,7 +70,7 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
     }
   },
 
-  _rangeTemplate: function () {
+  _rangeTemplate: function() {
     var tpl =
       '<div class="drawing-board-control-inner" title="{{size}}">' +
       '<input type="range" min="{{min}}" max="{{max}}" value="{{size}}" step="1" class="drawing-board-control-size-range-input">' +
@@ -88,12 +83,12 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
     });
   },
 
-  _dropdownTemplate: function () {
+  _dropdownTemplate: function() {
     var tpl =
       '<div class="drawing-board-control-inner" title="{{size}}">' +
       '<div class="drawing-board-control-size-dropdown-current"><span></span></div>' +
       '<ul class="drawing-board-control-size-dropdown">';
-    $.each(this.opts.dropdownValues, function (i, size) {
+    $.each(this.opts.dropdownValues, function(i, size) {
       tpl += DrawingBoard.Utils.tpl(
         '<li data-size="{{size}}"><span style="width: {{size}}px; height: {{size}}px; border-radius: {{size}}px;"></span></li>',
         { size: size }
@@ -103,38 +98,34 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
     return tpl;
   },
 
-  onBoardReset: function (opts) {
+  onBoardReset: function(opts) {
     this.updateView();
   },
 
-  updateView: function () {
+  updateView: function() {
     var val = this.val;
     this.board.ctx.lineWidth = val;
 
-    this.$el
-      .find(
-        '.drawing-board-control-size-range-current, .drawing-board-control-size-dropdown-current span'
-      )
-      .css({
-        width: val + 'px',
-        height: val + 'px',
-        borderRadius: val + 'px',
-        marginLeft: (-1 * val) / 2 + 'px',
-        marginTop: (-1 * val) / 2 + 'px'
-      });
+    this.$el.find('.drawing-board-control-size-range-current, .drawing-board-control-size-dropdown-current span').css({
+      width: val + 'px',
+      height: val + 'px',
+      borderRadius: val + 'px',
+      marginLeft: (-1 * val) / 2 + 'px',
+      marginTop: (-1 * val) / 2 + 'px'
+    });
 
     this.$el.find('.drawing-board-control-inner').attr('title', val);
 
     if (this.opts.type == 'dropdown') {
       var closest = null;
-      $.each(this.opts.dropdownValues, function (i, size) {
+      $.each(this.opts.dropdownValues, function(i, size) {
         if (closest === null || Math.abs(size - val) < Math.abs(closest - val)) closest = size;
       });
       this.$el.find('.drawing-board-control-size-dropdown').addClass('drawing-board-utils-hidden');
     }
   },
 
-  _iHasRangeInput: function () {
+  _iHasRangeInput: function() {
     var inputElem = document.createElement('input'),
       smile = ':)',
       docElement = document.documentElement,

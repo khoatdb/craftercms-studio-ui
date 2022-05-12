@@ -1,17 +1,18 @@
 {
+  "name": "@craftercms/studio",
   "private": true,
-  "scripts": {
-    "prettier": "node scripts/prettier.js",
-    "prettier:all": "node scripts/prettier.js write",
-    "prettier:next": "node scripts/prettier.js next",
-    "prettier:legacy": "node scripts/prettier.js legacy",
-    "prettier:check": "node scripts/prettier.js check-changed",
-    "prettier:changed": "node scripts/prettier.js changed",
-    "prettier:certify": "node scripts/prettier.js check"
-  },
+  "workspaces": [
+    "ui/app",
+    "ui/guest",
+    "ui/legacy",
+    "ui/scss",
+    "ui/monaco",
+    "ui/ace",
+    "ui/uppy"
+  ],
   "eslintConfig": {
     "extends": [
-      "prettier"
+      "plugin:prettier/recommended"
     ],
     "plugins": [
       "prettier"
@@ -19,17 +20,83 @@
     "rules": {
       "prettier/prettier": [
         "error"
+      ],
+      "spaced-comment": [
+        "error",
+        "always",
+        {
+          "line": {
+            "markers": [
+              "/",
+              "#"
+            ]
+          },
+          "block": {
+            "markers": [
+              "!",
+              "*",
+              "#",
+              "function",
+              "const",
+              "if",
+              "export",
+              "interface",
+              "#__PURE__",
+              "@__PURE__"
+            ],
+            "exceptions": [
+              "!",
+              "*",
+              "#"
+            ],
+            "balanced": false
+          }
+        }
       ]
     },
     "parserOptions": {
       "ecmaVersion": 2015
     }
   },
+  "resolutions": {
+    "react-is": "^17.0.2"
+  },
+  "packageManager": "yarn@3.1.0",
+  "scripts": {
+    "prettier:raw": "node scripts/prettier.js",
+    "prettier:all": "node scripts/prettier.js write",
+    "prettier:next": "node scripts/prettier.js next",
+    "prettier:legacy": "node scripts/prettier.js legacy",
+    "prettier:check": "node scripts/prettier.js check-changed",
+    "prettier:changed": "node scripts/prettier.js changed",
+    "prettier:certify": "node scripts/prettier.js check",
+    "prettier:sass": "prettier --config prettier.config.js --write 'ui/scss/**/*.scss'",
+    "prettier:css": "prettier --config prettier.config.js --write 'static-assets/css/**/*.css' 'static-assets/themes/cstudioTheme/**/*.css'",
+    "format-pom": "prettier --use-tabs --write pom.xml",
+    "lint:ci": "eslint --ext .ts,.tsx .",
+    "upgrade-yarn": "yarn set version latest"
+  },
   "devDependencies": {
-    "eslint-config-prettier": "^6.15.0",
-    "eslint-plugin-prettier": "^3.1.4",
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "7.12.3",
+    "@babel/runtime": "^7.15.4",
+    "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-node-resolve": "^13.0.6",
+    "@rollup/plugin-replace": "^3.0.0",
+    "@types/node": "^16.11.13",
+    "@types/rimraf": "^3",
+    "build-if-changed": "^1.5.5",
+    "eslint": "^7.11.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "glob-gitignore": "^1.0.14",
-    "prettier": "^2.1.2",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.59.0",
+    "rollup-plugin-babel": "^4.4.0",
+    "rollup-plugin-copy": "^3.4.0",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-ts-treeshaking": "^1.0.2",
     "yargs": "^15.3.1"
   }
 }

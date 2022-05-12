@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -23,19 +23,15 @@ DrawingBoard.Control.DrawingMode = DrawingBoard.Control.extend({
     filler: true
   },
 
-  initialize: function () {
+  initialize: function() {
     this.prevMode = this.board.getMode();
 
     $.each(
       ['pencil', 'eraser', 'filler'],
-      $.proxy(function (k, value) {
+      $.proxy(function(k, value) {
         if (this.opts[value]) {
           this.$el.append(
-            '<button class="drawing-board-control-drawingmode-' +
-              value +
-              '-button" data-mode="' +
-              value +
-              '"></button>'
+            '<button class="drawing-board-control-drawingmode-' + value + '-button" data-mode="' + value + '"></button>'
           );
         }
       }, this)
@@ -44,7 +40,7 @@ DrawingBoard.Control.DrawingMode = DrawingBoard.Control.extend({
     this.$el.on(
       'click',
       'button[data-mode]',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         var value = $(e.currentTarget).attr('data-mode');
         var mode = this.board.getMode();
         if (mode !== value) this.prevMode = mode;
@@ -56,7 +52,7 @@ DrawingBoard.Control.DrawingMode = DrawingBoard.Control.extend({
 
     this.board.ev.bind(
       'board:mode',
-      $.proxy(function (mode) {
+      $.proxy(function(mode) {
         this.toggleButtons(mode);
       }, this)
     );
@@ -64,8 +60,8 @@ DrawingBoard.Control.DrawingMode = DrawingBoard.Control.extend({
     this.toggleButtons(this.board.getMode());
   },
 
-  toggleButtons: function (mode) {
-    this.$el.find('button[data-mode]').each(function (k, item) {
+  toggleButtons: function(mode) {
+    this.$el.find('button[data-mode]').each(function(k, item) {
       var $item = $(item);
       $item.toggleClass('active', mode === $item.attr('data-mode'));
     });

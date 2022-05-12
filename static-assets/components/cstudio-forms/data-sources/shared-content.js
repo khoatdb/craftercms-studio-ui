@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -76,11 +76,7 @@ CStudioForms.Datasources.SharedContent = function (id, form, properties, constra
 YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDatasource, {
   itemsAreContentReferences: true,
 
-  createElementAction: function (control, _self, addContainerEl) {
-    if (this.countOptions > 1) {
-      control.addContainerEl = null;
-      control.containerEl.removeChild(addContainerEl);
-    }
+  createElementAction: function (control, _self) {
     if (_self.type === '') {
       CStudioAuthoring.Operations.createNewContent(
         CStudioAuthoringContext.site,
@@ -107,7 +103,6 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
           success: function (contentTO, editorId, name, value) {
             control.insertItem(name, value, null, null, _self.id);
             control._renderItems();
-            CStudioAuthoring.InContextEdit.unstackDialog(editorId);
           },
           failure: function () {}
         },
@@ -116,43 +111,29 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
     }
   },
 
-  browseExistingElementAction: function (control, _self, addContainerEl) {
-    if (this.countOptions > 1) {
-      control.addContainerEl = null;
-      control.containerEl.removeChild(addContainerEl);
-    }
+  browseExistingElementAction: function (control, _self) {
     // if the browsePath property is set, use the property instead of the repoPath property
     // otherwise continue to use the repoPath for both cases for backward compatibility
     var browsePath = _self.repoPath;
     if (_self.browsePath != undefined && _self.browsePath != '') {
       browsePath = _self.browsePath;
     }
-    CStudioAuthoring.Operations.openBrowse(
-      '',
-      _self.processPathsForMacros(browsePath),
-      _self.selectItemsCount,
-      'select',
-      true,
-      {
-        success: function (searchId, selectedTOs) {
-          for (var i = 0; i < selectedTOs.length; i++) {
-            var item = selectedTOs[i];
-            var value = item.internalName && item.internalName != '' ? item.internalName : item.uri;
-            control.insertItem(item.uri, value, null, null, _self.id);
-            control._renderItems();
-          }
-        },
-        failure: function () {}
+    const multiSelect = _self.selectItemsCount === -1 || _self.selectItemsCount > 1;
+    CStudioAuthoring.Operations.openBrowseFilesDialog({
+      path: _self.processPathsForMacros(browsePath),
+      multiSelect,
+      onSuccess: (result) => {
+        const items = Array.isArray(result) ? result : [result];
+        items.forEach(({ name, path }) => {
+          const value = name && name !== '' ? name : path;
+          control.newInsertItem(path, value, 'shared');
+          control._renderItems();
+        });
       }
     );
   },
 
-  searchExistingElementAction: function (control, _self, addContainerEl) {
-    if (this.countOptions > 1) {
-      control.addContainerEl = null;
-      control.containerEl.removeChild(addContainerEl);
-    }
-
+  searchExistingElementAction: function (control, _self) {
     var searchContext = {
       searchId: null,
       itemsPerPage: 12,
@@ -170,13 +151,12 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
     };
 
     if (this.type) {
-      searchContext.filters['content-type'] = this.type;
+      searchContext.filters['content-type'] = [this.type];
     }
 
     if (this.browsePath) {
-      const path = _self.processPathsForMacros(this.browsePath)
+      const path = _self.processPathsForMacros(this.browsePath);
       searchContext.path = path.endsWith('/') ? `${path}.+` : `${path}/.+`;
-      searchContext.externalPath = true;
     }
 
     CStudioAuthoring.Operations.openSearch(
@@ -185,8 +165,8 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
       {
         success(searchId, selectedTOs) {
           selectedTOs.forEach(function (item) {
-            var value = item.internalName && item.internalName !== '' ? item.internalName : item.uri;
-            control.insertItem(item.uri, value, null, null, _self.id);
+            const value = item.label && item.label !== '' ? item.label : item.path;
+            control.insertItem(item.path, value, null, null, _self.id);
             control._renderItems();
           });
         },
@@ -202,8 +182,6 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
 
     var _self = this;
 
-    var addContainerEl = control.addContainerEl ? control.addContainerEl : null;
-
     var datasourceDef = this.form.definition.datasources,
       newElTitle = '';
 
@@ -213,33 +191,24 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
       }
     }
 
-    if (!addContainerEl && (this.countOptions > 1 || onlyAppend)) {
-      addContainerEl = document.createElement('div');
-      control.containerEl.appendChild(addContainerEl);
-      YAHOO.util.Dom.addClass(addContainerEl, 'cstudio-form-control-node-selector-add-container');
-      control.addContainerEl = addContainerEl;
-      control.addContainerEl.style.left = control.addButtonEl.offsetLeft + 'px';
-      control.addContainerEl.style.top = control.addButtonEl.offsetTop + 22 + 'px';
-    }
-
     if (this.enableCreateNew || this.defaultEnableCreateNew) {
       if (this.countOptions > 1 || onlyAppend) {
-        addContainerEl.create = document.createElement('div');
-        addContainerEl.appendChild(addContainerEl.create);
-        YAHOO.util.Dom.addClass(addContainerEl.create, 'cstudio-form-controls-create-element');
+        const create = $(
+          `<li class="cstudio-form-controls-create-element"><a class="cstudio-form-control-node-selector-add-container-item">${CMgs.format(
+            langBundle,
+            'createNew'
+          )} - ${CrafterCMSNext.util.string.escapeHTML(newElTitle)}</a></li>`
+        );
 
-        var createEl = document.createElement('div');
-        YAHOO.util.Dom.addClass(createEl, 'cstudio-form-control-node-selector-add-container-item');
-        createEl.innerHTML = CMgs.format(langBundle, 'createNew') + ' - ' + newElTitle;
-        control.addContainerEl.create.appendChild(createEl);
-        var addContainerEl = control.addContainerEl;
+        control.$dropdownMenu.append(create);
+
         YAHOO.util.Event.on(
-          createEl,
+          create[0],
           'click',
           function () {
-            _self.createElementAction(control, _self, addContainerEl);
+            _self.createElementAction(control, _self);
           },
-          createEl
+          create[0]
         );
       } else {
         _self.createElementAction(control, _self);
@@ -248,22 +217,22 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
 
     if (this.enableBrowseExisting || this.defaultEnableBrowseExisting) {
       if (this.countOptions > 1 || onlyAppend) {
-        addContainerEl.browse = document.createElement('div');
-        addContainerEl.appendChild(addContainerEl.browse);
-        YAHOO.util.Dom.addClass(addContainerEl.browse, 'cstudio-form-controls-browse-element');
+        const browse = $(
+          `<li class="cstudio-form-controls-browse-element"><a class="cstudio-form-control-node-selector-add-container-item">${CMgs.format(
+            langBundle,
+            'browseExisting'
+          )} - ${CrafterCMSNext.util.string.escapeHTML(newElTitle)}</a></li>`
+        );
 
-        var browseEl = document.createElement('div');
-        browseEl.innerHTML = CMgs.format(langBundle, 'browseExisting') + ' - ' + newElTitle;
-        YAHOO.util.Dom.addClass(browseEl, 'cstudio-form-control-node-selector-add-container-item');
-        control.addContainerEl.browse.appendChild(browseEl);
-        var addContainerEl = control.addContainerEl;
+        control.$dropdownMenu.append(browse);
+
         YAHOO.util.Event.on(
-          browseEl,
+          browse[0],
           'click',
           function () {
-            _self.browseExistingElementAction(control, _self, addContainerEl);
+            _self.browseExistingElementAction(control, _self);
           },
-          browseEl
+          browse[0]
         );
       } else {
         _self.browseExistingElementAction(control, _self);
@@ -272,22 +241,22 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
 
     if (this.enableSearchExisting || this.defaultEnableSearchExisting) {
       if (this.countOptions > 1 || onlyAppend) {
-        addContainerEl.search = document.createElement('div');
-        addContainerEl.appendChild(addContainerEl.search);
-        YAHOO.util.Dom.addClass(addContainerEl.search, 'cstudio-form-controls-search-element');
+        const search = $(
+          `<li class="cstudio-form-controls-search-element"><a class="cstudio-form-control-node-selector-add-container-item">${CMgs.format(
+            langBundle,
+            'searchExisting'
+          )} - ${CrafterCMSNext.util.string.escapeHTML(newElTitle)}</a></li>`
+        );
 
-        var searchEl = document.createElement('div');
-        searchEl.innerHTML = CMgs.format(langBundle, 'searchExisting') + ' - ' + newElTitle;
-        YAHOO.util.Dom.addClass(searchEl, 'cstudio-form-control-node-selector-add-container-item');
-        control.addContainerEl.search.appendChild(searchEl);
-        var addContainerEl = control.addContainerEl;
+        control.$dropdownMenu.append(search);
+
         YAHOO.util.Event.on(
-          searchEl,
+          search[0],
           'click',
           function () {
-            _self.searchExistingElementAction(control, _self, addContainerEl);
+            _self.searchExistingElementAction(control, _self);
           },
-          searchEl
+          search[0]
         );
       } else {
         _self.searchExistingElementAction(control, _self);
@@ -295,7 +264,7 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
     }
   },
 
-  edit: function (key, control) {
+  edit: function (key, control, index) {
     var _self = this;
     const readonly = control.readonly;
     const action = readonly ? CStudioAuthoring.Operations.viewContent : CStudioAuthoring.Operations.editContent;
@@ -305,15 +274,21 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
         action(
           contentTO.item.contentType,
           CStudioAuthoringContext.siteId,
-          contentTO.item.uri,
+          contentTO.item.mimeType,
           contentTO.item.nodeRef,
           contentTO.item.uri,
           false,
           {
-            success: function (contentTO, editorId, name, value) {
+            success: function (contentTO, editorId, name, value, draft, action) {
               if (control) {
-                control.updateEditedItem(value, _self.id);
-                CStudioAuthoring.InContextEdit.unstackDialog(editorId);
+                control.updateEditedItem(value, _self.id, index);
+                CStudioForms.communication.sendMessage({
+                  type: 'CHILD_FORM_SUCCESS',
+                  payload: {
+                    action: action,
+                    editorId: editorId
+                  }
+                });
               }
             }
           }
@@ -369,8 +344,26 @@ YAHOO.extend(CStudioForms.Datasources.SharedContent, CStudioForms.CStudioFormDat
         type: 'boolean',
         defaultValue: 'false'
       },
-      { label: CMgs.format(langBundle, 'repositoryPath'), name: 'repoPath', type: 'string' },
-      { label: CMgs.format(langBundle, 'browsePath'), name: 'browsePath', type: 'string' },
+      {
+        label: CMgs.format(langBundle, 'repositoryPath'),
+        name: 'repoPath',
+        type: 'content-path-input',
+        defaultValue: '/site/',
+        rootPath: '/site',
+        validations: {
+          regex: /^\/site(\/.*)?$/
+        }
+      },
+      {
+        label: CMgs.format(langBundle, 'browsePath'),
+        name: 'browsePath',
+        type: 'content-path-input',
+        defaultValue: '/site/',
+        rootPath: '/site',
+        validations: {
+          regex: /^\/site(\/.*)?$/
+        }
+      },
       { label: CMgs.format(langBundle, 'defaultType'), name: 'type', type: 'string' }
     ];
   },

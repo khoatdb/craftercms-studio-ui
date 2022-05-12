@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -23,27 +23,19 @@ CStudioForms.Controls.RTE =
     this.properties = properties;
     this.constraints = constraints;
     this.inputEl = null;
-    this.countEl = null;
     this.required = false;
     this.value = '_not-set';
     this.form = form;
     this.id = id;
-    this.registeredPlugins = [];
-    this.rteTables = [];
-    this.rteTableStyles = {};
-    this.rteLinkStyles = [];
-    this.rteLinkTargets = [];
     this.readonly = readonly;
-    this.codeModeXreduction = 130; // Amount of pixels deducted from the total width value of the RTE in code mode
-    this.codeModeYreduction = 130; // Amount of pixels deducted from the total height value of the RTE in code mode
-    this.rteWidth;
-    this.delayedInit = true; // Flag that indicates that this control takes a while to initialize
+    this.rteHeight = 300;
     this.pencilMode = pencilMode;
     this.supportedPostFixes = ['_html'];
     this.enableSpellCheck = true;
-    this.charCount;
 
     this.formatMessage = CrafterCMSNext.i18n.intl.formatMessage;
+    this.words = CrafterCMSNext.i18n.messages.words;
+    this.messages = CrafterCMSNext.i18n.messages.rteControlMessages;
     this.contentTypesMessages = CrafterCMSNext.i18n.messages.contentTypesMessages;
 
     return this;
@@ -57,22 +49,22 @@ CStudioAuthoring.Module.requireModule(
   {},
   {
     moduleLoaded: function () {
-      var YDom = YAHOO.util.Dom,
-        YEvent = YAHOO.util.Event,
-        YSelector = YAHOO.util.Selector;
-
+      const YDom = YAHOO.util.Dom;
+      const tinymce = window.tinymce;
       YAHOO.extend(CStudioForms.Controls.RTE, CStudioForms.CStudioFormField, {
         getLabel: function () {
-          return CMgs.format(langBundle, 'richTextEditor');
+          return CMgs.format(langBundle, 'rte');
         },
 
         /**
          * render the RTE
          */
         render: function (config, containerEl) {
-          var _thisControl = this;
+          var _thisControl = this,
+            configuration = 'generic';
 
-          var configuration = 'generic';
+          const { take } = CrafterCMSNext.rxjs;
+
           for (var i = 0; i < config.properties.length; i++) {
             var prop = config.properties[i];
 
@@ -85,37 +77,39 @@ CStudioAuthoring.Module.requireModule(
             }
           }
 
-          CStudioForms.Controls.RTEManager.getRteConfiguration(configuration, 'no-role-support', {
-            success: function (rteConfig) {
-              _thisControl._loadPlugins(rteConfig.rteModules.module, {
-                success: function () {
-                  this.control._initializeRte(this.controlConfig, this.rteConfig, this.containerEl);
+          CrafterCMSNext.system
+            .getStore()
+            .pipe(take(1))
+            .subscribe((store) => {
+              if (!Boolean(store.getState().preview.richTextEditor)) {
+                // If textEditorConfig is not loaded
+                const unsubscribe = store.subscribe(() => {
+                  if (Boolean(store.getState().preview.richTextEditor)) {
+                    _thisControl._initializeRte(
+                      config,
+                      store.getState().preview.richTextEditor[configuration],
+                      containerEl
+                    );
+                    unsubscribe();
+                  }
+                });
 
-                  this.control.form.registerBeforeUiRefreshCallback({
-                    beforeUiRefresh: function () {
-                      var content = tinymce2.activeEditor.getContent({ format: 'raw' });
-                      if (content != '') {
-                        //Could be that the model hasn't been loaded yet
-                        tinymce2.activeEditor.contextControl.updateModel(content);
-                      }
-                    },
-                    context: this.control
-                  });
-                },
-                failure: function () {},
-
-                controlConfig: config,
-                rteConfig: rteConfig,
-                containerEl: containerEl,
-                control: _thisControl
-              });
-              _thisControl.rteTables = rteConfig.rteTables;
-              _thisControl.rteTableStyles = rteConfig.rteTablestyles;
-              _thisControl.rteLinkStyles = rteConfig.rteLinkStyles.style;
-              _thisControl.rteLinkTargets = rteConfig.rteLinkTargets;
-            },
-            failure: function () {}
-          });
+                store.dispatch({
+                  type: 'INIT_RICH_TEXT_EDITOR_CONFIG',
+                  payload: {
+                    configXml: CrafterCMSNext.system.store.getState().uiConfig.xml,
+                    siteId: CStudioAuthoringContext.site
+                  }
+                });
+              } else {
+                // If textEditorConfig is already loaded
+                _thisControl._initializeRte(
+                  config,
+                  store.getState().preview.richTextEditor[configuration],
+                  containerEl
+                );
+              }
+            });
         },
 
         /**
@@ -136,21 +130,19 @@ CStudioAuthoring.Module.requireModule(
          */
         setValue: function (value) {
           this.value = value;
+
           try {
-            tinymce2.activeEditor.setContent(value, { format: 'raw' });
+            tinymce.activeEditor.setContent(value, { format: 'raw' });
           } catch (err) {}
 
-          if (this.inputEl) {
-            this.inputEl.value = value;
-            this.count(null, this.countEl, this.inputEl);
-            this._onChange(null, this);
-          }
           this.updateModel(value);
           this.edited = false;
         },
 
         updateModel: function (value) {
-          this.form.updateModel(this.id, CStudioForms.Util.unEscapeXml(value));
+          const newValue = this.escapeScripts ? value : CStudioForms.Util.unEscapeXml(value);
+
+          this.form.updateModel(this.id, newValue);
         },
 
         /**
@@ -165,10 +157,22 @@ CStudioAuthoring.Module.requireModule(
          */
         getSupportedProperties: function () {
           return [
-            { label: CMgs.format(langBundle, 'width'), name: 'width', type: 'int' },
-            { label: CMgs.format(langBundle, 'height'), name: 'height', type: 'int' },
-            { label: CMgs.format(langBundle, 'maxLength'), name: 'maxlength', type: 'int' },
-            { label: CMgs.format(langBundle, 'allowResize'), name: 'allowResize', type: 'boolean' },
+            {
+              label: this.formatMessage(this.contentTypesMessages.width),
+              name: 'width',
+              type: 'int'
+            },
+            {
+              label: this.formatMessage(this.contentTypesMessages.height),
+              name: 'height',
+              type: 'int'
+            },
+            {
+              label: this.formatMessage(this.contentTypesMessages.autoGrow),
+              name: 'autoGrow',
+              type: 'boolean',
+              defaultValue: 'false'
+            },
             {
               label: this.formatMessage(this.contentTypesMessages.enableSpellCheck),
               name: 'enableSpellCheck',
@@ -176,44 +180,42 @@ CStudioAuthoring.Module.requireModule(
               defaultValue: 'true'
             },
             {
-              label: CMgs.format(langBundle, 'forceRootBlockP'),
+              label: this.formatMessage(this.contentTypesMessages.forceRootBlockP),
               name: 'forceRootBlockPTag',
               type: 'boolean',
               defaultValue: 'true'
             },
             {
-              label: CMgs.format(langBundle, 'forcePNewLines'),
-              name: 'forcePTags',
-              type: 'boolean',
-              defaultValue: 'true'
-            },
-            {
-              label: CMgs.format(langBundle, 'forceBRNewLines'),
+              label: this.formatMessage(this.contentTypesMessages.forceBRNewLines),
               name: 'forceBRTags',
               type: 'boolean',
               defaultValue: 'false'
             },
             {
-              label: CMgs.format(langBundle, 'requireImageAlt'),
-              name: 'forceImageAlts',
-              type: 'boolean',
-              defaultValue: 'false'
-            },
-            {
-              label: CMgs.format(langBundle, 'supportedChannels'),
+              label: this.formatMessage(this.contentTypesMessages.supportedChannels),
               name: 'supportedChannels',
               type: 'supportedChannels'
             },
             {
-              label: CMgs.format(langBundle, 'RTEConfiguration'),
+              label: this.formatMessage(this.contentTypesMessages.RTEConfiguration),
               name: 'rteConfiguration',
               type: 'string',
               defaultValue: 'generic'
             },
             {
-              label: CMgs.format(langBundle, 'imageManager'),
+              label: this.formatMessage(this.contentTypesMessages.imageManager),
               name: 'imageManager',
               type: 'datasource:image'
+            },
+            {
+              label: this.formatMessage(this.contentTypesMessages.videoManager),
+              name: 'videoManager',
+              type: 'datasource:video'
+            },
+            {
+              label: this.formatMessage(this.contentTypesMessages.fileManager),
+              name: 'fileManager',
+              type: 'datasource:item'
             }
           ];
         },
@@ -230,306 +232,48 @@ CStudioAuthoring.Module.requireModule(
         },
 
         /**
-         * Scroll to the top of an element, minus a pixel offset (in the case of an RTE, we use the pixel offset to move the RTE under the
-         * toolbar; otherwise, the toolbar will appear over the RTE)
-         * @param: el
-         * @param: pixOffset (optional -defaults to 0)
-         */
-        scrollToTopOfElement: function (el, pixOffset) {
-          pixOffset = pixOffset || 0;
-          var scrollY = YDom.getY(el) - pixOffset;
-          window.scrollTo(0, scrollY);
-        },
-
-        // Clear the current selection in tinymce2's text editor
-        clearTextEditorSelection: function () {
-          var rootEl = this.editor.dom.getRoot(),
-            caretEl = document.createElement('span'),
-            textEl = document.createTextNode(' '); // IE9 needs the span tag to have a text node; not necessary in FF nor Chrome
-
-          caretEl.id = 'caret_pos_holder';
-          caretEl.appendChild(textEl);
-          // Place cursor at the beginning of the textarea
-          if (rootEl.firstChild) {
-            YDom.insertBefore(caretEl, rootEl.firstChild);
-          } else {
-            rootEl.appendChild(caretEl);
-          }
-          this.editor.selection.select(this.editor.dom.select('#caret_pos_holder')[0]); //select the span
-          this.editor.dom.remove(this.editor.dom.select('#caret_pos_holder')[0]); //remove the span
-        },
-
-        focusIn: function () {
-          var heightVal, widthVal;
-
-          if (YDom.hasClass(this.containerEl, 'rte-inactive')) {
-            // No need to focus on an RTE that is already active
-            YDom.replaceClass(this.containerEl, 'rte-inactive', 'rte-active');
-            var elements = YDom.getElementsByClassName('cstudio-form-container', 'div');
-            YDom.setStyle(elements[0], 'margin-top', '50px');
-
-            this.resize();
-          }
-        },
-
-        /**
-         * Resize editor whether is text mode or code mode
-         */
-        resize: function (isPaste) {
-          if (YDom.hasClass(this.containerEl, 'text-mode')) {
-            // The RTE is in text mode
-            this.resizeEditor(this.editor, false, isPaste); // Resize the editor (in case its contents exceed its set height)
-          } else {
-            // The RTE is in code mode
-            this.resizeCodeView(this.editor.codeView);
-          }
-        },
-
-        focusOut: function () {
-          var widthVal, heightVal, sizeCookie, cookieHeight;
-
-          amplify.publish('/rte/blurred'); // Notify other components
-          YDom.replaceClass(this.containerEl, 'rte-active', 'rte-inactive');
-          var elements = YDom.getElementsByClassName('cstudio-form-container', 'div');
-          YDom.setStyle(elements[0], 'margin-top', '20px');
-
-          if (YDom.hasClass(this.containerEl, 'text-mode')) {
-            // The RTE is in text mode
-            sizeCookie = tinymce2.util.Cookie.getHash('tinymce2_' + this.editor.id + '_size' + window.name);
-            cookieHeight = sizeCookie ? sizeCookie.ch : 0;
-
-            // Give priority to the height value stored in the cookie (if there's one)
-            heightVal = cookieHeight ? cookieHeight : this.editor.settings.height;
-
-            tinymce2.DOM.setStyle(this.editor.editorId + '_ifr', 'height', heightVal + 'px');
-            this.editor.getWin().scrollTo(0, 0); // Scroll to the top of the editor window
-
-            // The editor selection is automatically cleared in IE9 when the text editor is blurred
-            /*if (!YAHOO.env.ua.ie || YAHOO.env.ua.ie >= 10) {
-				this.clearTextEditorSelection();
-			}*/
-            this.editor.onDeactivate.dispatch(this.editor, null); // Fire tinymce2 handlers for onDeactivate (eg. used by contextmenu)
-          } else {
-            // The RTE is in code mode
-            widthVal = this.containerEl.clientWidth - this.codeModeXreduction;
-
-            this.editor.codeView.selection.moveTo(0, 0); // Set the cursor to the beginning of the code editor
-
-            var editorContainer = this.editor.codeView.container;
-            editorContainer.style.width = widthVal + 'px';
-            editorContainer.style.height = this.editor.settings.height + 'px';
-            this.editor.codeView.resize();
-
-            this.editor.setContent(this.editor.codeView.getValue()); // Transfer content in codeView to RTE
-
-            this.editor.codeView.clearSelection(); // Clear the current selection -in case there was any
-          }
-          this.save(); // Save the content in RTE and update form model
-        },
-
-        resizeEditor: function (editor, onInit, isPaste) {
-          var sizeCookie = tinymce2.util.Cookie.getHash('tinymce2_' + editor.id + '_size' + window.name);
-          var cookieHeight = sizeCookie ? sizeCookie.ch : 0;
-          /* BEGIN: resizing editor treatment */
-          var formBody = document.querySelectorAll('html, body');
-          var scrollTop = formBody[0].scrollTop > 0 ? formBody[0].scrollTop : formBody[1].scrollTop;
-          formBody = formBody[0].scrollTop > 0 ? formBody[0] : formBody[1];
-          /* end */
-
-          tinymce2.DOM.setStyle(editor.editorId + '_ifr', 'height', cookieHeight + 'px');
-
-          var heightVal = Math.max(editor.settings.height, cookieHeight),
-            currentHeight = +tinymce2.DOM.getStyle(this.editor.editorId + '_ifr', 'height').split('px')[0];
-
-          heightVal = !onInit ? Math.max(heightVal, editor.getDoc().body.scrollHeight) : heightVal;
-          tinymce2MaxHeight =
-            formBody.offsetHeight - 130 > this.rteControlHeight ? formBody.offsetHeight - 130 : this.rteControlHeight;
-
-          heightVal = heightVal > tinymce2MaxHeight ? tinymce2MaxHeight : heightVal;
-
-          if (currentHeight < heightVal || onInit) {
-            tinymce2.DOM.setStyle(editor.editorId + '_ifr', 'height', heightVal + 'px');
-
-            if (isPaste) {
-              if ($('#' + tinymce2.DOM.doc.activeElement.id).offset()) {
-                formBody.scrollTop = $('#' + tinymce2.DOM.doc.activeElement.id).offset().top - 40;
-              } else {
-                formBody.scrollTop = scrollTop;
-              }
-            } else {
-              formBody.scrollTop = scrollTop;
-            }
-          }
-        },
-
-        resizeCodeView: function (codeView) {
-          var cmHeight = 400,
-            cmWidth = this.containerEl.clientWidth - this.codeModeXreduction,
-            currentHeight = +tinymce2.DOM.getStyle(codeView.container, 'height').split('px')[0];
-
-          if (currentHeight < cmHeight) {
-            var editorContainer = codeView.container;
-            editorContainer.style.width = cmWidth + 'px';
-            editorContainer.style.height = cmHeight + 'px';
-            codeView.resize();
-          }
-        },
-
-        resizeTextView: function (containerEl, rteWidth, elements) {
-          var rteSidePadding = 40,
-            rteMarginLeft = 230,
-            rteContainerWidth = +rteWidth + rteSidePadding,
-            sectionContainer,
-            fieldContainerWidth = window.getComputedStyle
-              ? window.getComputedStyle(containerEl).getPropertyValue('width')
-              : containerEl.currentStyle
-              ? containerEl.currentStyle.width
-              : null;
-
-          // If the section is collapsed by default, then the RTE's container width will not be calculated
-          // correctly and we'll have to get the width from the section container
-          if (!fieldContainerWidth || fieldContainerWidth == 'auto') {
-            // We assume the section container is the first ancestor with width value set in pixels
-            sectionContainer = YDom.getAncestorBy(containerEl, function (el) {
-              var fieldWidth = window.getComputedStyle
-                ? window.getComputedStyle(el).getPropertyValue('width')
-                : el.currentStyle
-                ? el.currentStyle.width
-                : null;
-              if (fieldWidth && fieldWidth != 'auto') {
-                return el;
-              }
-            });
-            fieldContainerWidth = window.getComputedStyle
-              ? window.getComputedStyle(sectionContainer).getPropertyValue('width')
-              : sectionContainer.currentStyle
-              ? sectionContainer.currentStyle.width
-              : '0px';
-          }
-
-          fieldContainerWidth = +fieldContainerWidth.split('px')[0];
-
-          if (typeof fieldContainerWidth == 'number') {
-            if (elements['rte-container']) {
-              if (rteContainerWidth < fieldContainerWidth - rteMarginLeft) {
-                YDom.setStyle(elements['rte-container'], 'margin-left', 27 + '%');
-                //YDom.setStyle(elements['rte-container'], "width", rteContainerWidth + "px");
-                if (elements['rte-table']) {
-                  YDom.setStyle(elements['rte-table'], 'width', rteWidth + 'px');
-                }
-              } else {
-                YDom.setStyle(
-                  elements['rte-container'],
-                  'max-width',
-                  (rteContainerWidth > fieldContainerWidth ? fieldContainerWidth : rteContainerWidth) + 'px'
-                ); // If the RTEs width exceeds that of its container, then use the container's width instead
-                YDom.setStyle(elements['rte-container'], 'width', '100%');
-                rteWidth = '96%';
-                if (elements['rte-table']) {
-                  YDom.setStyle(elements['rte-table'], 'width', rteWidth);
-                }
-              }
-            }
-            return rteWidth;
-          }
-          return null;
-        },
-
-        /**
-         * render
+         * render and initialization of editor
          */
         _initializeRte: function (config, rteConfig, containerEl) {
           var _thisControl = this,
-            rteSidePadding = 40,
-            rteMarginLeft = 230,
-            rteContainerWidth,
-            fieldContainerWidth,
-            width,
-            _self = this;
+            callback,
+            rteId = CStudioAuthoring.Utils.generateUUID(),
+            inputEl,
+            pluginList;
 
           containerEl.id = this.id;
           this.containerEl = containerEl;
           this.fieldConfig = config;
-          this.rteConfig = rteConfig;
+          this.rteId = rteId;
 
-          YDom.addClass(this.containerEl, 'rte-inactive');
-          YDom.addClass(this.containerEl, 'text-mode');
-          // we need to make the general layout of a control inherit from common
-          // you should be able to override it -- but most of the time it wil be the same
-          var titleEl = document.createElement('span');
+          inputEl = this._renderInputMarkup(config, rteId);
 
-          YDom.addClass(titleEl, 'cstudio-form-field-title');
-          titleEl.textContent = config.title;
-
-          var controlWidgetContainerEl = document.createElement('div');
-          YDom.addClass(controlWidgetContainerEl, 'cstudio-form-control-rte-container');
-
-          var validEl = document.createElement('span');
-          YDom.addClass(validEl, 'validation-hint');
-          YDom.addClass(validEl, 'cstudio-form-control-validation fa fa-checks');
-          controlWidgetContainerEl.appendChild(validEl);
-
-          /* tiny MCE initializes by class selector - so for now we will init each RTE uniquely
-           * this can be optimized if we give each rte of the same config a specific class, wait until
-           * the enire form is rendered and then init all RTEs which means only 1 init per type
-           */
-          var inputEl = document.createElement('textarea');
-          controlWidgetContainerEl.appendChild(inputEl);
-          YDom.addClass(inputEl, 'datum');
-
-          this.inputEl = inputEl;
-          inputEl.value = this.value == '_not-set' ? config.defaultValue : this.value;
-          var rteUniqueInitClass = CStudioAuthoring.Utils.generateUUID();
-          YDom.addClass(inputEl, rteUniqueInitClass);
-          YDom.addClass(inputEl, 'cstudio-form-control-input');
-
-          var descriptionEl = document.createElement('span');
-          YDom.addClass(descriptionEl, 'description');
-          YDom.addClass(descriptionEl, 'cstudio-form-control-rte-description');
-          descriptionEl.innerHTML = config.description;
-
-          containerEl.appendChild(titleEl);
-          containerEl.appendChild(controlWidgetContainerEl);
-          controlWidgetContainerEl.appendChild(descriptionEl);
-
-          YEvent.on(inputEl, 'change', this._onChangeVal, this);
-
+          // Getting properties from content-type
           for (var i = 0; i < config.properties.length; i++) {
             var prop = config.properties[i];
 
             switch (prop.name) {
-              case 'forceImageAlts':
-                this.forceImageAlts = prop.value && prop.Value == 'true' ? true : false;
-                break;
               case 'imageManager':
                 this.imageManagerName = prop.value && prop.Value != '' ? prop.value : null;
                 break;
+              case 'videoManager':
+                this.videoManagerName = prop.value && prop.Value != '' ? prop.value : null;
+                break;
               case 'width':
-                this.rteWidth = typeof prop.value == 'string' && prop.value ? prop.value : '400';
-                width = this.resizeTextView(containerEl, this.rteWidth, {
-                  'rte-container': controlWidgetContainerEl
-                });
+                var value = isNaN(parseInt(prop.value)) ? prop.value : parseInt(prop.value);
+                this.rteWidth = typeof prop.value == 'string' && prop.value ? value : '100%';
+                break;
+              case 'fileManager':
+                this.fileManagerName = prop.value && prop.Value != '' ? prop.value : null;
                 break;
               case 'height':
-                var height;
-                if (!this.pencilMode) {
-                  height = prop.value === undefined ? 140 : Array.isArray(prop.value) ? 140 : Math.max(+prop.value, 50);
-                  if (isNaN(height)) {
-                    height = 140;
-                  }
-                } else {
-                  height = 330;
-                }
-
-                this.rteControlHeight = height;
-
+                this.rteHeight = prop.value === undefined || prop.value === '' ? 300 : parseInt(prop.value, 10);
+                break;
+              case 'autoGrow':
+                this.autoGrow = prop.value == 'false' ? false : true;
                 break;
               case 'maxlength':
                 inputEl.maxlength = prop.value;
-                this.maxLength = parseInt(prop.value);
-                break;
-              case 'forcePTags':
-                var forcePTags = prop.value == 'false' ? false : true;
                 break;
               case 'forceBRTags':
                 var forceBRTags = prop.value == 'true' ? true : false;
@@ -543,458 +287,565 @@ CStudioAuthoring.Module.requireModule(
             }
           }
 
-          var pluginList =
-            'advhr, cs_inlinepopups, cs_table, directionality, emotions, ' +
-            'fullscreen, inlinepopups, insertdatetime, layer, media, ' +
-            'nonbreaking, paste, preview, searchreplace, ' +
-            'style, table, template, visualblocks, visualchars, wordcount, xhtmlxtras, ';
+          // https://www.tiny.cloud/docs/plugins/
+          // paste plugin is hardcoded in order to enable drag and drop functionality (and avoid it being removed from
+          // configuration file).
+          pluginList = [rteConfig.tinymceOptions?.plugins, 'paste', this.autoGrow && 'autoresize']
+            .filter(Boolean)
+            .join(' ');
 
-          for (var l = 0; l < rteConfig.rteModules.module.length; l++) {
-            // mce plugin names cannot have a - in them
-            pluginList += '-' + rteConfig.rteModules.module[l].replace(/-/g, '') + ',';
+          const $editorContainer = $(`#${rteId}`).parent(),
+            editorContainerWidth = $editorContainer.width(),
+            editorContainerPL = parseFloat($editorContainer.css('padding-left').replace('px', ''));
+
+          if (_thisControl.rteWidth > editorContainerWidth) {
+            $editorContainer.css('padding-left', 0);
+            $editorContainer.css('float', 'right');
+            if (_thisControl.rteWidth > editorContainerWidth + editorContainerPL) {
+              _thisControl.rteWidth = editorContainerWidth + editorContainerPL;
+            }
           }
 
-          var toolbarConfig1 =
-            rteConfig.toolbarItems1 && rteConfig.toolbarItems1.length != 0
-              ? rteConfig.toolbarItems1
-              : 'bold,italic,|,bullist,numlist';
+          const imageDatasources = this.imageManagerName ? this.imageManagerName.split(',') : [];
+          const imageUploadDatasources = [
+            'img-CMIS-upload',
+            'img-desktop-upload',
+            'img-S3-upload',
+            'img-WebDAV-upload'
+          ];
+          this.editorImageDatasources = this.form.definition.datasources.filter(
+            (datasource) =>
+              datasource.interface === 'image' &&
+              imageUploadDatasources.includes(datasource.name) &&
+              imageDatasources.includes(datasource.id)
+          );
 
-          var toolbarConfig2 =
-            rteConfig.toolbarItems2 && rteConfig.toolbarItems2.length != 0 ? rteConfig.toolbarItems2 : '';
-          var toolbarConfig3 =
-            rteConfig.toolbarItems3 && rteConfig.toolbarItems3.length != 0 ? rteConfig.toolbarItems3 : '';
-          var toolbarConfig4 =
-            rteConfig.toolbarItems4 && rteConfig.toolbarItems4.length != 0 ? rteConfig.toolbarItems4 : '';
+          const external = {
+            ...rteConfig.tinymceOptions?.external_plugins,
+            acecode: '/studio/static-assets/js/tinymce-plugins/ace/plugin.min.js',
+            craftercms_paste_extension: '/studio/static-assets/js/tinymce-plugins/craftercms_paste_extension/plugin.js'
+          };
 
-          var styleFormats =
-            rteConfig.styleFormats && rteConfig.styleFormats.length != 0 ? eval(rteConfig.styleFormats) : [];
-
-          var editor = tinymce2.init({
-            // General options
-            mode: 'textareas',
-            editor_selector: rteUniqueInitClass,
-            theme: 'advanced',
-            skin: 'cstudio-rte',
-            width: '100%', // Why? Field width should be flexible, because of responsiveness, should resize based on the screen size, this works together with max width set on post render event below on setup: method
-            height: height,
-            encoding: 'xml',
-            valid_elements: '+*[*]',
-            extended_valid_elements: '+*[*]',
-            valid_children: '+*[*]',
-            paste_auto_cleanup_on_paste: true,
-            relative_urls: false,
-            browser_spellcheck: this.enableSpellCheck,
-
-            readonly: _thisControl.readonly,
-            force_p_newlines: forcePTags,
-            force_br_newlines: forceBRTags,
-            forced_root_block: forceRootBlockPTag,
-            inlinepopups_skin: 'cstudio-rte',
-            min_height: 74,
-            remove_trailing_brs: false,
-
-            style_formats: styleFormats,
-
-            theme_advanced_resizing: true,
-            theme_advanced_resize_horizontal: false,
-            theme_advanced_toolbar_location: 'top',
-            theme_advanced_toolbar_align: 'left',
-            theme_advanced_statusbar_location: 'bottom',
-
-            theme_advanced_buttons1: toolbarConfig1,
-            theme_advanced_buttons2: toolbarConfig2,
-            theme_advanced_buttons3: toolbarConfig3,
-            theme_advanced_buttons4: toolbarConfig4,
-
-            content_css: '',
-
-            // Drop lists for link/image/media/template dialogs
-            // template_external_list_url : "js/template_list.js",
-            // external_link_list_url : "js/link_list.js",
-            // external_image_list_url : "js/image_list.js",
-            // media_external_list_url : "js/media_list.js",
+          tinymce.init({
+            selector: '#' + rteId,
+            width: _thisControl.rteWidth,
+            // As of 3.1.14, the toolbar is moved to be part of the editor text field (not stuck/floating at the top of the window).
+            // Adding 78px (toolbar's height) so that the toolbar doesn't eat up on the height set on the content modelling tool.
+            height: _thisControl.rteHeight + 78,
+            min_height: _thisControl.rteHeight,
+            theme: 'silver',
             plugins: pluginList,
+            toolbar_sticky: true,
+            image_advtab: true,
+            encoding: 'xml',
+            relative_urls: false,
+            remove_script_host: false,
+            convert_urls: false,
+            readonly: _thisControl.readonly, // comes from control props (not xml config)
+            force_br_newlines: forceBRTags, // comes from control props (not xml config)
+            forced_root_block: forceRootBlockPTag, // comes from control props (not xml config)
+            remove_trailing_brs: false,
+            media_live_embeds: true,
+            autoresize_on_init: false,
+            autoresize_bottom_margin: 0,
+            contextmenu: !this.enableSpellCheck, // comes from control props (not xml config)
+            image_uploadtab: this.editorImageDatasources.length > 0, // comes from control props (not xml config)
+            craftercms_paste_cleanup: rteConfig?.tinymceOptions?.craftercms_paste_cleanup ?? true, // If doesn't exist or if true => true
+            automatic_uploads: true,
+            file_picker_types: 'image media file',
+            skin: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'oxide-dark' : 'oxide',
+            code_editor_inline: true,
 
-            setup: function (ed) {
-              try {
-                ed.contextControl = _thisControl;
-                ed.isPaste = false;
-                _thisControl.editor = ed;
+            external_plugins: external,
 
-                const onChange = (ed) => {
-                  ed.save();
-                  ed.contextControl._onChange(null, ed.contextControl);
-                };
+            file_picker_callback: function (cb, value, meta) {
+              // meta contains info about type (image, media, etc). Used to properly add DS to dialogs.
+              _thisControl.createControl(cb, meta);
+            },
+            images_upload_handler: function (blobInfo, success, failure) {
+              _thisControl.addDndImage(blobInfo, success, failure);
+            },
+            setup: function (editor) {
+              var pluginManager = tinymce.util.Tools.resolve('tinymce.PluginManager');
 
-                ed.onKeyUp.add(function (ed, e) {
-                  onChange(ed);
-                });
+              editor.on('init', function (e) {
+                amplify.publish('/field/init/completed');
+                _thisControl.editorId = editor.id;
+                _thisControl.editor = editor;
+                if (_thisControl.value && _thisControl.value !== '_not-set') {
+                  editor.setContent(_thisControl.value, { format: 'raw' });
+                }
+                _thisControl._onChange(null, _thisControl);
+              });
 
-                ed.onUndo.add(function (ed, e) {
-                  onChange(ed);
-                });
+              editor.on('keyup paste undo redo', function (e) {
+                _thisControl.save();
+                _thisControl._onChangeVal(null, _thisControl);
+              });
 
-                ed.onRedo.add(function (ed, e) {
-                  onChange(ed);
-                });
+              // Save model when setting content into editor (images, tables, etc).
+              editor.on('SetContent', function (e) {
+                // Don't save model on initial setting of content (initializing editor)
+                if (!e.initial) {
+                  _thisControl.save();
+                }
+              });
 
-                ed.onDblClick.add(function (ed, e) {
-                  var el = e.target.parentNode;
-                  var flag = false;
+              editor.on('Change', function (e) {
+                const id = _thisControl.editorId,
+                  windowHeight = $(window).height(),
+                  $editorIframe = $('#' + id + '_ifr'),
+                  editorScrollTop = $editorIframe.offset().top, // Top position in document
+                  editorPos =
+                    $editorIframe[0].getBoundingClientRect().top > 0 ? $editorIframe[0].getBoundingClientRect().top : 0, // Top position in current view
+                  currentSelectionPos = $(tinymce.activeEditor.selection.getNode()).offset().top, // Top position of current node selected in editor
+                  editorHeight = $editorIframe.height();
 
-                  while (el.tagName != 'BODY' && !flag) {
-                    if (YDom.hasClass(el, 'mceNonEditable')) {
-                      flag = true;
-                      break;
+                // if current selection it out of view, scroll to selection
+                if (editorPos + currentSelectionPos > windowHeight - 100) {
+                  $(document).scrollTop(editorScrollTop + editorHeight - windowHeight + 100);
+                }
+
+                if (!e.initial) {
+                  _thisControl.save();
+                }
+                _thisControl._onChangeVal(null, _thisControl);
+              });
+
+              editor.on('DblClick', function (e) {
+                if (e.target.nodeName == 'IMG') {
+                  tinyMCE.activeEditor.execCommand('mceImage');
+                }
+              });
+
+              // No point in waiting for `craftercms_tinymce_hooks` if the hook won't be loaded at all.
+              external.craftercms_tinymce_hooks &&
+                pluginManager.waitFor(
+                  'craftercms_tinymce_hooks',
+                  () => {
+                    const hooks = pluginManager.get('craftercms_tinymce_hooks');
+                    if (hooks) {
+                      pluginManager.get('craftercms_tinymce_hooks').setup?.(editor);
                     } else {
-                      el = el.parentNode;
+                      console.error(
+                        "The `craftercms_tinymce_hooks` was configured to be loaded but didn't load. Check the path is correct in the rte configuration file."
+                      );
                     }
-                  }
-                  if (!flag) {
-                    ed.contextControl._handleElementDoubleClick(ed, e);
-                  }
+                  },
+                  'loaded'
+                );
+            },
+            paste_preprocess(plugin, args) {
+              _thisControl.editor.plugins.craftercms_paste_extension?.paste_preprocess(plugin, args);
+            },
+            paste_postprocess: function (plugin, args) {
+              // If no text, and external it means that is dragged
+              // text validation is because it can be text copied from outside the editor
+              if (args.node.outerText === '' && !args.internal && !_thisControl.editorImageDatasources.length) {
+                args.preventDefault();
+                _thisControl.editor.notificationManager.open({
+                  text: _thisControl.formatMessage(_thisControl.messages.noDatasourcesConfigured),
+                  timeout: 3000,
+                  type: 'error'
                 });
-
-                ed.onClick.add(function (ed, e) {
-                  amplify.publish('/rte/clicked');
-                });
-
-                ed.onLoadContent.add(function (ed, cm) {
-                  ed.save();
-                  var value = ed.contextControl.inputEl.value;
-                  if (value != '')
-                    //Could be that the model hasn't been loaded yet(Fix the repeat group issue)
-                    ed.contextControl.updateModel(value); //Should we really update the model here?
-                  ed.contextControl._onChange(null, ed.contextControl);
-                });
-                ed.onChange.add(function (ed, l) {
-                  _self.edited = true;
-
-                  if (!ed.isPaste) {
-                    _self.resize();
-                  } else {
-                    _self.resize(true);
-                    ed.isPaste = false;
-                  }
-                });
-
-                ed.onInit.add(function (ed) {
-                  amplify.publish('/field/init/completed');
-                });
-
-                ed.onBeforeExecCommand.add(function (ed, cmd, ui, val) {
-                  var ln = ed.selection.getNode();
-                  if (cmd == 'unlink' && ln) {
-                    while (ln.nodeName != 'A' && ln.parentNode) {
-                      // Look for the link node among the node's ancestors
-                      ln = ln.parentNode;
-                    }
-                    if (ln.nodeName == 'A') {
-                      // Remove all class names from the link element so nothing remains of the link element; otherwise, FF
-                      // will create a span element and move all the class names to it
-                      ln.className = '';
-                    }
-                  }
-                });
-
-                ed.onPostRender.add(function (ed, cm) {
-                  ed.contextControl.resizeEditor(ed, true);
-
-                  if (_thisControl.containerEl.querySelector('.mceLayout')) {
-                    _thisControl.containerEl.querySelector('.mceLayout').style.maxWidth = width + 'px'; // Why? Field width should be flexible, because of responsiveness, should resize based on the screen size
-                  }
-
-                  // Add counter element
-                  var refEl = YSelector.query('table.mceLayout tbody', _thisControl.containerEl, true),
-                    theadEl = document.createElement('thead'),
-                    trEl = document.createElement('tr'),
-                    tdEl = document.createElement('td'),
-                    taEl = document.createElement('textarea'),
-                    ctrlEl = document.createElement('th');
-
-                  YDom.addClass(refEl, 'cstudio-rte-add-component');
-                  YDom.addClass(ctrlEl, 'cstudio-form-control-rte-count');
-                  ctrlEl.setAttribute('colspan', '3');
-
-                  countEl = document.createElement('span');
-                  YDom.addClass(countEl, 'char-count');
-                  ctrlEl.appendChild(countEl);
-
-                  _thisControl.renderHelp(_thisControl.fieldConfig, ctrlEl);
-
-                  trEl.appendChild(ctrlEl);
-                  theadEl.appendChild(trEl);
-                  YDom.insertBefore(theadEl, refEl);
-                  _thisControl.countEl = countEl;
-
-                  // Add textarea element for code view
-                  refEl = YSelector.query('tr.mceLast', refEl, true);
-                  trEl = document.createElement('tr');
-                  YDom.addClass(taEl, 'code-view');
-                  tdEl.appendChild(taEl);
-                  trEl.appendChild(tdEl);
-                  YDom.insertBefore(trEl, refEl);
-                  _thisControl.editor.codeTextArea = taEl;
-
-                  YEvent.on(inputEl, 'keyup', _thisControl.count, countEl);
-                  YEvent.on(inputEl, 'keypress', _thisControl.count, countEl);
-                  YEvent.on(inputEl, 'mouseup', _thisControl.count, countEl);
-
-                  if (!navigator.appName == 'Microsoft Internet Explorer') {
-                    // Bind focus event
-                    tinymce2.dom.Event.add(ed.getWin(), 'focus', function (e) {
-                      _thisControl.form.setFocusedField(_thisControl);
-                    });
-                  } else {
-                    // IE10 fires the 'focus' event on the window every time
-                    // you click on it; therefore, it becomes impossible for
-                    // the RTE to lose focus. To work around this, we'll focus
-                    // on the RTE only after clicking on its body.
-                    tinymce2.dom.Event.add(ed.getBody(), 'focus', function (e) {
-                      _thisControl.form.setFocusedField(_thisControl);
-                    });
-                  }
-
-                  ed.contextControl._applyOverrideStyles(ed, rteConfig);
-
-                  if (_thisControl.readonly == true) {
-                    YEvent.on(
-                      ed.getBody(),
-                      'click',
-                      function () {
-                        ed.execCommand('mceAutoResize');
-                      },
-                      ed
-                    );
-                  }
-                });
-              } catch (err) {
-                // log failure
+              } else {
+                _thisControl.editor.plugins.craftercms_paste_extension?.paste_postprocess(plugin, args);
               }
-            }
+            },
+            ...(rteConfig?.tinymceOptions && {
+              ...CrafterCMSNext.util.object.reversePluckProps(
+                rteConfig.tinymceOptions,
+                'target', // Target can't be changed
+                'inline', // The control will always have the default (false) in forms-engine.
+                'setup',
+                'base_url',
+                'encoding',
+                'autosave_ask_before_unload', // Autosave options are removed since it is not supported in control.
+                'autosave_interval',
+                'autosave_prefix',
+                'autosave_restore_when_empty',
+                'autosave_retention',
+                'file_picker_callback', // File picker integration with our data sources is already implemented in the control
+                'height', // Height is set via control properties
+                'width', // Width is set via control properties
+                'paste_postprocess', // Already implemented for paste and drag&drop using our data sources.
+                'images_upload_handler', // Images upload integration with our data sources is already implemented in the control
+                'code_editor_inline', // Code editor will always be inline in forms-engine.
+                'plugins', // Considered/used above, mixed with our options
+                'external_plugins', // Considered/used above, mixed with our options
+                'toolbar_sticky', // Toolbar is configured and styled to be sticky in forms-engine
+                'relative_urls', // To avoid allowing convertion of urls to be relative to the document_base_url
+                'readonly', // Comes from form control props, can't be overridden.
+                'force_br_newlines', // Comes from form control props, can't be overridden.
+                'forced_root_block' // Comes from form control props, can't be overridden.
+              )
+            })
           });
 
           // Update all content before saving the form (all content is automatically updated on focusOut)
-          var callback = {};
+          callback = {};
           callback.beforeSave = function () {
-            //if codeView has changes - update rte.
-            if (!YDom.hasClass(_thisControl.containerEl, 'text-mode')) {
-              _thisControl.editor.setContent(_thisControl.editor.codeView.getValue()); // Transfer content in codeView to RTE
-            }
             _thisControl.save();
           };
           _thisControl.form.registerBeforeSaveCallback(callback);
         },
 
-        /**
-         * handle element clicks
-         */
-        _handleElementDoubleClick: function (editor, event) {
-          var n = event.target;
+        createControl: function (cb, meta) {
+          var datasourcesNames = '',
+            imageManagerNames = this.imageManagerName, // List of image datasource IDs, could be an array or a string
+            videoManagerNames = this.videoManagerName,
+            fileManagerNames = this.fileManagerName,
+            addContainerEl,
+            tinyMCEContainer = $('.tox-dialog'),
+            _self = this,
+            type = meta.filetype == 'media' ? 'video' : meta.filetype == 'file' ? 'item' : meta.filetype;
 
-          if (n.nodeName == 'IMG') {
-            this._handleImageDoubleClick(editor, event);
-          } else if (n.nodeName == 'A') {
-            editor.execCommand('mceLink');
+          imageManagerNames = !imageManagerNames
+            ? ''
+            : Array.isArray(imageManagerNames)
+            ? imageManagerNames.join(',')
+            : imageManagerNames; // Turn the list into a string
+          videoManagerNames = !videoManagerNames
+            ? ''
+            : Array.isArray(videoManagerNames)
+            ? videoManagerNames.join(',')
+            : videoManagerNames;
+          fileManagerNames = !fileManagerNames
+            ? ''
+            : Array.isArray(fileManagerNames)
+            ? fileManagerNames.join(',')
+            : fileManagerNames;
+
+          if (videoManagerNames !== '') {
+            datasourcesNames = videoManagerNames;
           }
-        },
-
-        /**
-         * handle element clicks
-         */
-        _handleImageDoubleClick: function (editor, event) {
-          CStudioAuthoring.Module.requireModule(
-            'cstudio-forms-controls-rte-edit-image',
-            '/static-assets/components/cstudio-forms/controls/rte-plugins/edit-image.js',
-            {},
-            {
-              moduleLoaded: function (moduleName, moduleClass, moduleConfig) {
-                moduleClass.renderImageEdit(editor, event.target);
-              }
+          if (imageManagerNames !== '') {
+            if (datasourcesNames !== '') {
+              datasourcesNames += ',';
             }
-          );
-        },
-
-        /**
-         * apply override styles to the RTE
-         * Override styles override styles from your the site stylesheet
-         */
-        _applyOverrideStyles: function (editor, configuration) {
-          var styleOverrides = configuration.rteStyleOverride;
-          var dom = editor.dom;
-          var ss = dom.doc.createElement('style'),
-            tt = dom.doc.createTextNode(styleOverrides);
-
-          //First add the currentStyleSheets
-          var styleSheets = tinymce2.explode(this._getContentCSS(editor) + ',' + this._getCurrentStyleSheets());
-
-          tinymce2.each(styleSheets, function (u) {
-            dom.loadCSS(u);
-          });
-
-          if (configuration && styleOverrides) {
-            ss.setAttribute('type', 'text/css');
-            //ss.setAttribute('title', channel);
-            dom.doc.head.appendChild(ss);
-
-            if (ss.styleSheet) {
-              // IE (6,7,8)
-              ss.styleSheet.cssText = styleOverrides;
-            } else {
-              if (tt.data != 'undefined') {
-                ss.appendChild(tt); // all other browsers
-              }
-            }
+            datasourcesNames += imageManagerNames;
           }
-        },
-
-        /**
-         * Load the default theme style sheet
-         */
-        _getContentCSS: function (editor) {
-          var url = tinymce2.ThemeManager.urls[editor.settings.theme] || tinymce2.documentBaseURL.replace(/\/$/, '');
-          return editor.baseURI.toAbsolute(url + '/skins/' + editor.settings.skin + '/content.css');
-        },
-
-        /**
-         * return the style sheets that should be applied to the RTE given the current context it is in
-         */
-        _getCurrentStyleSheets: function (channel) {
-          var stylesheets = '/studio/static-assets/themes/cstudioTheme/css/forms-rte.css';
-          var rteConfig = this.rteConfig;
-
-          // if rteStylesheets xml tag is not defined, use only default css
-          if (typeof rteConfig.rteStylesheets === 'undefined' || typeof rteConfig.rteStylesheets.link !== 'object') {
-            return stylesheets;
+          if (fileManagerNames !== '') {
+            if (datasourcesNames !== '') {
+              datasourcesNames += ',';
+            }
+            datasourcesNames += fileManagerNames;
           }
 
-          // if rteStylesheets xml tag is defined, add them to the style sheet list
-          if (rteConfig.rteStylesheets.link.length) {
-            for (var i = 0; i < rteConfig.rteStylesheets.link.length; i++) {
-              var item = rteConfig.rteStylesheets.link[i];
-              if (
-                !item.appliesToChannel ||
-                (!channel && item.appliesToChannel == 'default') ||
-                (channel && item.appliesToChannel.indexOf(channel) != -1)
-              ) {
-                stylesheets += ', ' + item.url;
-              }
-            }
+          if (this.addContainerEl) {
+            addContainerEl = this.addContainerEl;
+            this.addContainerEl = null;
+            $('.cstudio-form-control-image-picker-add-container').remove();
           } else {
-            if (rteConfig.rteStylesheets.link.url) {
-              stylesheets += ', ' + rteConfig.rteStylesheets.link.url;
-            }
-          }
+            addContainerEl = document.createElement('div');
+            tinyMCEContainer.append(addContainerEl);
+            YAHOO.util.Dom.addClass(addContainerEl, 'cstudio-form-control-image-picker-add-container');
+            YAHOO.util.Dom.addClass(addContainerEl, 'cstudio-tinymce');
+            this.addContainerEl = addContainerEl;
 
-          return stylesheets;
-        },
+            addContainerEl.style.position = 'absolute';
+            addContainerEl.style.right = '15px';
+            addContainerEl.style.top = '113px';
 
-        /**
-         * apply style sheets for channel
-         */
-        _applyChannelStyleSheets: function (channel) {
-          var stylesheets = this._getCurrentStyleSheets(channel).split(',');
-
-          var head = tinymce2.activeEditor.dom.doc.getElementsByTagName('head')[0];
-
-          // Clear all elements from head; IE doesn't like head.innerHTML = ''
-          CStudioAuthoring.Utils.emptyElement(head);
-
-          var link = document.createElement('link');
-          link.setAttribute('rel', 'stylesheet');
-          link.setAttribute('type', 'text/css');
-
-          for (var i = 0; i < stylesheets.length; i++) {
-            var stylesheet = { loadFromPreview: true, url: stylesheets[i] };
-
-            if (stylesheet.loadFromPreview) {
-              // assume relative to preview server
-              link.setAttribute('href', CStudioAuthoringContext.previewAppBaseUri + stylesheet.url);
-            } else {
-              // assume fully qualified
-              link.setAttribute('href', stylesheet.url);
+            var datasourceMap = this.form.datasourceMap,
+              datasourceDef = this.form.definition.datasources,
+              addFunction; //video or image add function
+            switch (type) {
+              case 'image':
+                addFunction = _self.addManagedImage;
+                break;
+              case 'video':
+                addFunction = _self.addManagedVideo;
+                break;
+              default:
+                addFunction = _self.addManagedFile;
             }
 
-            head.appendChild(link);
-          }
+            var addMenuOption = function (el) {
+              // We want to avoid possible substring conflicts by using a reg exp (a simple indexOf
+              // would fail if a datasource id string is a substring of another datasource id)
+              var regexpr = new RegExp('(' + el.id + ')[\\s,]|(' + el.id + ')$'),
+                mapDatasource;
 
-          this._applyOverrideStyles(tinymce2.activeEditor, this.rteConfig);
+              if (datasourcesNames.indexOf(el.id) != -1 && el.interface === type) {
+                mapDatasource = datasourceMap[el.id];
+
+                var itemEl = document.createElement('div');
+                YAHOO.util.Dom.addClass(itemEl, 'cstudio-form-control-image-picker-add-container-item');
+                itemEl.textContent = el.title;
+                addContainerEl.appendChild(itemEl);
+
+                YAHOO.util.Event.on(
+                  itemEl,
+                  'click',
+                  function () {
+                    _self.addContainerEl = null;
+                    $('.cstudio-form-control-image-picker-add-container').remove();
+
+                    try {
+                      addFunction(mapDatasource, cb); // video or image add function
+                    } catch (e) {
+                      CStudioAuthoring.Operations.showSimpleDialog(
+                        'datasourceError',
+                        CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                        _self.formatMessage(_self.words.notification),
+                        _self.formatMessage(_self.messages.incompatibleDatasource),
+                        null, // use default button
+                        YAHOO.widget.SimpleDialog.ICON_BLOCK,
+                        'studioDialog',
+                        null,
+                        1301
+                      );
+                    }
+                  },
+                  itemEl
+                );
+              }
+            };
+            datasourceDef.forEach(addMenuOption);
+
+            // If no datasources for type
+            if ($(addContainerEl).children().length === 0) {
+              var itemEl = document.createElement('div');
+              YAHOO.util.Dom.addClass(itemEl, 'cstudio-form-control-image-picker-add-container-item');
+              itemEl.innerHTML = 'No datasources available';
+              addContainerEl.appendChild(itemEl);
+            }
+          }
         },
 
-        /**
-         * load the javascript plugins for the given RTE configuration
-         */
-        _loadPlugins: function (plugins, initCallback) {
-          // create list of plugins
-          this.waitingForPlugins = [];
+        addManagedImage(datasource, cb, file) {
+          if (datasource && datasource.insertImageAction) {
+            datasource.insertImageAction(
+              {
+                success: function (imageData) {
+                  var cleanUrl = imageData.relativeUrl.replace(/^(.+?\.(png|jpe?g)).*$/i, '$1'); //remove timestamp
 
-          // init the plugin list
-          for (var k = 0; k < plugins.length; k++) {
-            this.waitingForPlugins[this.waitingForPlugins.length] = plugins[k];
-          }
-
-          // define the callback that will fire the RTE init when all plugins are loaded
-          var loadedCb = {
-            moduleLoaded: function (moduleName, moduleClass, moduleConfig) {
-              moduleConfig.context.registeredPlugins[moduleConfig.context.registeredPlugins.length] = moduleClass;
-
-              for (var j = 0; j < moduleConfig.context.waitingForPlugins.length; j++) {
-                var pluginName = 'cstudio-forms-controls-rte-' + moduleConfig.context.waitingForPlugins[j];
-
-                if (pluginName == moduleName) {
-                  moduleConfig.context.waitingForPlugins.splice(j, 1);
-                  break;
+                  if (cb.success) {
+                    cb.success(cleanUrl, { title: imageData.fileName });
+                  } else {
+                    cb(cleanUrl, { title: imageData.fileName });
+                  }
+                },
+                failure: function (message) {
+                  if (cb.failure) {
+                    cb.failure(message);
+                  } else {
+                    CStudioAuthoring.Operations.showSimpleDialog(
+                      'message-dialog',
+                      CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                      CMgs.format(langBundle, 'notification'),
+                      message,
+                      null,
+                      YAHOO.widget.SimpleDialog.ICON_BLOCK,
+                      'studioDialog'
+                    );
+                  }
                 }
-              }
-
-              if (moduleConfig.context.waitingForPlugins.length == 0) {
-                // init the rte
-                initCallback.success();
-              }
-            }
-          };
-
-          // load the modules
-          for (var i = 0; i < plugins.length; i++) {
-            CStudioAuthoring.Module.requireModule(
-              'cstudio-forms-controls-rte-' + plugins[i],
-              '/static-assets/components/cstudio-forms/controls/rte-plugins/' + plugins[i] + '.js',
-              { context: this },
-              loadedCb
+              },
+              file
             );
           }
+        },
+
+        addManagedVideo(datasource, cb) {
+          if (datasource && datasource.insertVideoAction) {
+            datasource.insertVideoAction({
+              success: function (videoData) {
+                cb(videoData.relativeUrl, { title: videoData.fileName });
+
+                // var cleanUrl = imageData.previewUrl.replace(/^(.+?\.(png|jpe?g)).*$/i, '$1');   //remove timestamp
+              },
+              failure: function (message) {
+                CStudioAuthoring.Operations.showSimpleDialog(
+                  'message-dialog',
+                  CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                  CMgs.format(langBundle, 'notification'),
+                  message,
+                  null,
+                  YAHOO.widget.SimpleDialog.ICON_BLOCK,
+                  'studioDialog'
+                );
+              }
+            });
+          }
+        },
+
+        addManagedFile(datasource, cb) {
+          if (datasource && datasource.add) {
+            datasource.add(
+              {
+                returnProp: 'browserUri', // to return proper item link (browserUri)
+                insertItem: function (fileData) {
+                  cb(fileData, {});
+                },
+                failure: function (message) {
+                  CStudioAuthoring.Operations.showSimpleDialog(
+                    'message-dialog',
+                    CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                    CMgs.format(langBundle, 'notification'),
+                    message,
+                    null,
+                    YAHOO.widget.SimpleDialog.ICON_BLOCK,
+                    'studioDialog'
+                  );
+                }
+              },
+              false
+            );
+          }
+        },
+
+        addDndImage(blobInfo, success, failure) {
+          const _self = this;
+          const datasourceMap = this.form.datasourceMap;
+
+          const $imageToAdd = $(_self.editor.iframeElement)
+            .contents()
+            .find(`img[src="${blobInfo.blobUri()}"]`)
+            .css('opacity', 0.3);
+
+          if (this.editorImageDatasources.length > 0) {
+            this.editor.windowManager.open({
+              title: 'Source',
+              body: {
+                type: 'panel',
+                items: [
+                  {
+                    type: 'selectbox',
+                    name: 'datasource',
+                    label: this.formatMessage(this.messages.chooseSource),
+                    items: this.editorImageDatasources.map((source) => ({
+                      value: source.id,
+                      text: source.title
+                    }))
+                  }
+                ]
+              },
+              onSubmit: function (api) {
+                const ds = datasourceMap[api.getData().datasource];
+
+                const file = blobInfo.blob();
+                file.dataUrl = `data:${file.type};base64,${blobInfo.base64()}`;
+
+                _self.addManagedImage(
+                  ds,
+                  {
+                    success: function (url, data) {
+                      _self.editor.notificationManager.open({
+                        text: _self.formatMessage(_self.messages.dropImageUploaded, { title: data.title }),
+                        timeout: 3000,
+                        type: 'success'
+                      });
+
+                      $imageToAdd.css('opacity', '');
+                      success(url);
+                    },
+                    failure: function (error) {
+                      _self.editor.notificationManager.open({
+                        text: error.message,
+                        timeout: 3000,
+                        type: 'error'
+                      });
+                      $imageToAdd.remove();
+                      failure();
+                    }
+                  },
+                  file
+                );
+                api.close();
+              },
+              onCancel: function () {
+                if ($imageToAdd.length > 0) {
+                  $imageToAdd.remove();
+                  failure(null, { remove: true });
+                } else {
+                  // Remove spinner added by upload tab under insert image dialog
+                  $('.tox-dialog__busy-spinner').remove();
+                }
+              },
+              buttons: [
+                {
+                  type: 'cancel',
+                  text: _self.formatMessage(_self.words.cancel)
+                },
+                {
+                  text: _self.formatMessage(_self.words.select),
+                  type: 'submit',
+                  primary: true,
+                  enabled: false
+                }
+              ]
+            });
+          }
+        },
+
+        /**
+         * render of control markup
+         */
+        _renderInputMarkup: function (config, rteId) {
+          var titleEl, controlWidgetContainerEl, validEl, inputEl, descriptionEl;
+
+          YDom.addClass(this.containerEl, 'rte-inactive');
+
+          // Control title of form
+          titleEl = document.createElement('span');
+          YDom.addClass(titleEl, 'cstudio-form-field-title');
+          titleEl.textContent = config.title;
+
+          // Control container under form
+          controlWidgetContainerEl = document.createElement('div');
+          YDom.addClass(controlWidgetContainerEl, 'cstudio-form-control-rte-container rte2-container');
+
+          // TODO: move to stylesheet
+          controlWidgetContainerEl.style.paddingLeft = '28%';
+
+          // Control validation element (its state  is set by control constraints)
+          validEl = document.createElement('span');
+          YDom.addClass(validEl, 'validation-hint');
+          YDom.addClass(validEl, 'cstudio-form-control-validation fa fa-checks');
+
+          // Control textarea - has the content that will be rendered on the plugin
+          inputEl = document.createElement('textarea');
+          controlWidgetContainerEl.appendChild(inputEl);
+          YDom.addClass(inputEl, 'datum');
+          this.inputEl = inputEl;
+          inputEl.value = this.value == '_not-set' ? config.defaultValue : this.value;
+          inputEl.id = rteId;
+          YDom.addClass(inputEl, 'cstudio-form-control-input');
+
+          // Control description that will be shown on the form
+          descriptionEl = document.createElement('span');
+          YDom.addClass(descriptionEl, 'description');
+          YDom.addClass(descriptionEl, 'cstudio-form-control-rte-description');
+          descriptionEl.innerHTML = config.description;
+
+          this.containerEl.appendChild(titleEl);
+          this.containerEl.appendChild(validEl);
+          this.containerEl.appendChild(controlWidgetContainerEl);
+          controlWidgetContainerEl.appendChild(descriptionEl);
+
+          return inputEl;
         },
 
         /**
          * on change
          */
         _onChange: function (evt, obj) {
-          obj.value = obj.inputEl.value;
-          obj.count(evt, obj.countEl, obj.inputEl);
-          const requirementsEnabled = obj.required || Boolean(obj.maxLength);
+          obj.value = this.editor ? this.editor.getContent() : obj.value;
 
-          if (requirementsEnabled) {
-            if (obj.required) {
-              if (CStudioAuthoring.Utils.isEmptyHtml(obj.value)) {
-                obj.setError('required', 'Field is Required');
-                obj.renderValidation(true, false);
-              } else {
-                obj.clearError('required');
-                obj.renderValidation(true, true);
-              }
-            }
-            if (obj.maxLength) {
-              if (obj.charCount > obj.maxLength) {
-                obj.setError('maxLength');
-                obj.renderValidation(true, false);
-              } else {
-                obj.clearError('maxLength');
-                obj.renderValidation(true, true);
-              }
+          if (obj.required) {
+            if (CStudioAuthoring.Utils.isEmptyHtml(obj.value)) {
+              obj.setError('required', this.formatMessage(this.messages.requiredField));
+              obj.renderValidation(true, false);
+            } else {
+              obj.clearError('required');
+              obj.renderValidation(true, true);
             }
           } else {
             obj.renderValidation(false, true);
           }
+
           obj.owner.notifyValidation();
         },
 
@@ -1004,373 +855,12 @@ CStudioAuthoring.Module.requireModule(
         },
 
         /**
-         * perform count calculation on keypress
-         * @param evt event
-         * @param el element
-         */
-        count: function (evt, countEl, el) {
-          // 'this' is the input box
-          el = el ? el : this;
-
-          // get length of only the textContent (no markup or escaped characters)
-          const editorBody = tinymce2.activeEditor.getBody();
-          const text = tinymce.trim(editorBody.innerText || editorBody.textContent);
-
-          this.charCount = text.length;
-          var maxlength = el.maxlength && el.maxlength != '' ? el.maxlength : -1;
-
-          if (maxlength != -1) {
-            if (this.charCount > el.maxlength) {
-              // truncate if exceeds max chars
-              if (this.charCount > el.maxlength) {
-                this.value = text.substr(0, el.maxlength);
-              }
-
-              if (
-                evt &&
-                evt != null &&
-                evt.keyCode != 8 &&
-                evt.keyCode != 46 &&
-                evt.keyCode != 37 &&
-                evt.keyCode != 38 &&
-                evt.keyCode != 39 &&
-                evt.keyCode != 40 && // arrow keys
-                evt.keyCode != 88 &&
-                evt.keyCode != 86
-              ) {
-                // allow backspace and
-                // delete key and arrow keys (37-40)
-                // 86 -ctrl-v, 90-ctrl-z,
-                if (evt) YEvent.stopEvent(evt);
-              }
-            }
-          }
-
-          if (maxlength != -1) {
-            countEl.innerHTML = this.charCount + ' / ' + el.maxlength;
-          } else {
-            countEl.innerHTML = this.charCount;
-          }
-        },
-
-        /**
          * call this instead of calling editor.save()
          */
-        save: function () {
-          this.editor.save();
-          this._onChange(null, this);
-          this.updateModel(this.inputEl.value);
+        save: function (a) {
+          this.updateModel(CStudioForms.Util.escapeXml(this.editor.getContent()));
         }
       });
-
-      YEvent.delegate(
-        'formContainer',
-        'click',
-        function (e, matchedEl) {
-          var rteRoot = YDom.getAncestorBy(matchedEl, function (el) {
-            if (el.nodeName == 'TABLE' && YDom.hasClass(el, 'mceLayout')) {
-              return el;
-            }
-          });
-          if (!rteRoot) {
-            // Clicked outside of an RTE
-            // Focus out of the RTE that's currently showing
-            tinymce2.activeEditor.contextControl.form.setFocusedField(null);
-          }
-        },
-        'div, span, td'
-      );
-
-      /* -------------------------------------------- */
-      /* --- Patch tinymce2's ColorSplitButton methods --- */
-      /* Original File : <studio-root>/src/main/webapp/modules/editors/tinymce2/tiny_mce.js
-/* -------------------------------------------- */
-      tinymce2.ui.ColorSplitButton.prototype.renderMenu = function () {
-        var d = tinymce2,
-          c = d.DOM,
-          a = d.dom.Event,
-          b = d.is,
-          e = d.each;
-
-        var p = this,
-          h,
-          k = 0,
-          q = p.settings,
-          g,
-          j,
-          l,
-          o,
-          f;
-        o = c.add(document.getElementById(tinymce2.activeEditor.editorId + '_toolbargroup'), 'div', {
-          role: 'listbox',
-          id: p.id + '_menu',
-          class: q.menu_class + ' ' + q['class'],
-          style: 'position:absolute;left:0;top:-1000px;'
-        });
-        h = c.add(o, 'div', { class: q['class'] + ' mceSplitButtonMenu' });
-        c.add(h, 'span', { class: 'mceMenuLine' });
-        g = c.add(h, 'table', { role: 'presentation', class: 'mceColorSplitMenu' });
-        j = c.add(g, 'tbody');
-        k = 0;
-        e(b(q.colors, 'array') ? q.colors : q.colors.split(','), function (i) {
-          i = i.replace(/^#/, '');
-          if (!k--) {
-            l = c.add(j, 'tr');
-            k = q.grid_width - 1;
-          }
-          g = c.add(l, 'td');
-          g = c.add(g, 'a', {
-            role: 'option',
-            href: 'javascript:;',
-            style: { backgroundColor: '#' + i },
-            title: p.editor.getLang('colors.' + i, i),
-            'data-mce-color': '#' + i
-          });
-          if (p.editor.forcedHighContrastMode) {
-            g = c.add(g, 'canvas', { width: 16, height: 16, 'aria-hidden': 'true' });
-            if (g.getContext && (f = g.getContext('2d'))) {
-              f.fillStyle = '#' + i;
-              f.fillRect(0, 0, 16, 16);
-            } else {
-              c.remove(g);
-            }
-          }
-        });
-        if (q.more_colors_func) {
-          g = c.add(j, 'tr');
-          g = c.add(g, 'td', { colspan: q.grid_width, class: 'mceMoreColors' });
-          g = c.add(
-            g,
-            'a',
-            {
-              role: 'option',
-              id: p.id + '_more',
-              href: 'javascript:;',
-              onclick: 'return false;',
-              class: 'mceMoreColors'
-            },
-            q.more_colors_title
-          );
-          a.add(g, 'click', function (i) {
-            q.more_colors_func.call(q.more_colors_scope || this);
-            return a.cancel(i);
-          });
-        }
-        c.addClass(h, 'mceColorSplitMenu');
-        new d.ui.KeyboardNavigation({
-          root: p.id + '_menu',
-          items: c.select('a', p.id + '_menu'),
-          onCancel: function () {
-            p.hideMenu();
-            p.focus();
-          }
-        });
-        a.add(p.id + '_menu', 'mousedown', function (i) {
-          return a.cancel(i);
-        });
-        a.add(p.id + '_menu', 'click', function (i) {
-          var m;
-          i = c.getParent(i.target, 'a', j);
-          if (i && i.nodeName.toLowerCase() == 'a' && (m = i.getAttribute('data-mce-color'))) {
-            p.setColor(m);
-          }
-          return a.cancel(i);
-        });
-        return o;
-      };
-
-      tinymce2.ui.ColorSplitButton.prototype.showMenu = function () {
-        var d = tinymce2,
-          c = d.DOM,
-          a = d.dom.Event;
-
-        var f = this,
-          g,
-          j,
-          i,
-          h;
-        if (f.isDisabled()) {
-          return;
-        }
-        if (!f.isMenuRendered) {
-          f.renderMenu();
-          f.isMenuRendered = true;
-        }
-        if (f.isMenuVisible) {
-          return f.hideMenu();
-        }
-        i = c.get(f.id);
-        c.show(f.id + '_menu');
-        c.addClass(i, 'mceSplitButtonSelected');
-        h = c.getPos(i);
-        c.setStyles(f.id + '_menu', {
-          left: h.x - 1,
-          top: h.y - window.pageYOffset + i.clientHeight,
-          zIndex: 200000
-        });
-        i = 0;
-        a.add(c.doc, 'mousedown', f.hideMenu, f);
-        f.onShowMenu.dispatch(f);
-        if (f._focused) {
-          f._keyHandler = a.add(f.id + '_menu', 'keydown', function (k) {
-            if (k.keyCode == 27) {
-              f.hideMenu();
-            }
-          });
-          c.select('a', f.id + '_menu')[0].focus();
-        }
-        f.isMenuVisible = 1;
-      };
-
-      /* --------------------------------------- */
-      /* --- Patch tinymce2's ListBox methods --- */
-      /* Original File : <studio-root>/src/main/webapp/modules/editors/tinymce2/tiny_mce.js
-/* --------------------------------------- */
-      tinymce2.ui.ListBox.prototype.renderMenu = function () {
-        var e = tinymce2.each,
-          c = tinymce2.DOM;
-
-        var g = this,
-          f;
-        f = g.settings.control_manager.createDropMenu(g.id + '_menu', {
-          menu_line: 1,
-          container: tinymce2.activeEditor.editorId + '_toolbargroup',
-          class: g.classPrefix + 'Menu mceNoIcons',
-          max_width: 160,
-          max_height: 160
-        });
-        f.onHideMenu.add(function () {
-          g.hideMenu();
-          g.focus();
-        });
-        f.add({
-          title: g.settings.title,
-          class: 'mceMenuItemTitle',
-          onclick: function () {
-            if (g.settings.onselect('') !== false) {
-              g.select('');
-            }
-          }
-        });
-        e(g.items, function (h) {
-          if (h.value === undefined) {
-            f.add({
-              title: h.title,
-              class: 'mceMenuItemTitle',
-              onclick: function () {
-                if (g.settings.onselect('') !== false) {
-                  g.select('');
-                }
-              }
-            });
-          } else {
-            h.id = c.uniqueId();
-            h.onclick = function () {
-              if (g.settings.onselect(h.value) !== false) {
-                g.select(h.value);
-              }
-            };
-            f.add(h);
-          }
-        });
-        g.onRenderMenu.dispatch(g, f);
-        g.menu = f;
-      };
-
-      tinymce2.ui.ListBox.prototype.showMenu = function () {
-        var d = tinymce2,
-          b = d.dom.Event,
-          c = d.DOM,
-          e = d.each;
-
-        var g = this,
-          i,
-          h = c.get(this.id),
-          f;
-        if (g.isDisabled() || g.items.length == 0) {
-          return;
-        }
-        if (g.menu && g.menu.isMenuVisible) {
-          return g.hideMenu();
-        }
-        if (!g.isMenuRendered) {
-          g.renderMenu();
-          g.isMenuRendered = true;
-        }
-        i = c.getPos(h);
-        f = g.menu;
-        f.settings.offset_x = i.x - 1;
-        f.settings.offset_y = i.y - window.pageYOffset;
-        f.settings.keyboard_focus = !d.isOpera;
-        if (g.oldID) {
-          f.items[g.oldID].setSelected(0);
-        }
-        e(g.items, function (j) {
-          if (j.value === g.selectedValue) {
-            f.items[j.id].setSelected(1);
-            g.oldID = j.id;
-          }
-        });
-        f.showMenu(0, h.clientHeight);
-        b.add(c.doc, 'mousedown', g.hideMenu, g);
-        c.addClass(g.id, g.classPrefix + 'Selected');
-      };
-
-      /* ------------------------------------------ */
-      /* --- Patch tinymce2's MenuButton methods --- */
-      /* Original File : <studio-root>/src/main/webapp/modules/editors/tinymce2/tiny_mce.js
-/* ------------------------------------------ */
-      tinymce2.ui.MenuButton.prototype.renderMenu = function () {
-        var f = this,
-          e;
-        e = f.settings.control_manager.createDropMenu(f.id + '_menu', {
-          menu_line: 1,
-          container: tinymce2.activeEditor.editorId + '_toolbargroup',
-          class: this.classPrefix + 'Menu',
-          icons: f.settings.icons
-        });
-        e.onHideMenu.add(function () {
-          f.hideMenu();
-          f.focus();
-        });
-        f.onRenderMenu.dispatch(f, e);
-        f.menu = e;
-      };
-
-      tinymce2.ui.MenuButton.prototype.showMenu = function () {
-        var c = tinymce2,
-          a = c.dom.Event,
-          b = c.DOM,
-          d = c.each;
-
-        var g = this,
-          j,
-          i,
-          h = b.get(g.id),
-          f;
-        if (g.isDisabled()) {
-          return;
-        }
-        if (!g.isMenuRendered) {
-          g.renderMenu();
-          g.isMenuRendered = true;
-        }
-        if (g.isMenuVisible) {
-          return g.hideMenu();
-        }
-        j = b.getPos(g.settings.menu_container);
-        i = b.getPos(h);
-        f = g.menu;
-        f.settings.offset_x = i.x - 1;
-        f.settings.offset_y = i.y - window.pageYOffset + 2;
-        f.settings.vp_offset_x = i.x;
-        f.settings.vp_offset_y = i.y;
-        f.settings.keyboard_focus = g._focused;
-        f.showMenu(0, h.clientHeight);
-        a.add(b.doc, 'mousedown', g.hideMenu, g);
-        g.setState('Selected', 1);
-        g.isMenuVisible = 1;
-      };
 
       CStudioAuthoring.Module.moduleLoaded('cstudio-forms-controls-rte', CStudioForms.Controls.RTE);
     }

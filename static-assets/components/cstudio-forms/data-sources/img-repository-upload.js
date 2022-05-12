@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -48,20 +48,12 @@ YAHOO.extend(CStudioForms.Datasources.ImgRepoUpload, CStudioForms.CStudioFormDat
 
     if (this.useSearch) {
       var searchContext = {
-        searchId: null,
-        itemsPerPage: 12,
         keywords: '',
         filters: {
           'mime-type': ['image/jpeg', 'image/png', 'image/gif', 'image/tiff', 'image/bmp']
         },
         sortBy: 'internalName',
         sortOrder: 'asc',
-        numFilters: 1,
-        filtersShowing: 10,
-        currentPage: 1,
-        searchInProgress: false,
-        view: 'grid',
-        lastSelectedFilterSelector: '',
         mode: 'select' // open search not in default but in select mode
       };
 
@@ -75,7 +67,7 @@ YAHOO.extend(CStudioForms.Datasources.ImgRepoUpload, CStudioForms.CStudioFormDat
         {
           success(searchId, selectedTOs) {
             var imageData = {};
-            var path = selectedTOs[0].uri;
+            var path = selectedTOs[0].path;
             var url = this.context.createPreviewUrl(path);
             imageData.previewUrl = url;
             imageData.relativeUrl = path;
@@ -89,19 +81,16 @@ YAHOO.extend(CStudioForms.Datasources.ImgRepoUpload, CStudioForms.CStudioFormDat
         null
       );
     } else {
-      CStudioAuthoring.Operations.openBrowse('', _self.processPathsForMacros(_self.repoPath), '1', 'select', true, {
-        success(searchId, selectedTOs) {
-          var imageData = {};
-          var path = selectedTOs[0].uri;
-          var url = this.context.createPreviewUrl(path);
-          imageData.previewUrl = url;
+      CStudioAuthoring.Operations.openBrowseFilesDialog({
+        path: _self.processPathsForMacros(_self.repoPath),
+        onSuccess: ({ path }) => {
+          const imageData = {};
+          imageData.previewUrl = _self.createPreviewUrl(path);
           imageData.relativeUrl = path;
           imageData.fileExtension = path.substring(path.lastIndexOf('.') + 1);
 
           insertCb.success(imageData, true);
-        },
-        failure() {},
-        context: _self
+        }
       });
     }
   },
@@ -141,7 +130,16 @@ YAHOO.extend(CStudioForms.Datasources.ImgRepoUpload, CStudioForms.CStudioFormDat
 
   getSupportedProperties() {
     return [
-      { label: CMgs.format(langBundle, 'repositoryPath'), name: 'repoPath', type: 'string' },
+      {
+        label: CMgs.format(langBundle, 'repositoryPath'),
+        name: 'repoPath',
+        type: 'content-path-input',
+        defaultValue: '/static-assets/',
+        rootPath: '/static-assets',
+        validations: {
+          regex: /^\/static-assets(\/.*)?$/
+        }
+      },
       {
         label: CMgs.format(langBundle, 'useSearch'),
         name: 'useSearch',

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,13 +14,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-CStudioAdminConsole.Tool.ContentTypes.PropertyType.Variable =
-  CStudioAdminConsole.Tool.ContentTypes.PropertyType.Variable ||
-  function (fieldName, containerEl) {
-    this.fieldName = fieldName;
-    this.containerEl = containerEl;
-    return this;
-  };
+CStudioAdminConsole.Tool.ContentTypes.PropertyType.Variable = function (fieldName, containerEl) {
+  this.fieldName = fieldName;
+  this.containerEl = containerEl;
+  return this;
+};
 
 YAHOO.extend(
   CStudioAdminConsole.Tool.ContentTypes.PropertyType.Variable,
@@ -37,6 +35,15 @@ YAHOO.extend(
 
       if (updateFn) {
         var updateFieldFn = function (event, el) {
+          if (fName === 'id' && this.value) {
+            var input = YDom.getElementsByClassName('property-input-id')[0];
+
+            if (CStudioAdminConsole.ignorePostfixFields.filter((field) => field.startsWith(input.value)).length === 0) {
+              input.value = this.value.replace(/[-]/g, '_');
+            } else {
+              input.value = this.value;
+            }
+          }
           updateFn(event, el);
           var addPostfixes = '';
           switch (type) {
@@ -60,7 +67,6 @@ YAHOO.extend(
               addPostfixes = '_o';
               break;
             case 'rte':
-            case 'rte-tinymce5':
               addPostfixes = '_html';
               break;
             case 'time':
@@ -79,6 +85,7 @@ YAHOO.extend(
               : YDom.getElementsByClassName('property-input-id')[0];
             if (idDatasource) {
               idDatasource.value = this.value.replace(/[^A-Za-z0-9-_]/g, '');
+              idDatasource.value = idDatasource.value.replace(/[-]/g, '_');
               idDatasource.value =
                 idDatasource.value.substr(0, 1).toLowerCase() + idDatasource.value.substr(1) + addPostfixes;
 
@@ -98,8 +105,9 @@ YAHOO.extend(
         };
 
         YAHOO.util.Event.on(valueEl, 'keyup', updateFieldFn, valueEl);
-        $(valueEl).change(function () {
-          updateFieldFn(event, this);
+
+        $(valueEl).on('paste', function (e) {
+          updateFieldFn(e, valueEl);
         });
 
         if ((fName == 'id' || fName == 'name') && value !== '') {

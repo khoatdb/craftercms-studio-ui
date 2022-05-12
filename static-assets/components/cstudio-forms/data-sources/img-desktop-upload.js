@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -33,7 +33,7 @@ YAHOO.extend(CStudioForms.Datasources.ImgDesktopUpload, CStudioForms.CStudioForm
   /**
    * action called when user clicks insert image
    */
-  insertImageAction: function (insertCb) {
+  insertImageAction: function (insertCb, file) {
     this._self = this;
     var site = CStudioAuthoringContext.site;
     var path = '/static-assets/images'; // default
@@ -52,10 +52,6 @@ YAHOO.extend(CStudioForms.Datasources.ImgDesktopUpload, CStudioForms.CStudioForm
 
     var callback = {
       success: function (imageData) {
-        var topWin = window.parent.CStudioAuthoring.ContextualNav.WcmRootFolder;
-        if (topWin.currentTextNode && topWin.myTreeAssets) {
-          topWin.refreshNodes(topWin.currentTextNode, false, false, topWin.myTreeAssets, null, true);
-        }
         var relativeUrl = path.endsWith('/') ? path + imageData.fileName : path + '/' + imageData.fileName;
         var url = this.context.createPreviewUrl(relativeUrl);
         imageData.previewUrl = url + '?' + new Date().getTime();
@@ -70,7 +66,30 @@ YAHOO.extend(CStudioForms.Datasources.ImgDesktopUpload, CStudioForms.CStudioForm
     };
 
     if ('' != path) {
-      CStudioAuthoring.Operations.uploadAsset(site, path, isUploadOverwrite, callback, ['image/*']);
+      if (!file) {
+        CStudioAuthoring.Operations.uploadAsset(site, path, isUploadOverwrite, callback, ['image/*']);
+      } else {
+        CrafterCMSNext.services.content.uploadDataUrl(site, file, path, '_csrf').subscribe(
+          (response) => {
+            if (response.type === 'complete') {
+              const item = response.payload.body.message;
+              const relativeUrl = item.uri;
+              const previewUrl = `${CStudioAuthoringContext.previewAppBaseUri}${relativeUrl}`;
+
+              const imageData = {
+                fileName: item.name,
+                relativeUrl,
+                previewUrl
+              };
+
+              insertCb.success(imageData);
+            }
+          },
+          (error) => {
+            insertCb.failure(error);
+          }
+        );
+      }
     } else {
       var errorString = CMgs.format(langBundle, 'noPathSetError');
       errorString = errorString.replace('{DATASOURCENAME}', '<b>' + this.getName() + '</b>');
@@ -122,7 +141,18 @@ YAHOO.extend(CStudioForms.Datasources.ImgDesktopUpload, CStudioForms.CStudioForm
   },
 
   getSupportedProperties: function () {
-    return [{ label: CMgs.format(langBundle, 'repositoryPath'), name: 'repoPath', type: 'string' }];
+    return [
+      {
+        label: CMgs.format(langBundle, 'repositoryPath'),
+        name: 'repoPath',
+        type: 'content-path-input',
+        defaultValue: '/static-assets/',
+        rootPath: '/static-assets',
+        validations: {
+          regex: /^\/static-assets(\/.*)?$/
+        }
+      }
+    ];
   },
 
   getSupportedConstraints: function () {

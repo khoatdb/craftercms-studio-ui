@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+  ~ Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License version 3 as published by
@@ -18,7 +18,12 @@
 <#assign pType = RequestParameters.type!''>
 <#assign pName = RequestParameters.name!''>
 <#assign pFile = RequestParameters.file!'index.js'>
-<#if pSite?? && pType?? && pName?? && pFile?ends_with('.html')>
+<#assign pPluginId = RequestParameters.pluginId!''>
+<#if pSite == '' || pType == '' || pName == ''>
+    <div style="font-family: sans-serif; text-align: center; margin: 50px;">
+      <h1>Query arguments site, type and name are mandatory to render a plugin</h1>
+    </div>
+<#elseif pSite?? && pType?? && pName?? && pFile?ends_with('.html')>
   <#assign html = applicationContext.configurationService.getConfigurationAsString(
       pSite,
       "studio",
@@ -64,7 +69,9 @@
 
         const script = document.createElement('script');
 
-        script.src = '/studio/api/2/plugin/file?siteId=${pSite}&type=${pType}&name=${pName}&filename=${pFile}';
+
+
+        script.src = '/studio/1/plugin/file?siteId=${pSite}&type=${pType}&name=${pName}&filename=${pFile}<#if pPluginId?has_content>&pluginId=${pPluginId}</#if>';
 
         script.onload = function () {
           if (['yes', 'true', 'enable', '1'].includes(qs.monitor)) {
@@ -110,7 +117,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <title>${title}</title>
-    <link href="/studio/static-assets/styles/fonts.css" rel="stylesheet">
     <style>
       html, body, #root {
         margin: 0;
@@ -127,8 +133,6 @@
     </style>
   </head>
   <body>
-  <script src="/studio/static-assets/libs/jquery/dist/jquery.js"></script>
-  <#include "/templates/web/common/page-fragments/studio-context.ftl" />
   <#include "/templates/web/common/js-next-scripts.ftl" />
   <#nested />
   </body>

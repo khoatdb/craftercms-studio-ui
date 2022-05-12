@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -116,9 +116,7 @@ CStudioAuthoring.Messages.registerBundle('siteDashboard', 'es', {
   dashletIconGuideExcel: 'MS Excel',
   dashletIconGuideZip: 'Zip',
   dashletIconGuideGroovy: 'Groovy',
-  dashletIconGuideOtherFiles: 'Otros Archivos',
-
-  dependenciesLabel: 'Dependencias'
+  dashletIconGuideOtherFiles: 'Otros Archivos'
 });
 
 CStudioAuthoring.Messages.registerBundle('contextnav', 'es', {
@@ -261,7 +259,7 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'es', {
   templates: 'Plantillas',
   scripts: 'Scripts',
   adminConsole: 'Consola de Administración',
-  siteconfig: 'Configuración del sitio',
+  siteconfig: 'Configuración del proyecto',
   previewSync: 'Vista previa de Sincronización',
   syncrepo: 'Sincronizar del Repositorio',
   allSites: 'Todos los Sitios',
@@ -324,8 +322,8 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'es', {
 });
 
 CStudioAuthoring.Messages.registerBundle('forms', 'es', {
-  rteConfigJSONParseError:
-    'La configuración del editor de texto enriquecido `{0}` es inválida: {1}. Verifique que la configuración de {0} del editor es JSON válido. Contenido de la configuración se adjunta a continuación:',
+  styleFormatsParseError:
+    'La configuración del editor de texto enriquecido `styleFormats` es inválida: {0}. Verifique que la configuración de styleFormats del editor es JSON válido. Contenido de la configuración se adjunta a continuación:',
   new: 'Nuevo',
   expandAll: 'Expandir Todo',
   collapseAll: 'Collapsar Todo',
@@ -376,7 +374,7 @@ CStudioAuthoring.Messages.registerBundle('forms', 'es', {
 
   chooseContentType: 'Elige un tipo de contenido',
   chooseContentTypeBody: 'Las siguientes plantillas de inicio están disponibles para su uso dentro de esta sección.',
-  chooseContentTypeLabel: 'Nombre de la Plantilla:',
+  chooseContentTypeLabel: 'Tipo de Contenido:',
   chooseContentTypePreview: 'Vista Previa:',
 
   cancelDialogHeader: 'Crafter Studio',
@@ -566,7 +564,6 @@ CStudioAuthoring.Messages.registerBundle('search', 'es', {
   videos: 'Videos',
   width: 'Ancho',
   height: 'Alto',
-  path: 'Ruta',
   'content-type': 'Content Type',
   'mime-type': 'MIME Type',
   'last-edit-date': 'Fecha de Última Edición',
@@ -682,8 +679,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'es', {
   /*Controls*/
   textArea: 'Área de Texto',
   linkTextarea: 'Área de Texto Vinculante',
-  richTextEditor: 'Editor de Texto Enriquecido (TinyMCE 2)',
-  rteTinyMCE5: 'Editor de Texto Enriquecido (TinyMCE 5)',
+  rte: 'Editor de Texto Enriquecido',
   input: 'Campo de Entrada',
   numericInput: 'Entrada numérica',
   uuid: 'UUID',
@@ -895,8 +891,8 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'es', {
   confTabRoleMappingsDesc: 'Define una lista de funciones disponibles en el sitio',
   confTabSiteConfiguration: 'Configuración del Sitio',
   confTabSiteConfigurationDesc: 'Define la configuración general del sitio',
-  confTabSiteConf: 'Herramientas de Configuración del sitio',
-  confTabSiteConfDesc: 'Define la lista de herramientas de administración disponibles',
+  confTabSiteConf: 'Configuración de Editor de Typos de Contenido',
+  confTabSiteConfDesc: 'Define controles y fuentes de datos disponibles para edición de tipos de contenido',
   confTabWorkflowConf: 'Configuración del Flujo de Trabajo',
   confTabWorkflowConfDesc: 'Define los flujos de trabajo disponibles en el sistema',
   confCacheCleared: 'Se ha eliminado el caché de configuración.',
@@ -910,8 +906,44 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'es', {
     'Estos archivos configuran 0 o más repositorios capaces de CMIS como fuentes de datos que los autores de contenido pueden elegir',
   confTabEngineSiteConfiguration: 'Configuración de Sitio de Engine',
   confTabEngineSiteConfigurationDesc: 'Configuración del Sitio usada por Crafter Engine',
+  confTabEngineSiteConfigurationPreview: 'Configuración de Sitio de Engine - Preview',
+  confTabEngineSiteConfigurationStaging: 'Configuración de Sitio de Engine - Staging',
+  confTabEngineSiteConfigurationLive: 'Configuración de Sitio de Engine - Live',
   confTabEngineSiteAppContextConfiguration: 'Configuración de Contexto de Aplicación de Sitio de Engine',
   confTabEngineSiteAppContextConfigurationDesc: 'Configuración del Contexto de Aplicación para el Sitio de Engine',
+  confTabEngineSiteAppContextConfigurationPreview:
+    'Configuración de Contexto de Aplicación de Sitio de Engine - Preview',
+  confTabEngineSiteAppContextConfigurationStaging:
+    'Configuración de Contexto de Aplicación de Sitio de Engine - Staging',
+  confTabEngineSiteAppContextConfigurationLive: 'Configuración de Contexto de Aplicación de Sitio de Engine - Live',
+  confTabTranslationConf: 'Configuración de Traducciones',
+  confTabTranslationConfDesc: 'Define los lenguajes soportados y su resolución',
+  confTabSitePolicyConf: 'Configuración de Políticas de Sitio',
+  confTabSitePolicyConfDesc: 'Define las políticas para validar operaciones de contentido',
+  confTabUiConf: 'Configuración de la Interfaz de Usuario',
+  confTabUiConfDesc: 'Define los widgets que se muestran en la interfaz de usuario',
+  confTabMimeTypes: 'Mime Types',
+  confTabMimeTypesDesc: 'Este archivo configura los íconos para este sitio/blueprint.',
+  confTabEngineUrlRewriteConf: 'Configuración de reescritura del motor de URL (estilo XML).',
+  confTabEngineUrlRewriteConfDesc: 'Este archivo configura propiedades del sitio utilizadas por Crafter Engine',
+  confTabEngineUrlRewriteConfPreview: 'Engine URL Rewrite Configuration (XML Style) - Preview',
+  confTabEngineUrlRewriteConfStaging: 'Engine URL Rewrite Configuration (XML Style) - Staging',
+  confTabEngineUrlRewriteConfLive: 'Engine URL Rewrite Configuration (XML Style) - Live',
+  confTabDependencyResolverConf: 'Configuración del solucionador de dependencias',
+  confTabDependencyResolverConfDesc:
+    'Este archivo configura qué rutas de archivos son consideradas por Crafter como dependencias y como deberían ser extraídas.',
+  confTabAWSProfiles: 'Perfiles AWS',
+  confTabAWSProfilesDesc: 'Archivo de configuración de perfiles AWS.',
+  confTabBoxProfiles: 'Perfiles Box',
+  confTabBoxProfilesDesc: 'Archivo de configuración de perfiles Box.',
+  confTabWebDAVProfiles: 'Perfiles WebDAV',
+  confTabWebDAVProfilesDesc: 'Archivo de configuración de perfiles WebDAV.',
+  confTabAssetProcessing: 'Procesamiento de activos',
+  confTabAssetProcessingDesc: 'Archivo de configuración de procesamiento de activos.',
+  confTabBlobStores: 'Blob Stores',
+  confTabBlobStoresDesc: 'Archivo de configuración de Blob stores.',
+  confTabProxyConfig: 'Configuración de Proxy',
+  confTabProxyConfigDesc: 'Este archivo configura los servidores proxy para vista previa.',
 
   /*Postfixes*/
   iDescription: 'Para nuúmero entero.',
@@ -939,7 +971,6 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'es', {
   contentTypeNotFound: 'El content type del componente no fue encontrado.',
   failConfig: 'La configuracioón no pudo ser cargada.',
   noConfPathError: 'No se ha definido ninguna ruta de configuración',
-  clearCacheError: 'Error al borrar la caché de configuración.',
   endpointsError: 'Error al cargar los puntos finales.',
   jobsError: 'Error al cargar trabajos.',
   cancelDeploymentError: 'Error al cancelar la implementación.',

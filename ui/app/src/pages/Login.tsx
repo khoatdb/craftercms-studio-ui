@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,18 +15,14 @@
  */
 
 import React from 'react';
-import { createStyles, makeStyles } from '@material-ui/core/styles';
-import LoginView, { LoginViewProps } from '../components/SystemStatus/LoginView';
+import createStyles from '@mui/styles/createStyles';
+import makeStyles from '@mui/styles/makeStyles';
+import LoginView, { LoginViewProps } from '../components/LoginView/LoginView';
+import CrafterThemeProvider from '../components/CrafterThemeProvider';
+import I18nProvider from '../components/I18nProvider';
 
 const useStyles = makeStyles(() =>
   createStyles({
-    '@global': {
-      'html, body, #root, #studioSPARoot': {
-        margin: 0,
-        padding: 0,
-        height: '100%'
-      }
-    },
     root: {
       height: '100%',
       background: 'url("/studio/static-assets/images/cogs.jpg") 0 0 no-repeat',
@@ -45,7 +41,7 @@ const useStyles = makeStyles(() =>
 );
 
 export default function Login(props: LoginViewProps) {
-  const classes = useStyles({});
+  const classes = useStyles();
   // **************************************************************************
   // TODO: To be enabled or removed depending on the background video decision.
   // **************************************************************************
@@ -56,24 +52,28 @@ export default function Login(props: LoginViewProps) {
   //   video.play();
   // }, []);
   return (
-    <div className={classes.root}>
-      {/*
-      **************************************************************************
-      TODO: To be enabled or removed depending on the background video decision.
-      **************************************************************************
-      <video
-        loop
-        muted
-        ref={videoRef}
-        // autoPlay
-        id="loginVideo"
-        preload="auto"
-        className={classes.video}
-        poster="/studio/static-assets/images/camera-moving-through-cogs.jpeg"
-        src="/studio/static-assets/images/camera-moving-through-cogs.mp4"
-      />
-      */}
-      <LoginView {...props} />
-    </div>
+    <I18nProvider>
+      <CrafterThemeProvider>
+        <div className={classes.root}>
+          {/*
+          **************************************************************************
+          TODO: To be enabled or removed depending on the background video decision.
+          **************************************************************************
+          <video
+            loop
+            muted
+            ref={videoRef}
+            // autoPlay
+            id="loginVideo"
+            preload="auto"
+            className={classes.video}
+            poster="/studio/static-assets/images/camera-moving-through-cogs.jpeg"
+            src="/studio/static-assets/images/camera-moving-through-cogs.mp4"
+          />
+          */}
+          <LoginView {...props} />
+        </div>
+      </CrafterThemeProvider>
+    </I18nProvider>
   );
 }

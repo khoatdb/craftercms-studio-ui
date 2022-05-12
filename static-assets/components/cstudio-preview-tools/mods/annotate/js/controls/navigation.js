@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -23,21 +23,18 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
     reset: true
   },
 
-  initialize: function () {
+  initialize: function() {
     var el = '';
-    if (this.opts.back)
-      el += '<button class="drawing-board-control-navigation-back">&larr;</button>';
-    if (this.opts.forward)
-      el += '<button class="drawing-board-control-navigation-forward">&rarr;</button>';
-    if (this.opts.reset)
-      el += '<button class="drawing-board-control-navigation-reset">&times;</button>';
+    if (this.opts.back) el += '<button class="drawing-board-control-navigation-back">&larr;</button>';
+    if (this.opts.forward) el += '<button class="drawing-board-control-navigation-forward">&rarr;</button>';
+    if (this.opts.reset) el += '<button class="drawing-board-control-navigation-reset">&times;</button>';
     this.$el.append(el);
 
     if (this.opts.back) {
       var $back = this.$el.find('.drawing-board-control-navigation-back');
       this.board.ev.bind(
         'historyNavigation',
-        $.proxy(function (pos) {
+        $.proxy(function(pos) {
           if (pos === 1) $back.attr('disabled', 'disabled');
           else $back.removeAttr('disabled');
         }, this)
@@ -45,7 +42,7 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
       this.$el.on(
         'click',
         '.drawing-board-control-navigation-back',
-        $.proxy(function (e) {
+        $.proxy(function(e) {
           this.board.goBackInHistory();
           e.preventDefault();
         }, this)
@@ -56,7 +53,7 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
       var $forward = this.$el.find('.drawing-board-control-navigation-forward');
       this.board.ev.bind(
         'historyNavigation',
-        $.proxy(function (pos) {
+        $.proxy(function(pos) {
           if (pos === this.board.history.values.length) $forward.attr('disabled', 'disabled');
           else $forward.removeAttr('disabled');
         }, this)
@@ -64,7 +61,7 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
       this.$el.on(
         'click',
         '.drawing-board-control-navigation-forward',
-        $.proxy(function (e) {
+        $.proxy(function(e) {
           this.board.goForthInHistory();
           e.preventDefault();
         }, this)
@@ -75,7 +72,7 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
       this.$el.on(
         'click',
         '.drawing-board-control-navigation-reset',
-        $.proxy(function (e) {
+        $.proxy(function(e) {
           this.board.reset({ background: true });
           e.preventDefault();
         }, this)

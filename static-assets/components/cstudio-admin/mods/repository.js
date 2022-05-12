@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -29,18 +29,14 @@ CStudioAdminConsole.Tool.Repository =
  */
 YAHOO.extend(CStudioAdminConsole.Tool.Repository, CStudioAdminConsole.Tool, {
   renderWorkarea: function () {
-    var workareaEl = document.getElementById('cstudio-admin-console-workarea'),
-      repoUrl = '/studio/#/repositories?iframe=true&site=' + CStudioAuthoringContext.siteId,
-      actions = [];
-
-    workareaEl.innerHTML =
-      '<div class="iframe-container" style="position: relative; top: 50px; height: calc(100vh - 50px);">' +
-      '<iframe src="' +
-      repoUrl +
-      '" style="width: 100%; height: 100%;"></iframe>' +
-      '</div>';
-
-    CStudioAuthoring.ContextualNav.AdminConsoleNav.initActions(actions);
+    const workarea = document.getElementById('cstudio-admin-console-workarea');
+    var el = document.createElement('div');
+    el.className = 'cstudio-admin-console-workarea-container';
+    $(workarea).html('');
+    workarea.appendChild(el);
+    CrafterCMSNext.render(el, 'RemotesManagement');
+    // TODO: This should be removed when ContentTypes and WorkflowStates are Reactified
+    CStudioAuthoring.ContextualNav.AdminConsoleNav.initActions([]);
   }
 });
 

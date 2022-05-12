@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,43 +14,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-CStudioForms.Controls.NodeSelector =
-  CStudioForms.Controls.NodeSelector ||
-  function (id, form, owner, properties, constraints, readonly) {
-    this.owner = owner;
-    this.owner.registerField(this);
-    this.errors = [];
-    this.nodes = [];
-    this.properties = properties;
-    this.constraints = constraints;
-    this.inputEl = null;
-    this.countEl = null;
-    this.required = false;
-    this.value = '_not-set';
-    this.form = form;
-    this.id = id;
-    this.allowEdit = false;
-    this.selectedItemIndex = -1;
-    this.items = [];
-    this.readonly = readonly;
-    this.allowDuplicates = false;
-    this.minSize = 0;
-    this.maxSize = 0;
-    this.readonly = readonly;
-    this.defaultValue = '';
-    this.disableFlattening = false;
-    this.useSingleValueFilename = false;
-    this.useMVS = false;
-    this.supportedPostFixes = ['_o'];
-    amplify.subscribe('/datasource/loaded', this, this.onDatasourceLoaded);
-    amplify.subscribe('UPDATE_NODE_SELECTOR', this, this.onIceUpdate);
-    amplify.subscribe('UPDATE_NODE_SELECTOR_NEW', this, this.insertEmbeddedItem);
-    this.formatMessage = CrafterCMSNext.i18n.intl.formatMessage;
-    this.words = CrafterCMSNext.i18n.messages.words;
-    this.formEngineMessages = CrafterCMSNext.i18n.messages.formEngineMessages;
+CStudioForms.Controls.NodeSelector = function (id, form, owner, properties, constraints, readonly) {
+  this.owner = owner;
+  this.owner.registerField(this);
+  this.errors = [];
+  this.nodes = [];
+  this.properties = properties;
+  this.constraints = constraints;
+  this.inputEl = null;
+  this.countEl = null;
+  this.required = false;
+  this.value = '_not-set';
+  this.form = form;
+  this.id = id;
+  this.allowEdit = false;
+  this.items = [];
+  this.readonly = readonly;
+  this.allowDuplicates = false;
+  this.minSize = 0;
+  this.maxSize = 0;
+  this.readonly = readonly;
+  this.defaultValue = '';
+  this.disableFlattening = false;
+  this.useSingleValueFilename = false;
+  this.useMVS = false;
+  this.supportedPostFixes = ['_o'];
+  amplify.subscribe('/datasource/loaded', this, this.onDatasourceLoaded);
+  amplify.subscribe('UPDATE_NODE_SELECTOR', this, this.onIceUpdate);
+  amplify.subscribe('UPDATE_NODE_SELECTOR_NEW', this, this.insertEmbeddedItem);
+  this.formatMessage = CrafterCMSNext.i18n.intl.formatMessage;
+  this.words = CrafterCMSNext.i18n.messages.words;
+  this.formEngineMessages = CrafterCMSNext.i18n.messages.formEngineMessages;
 
-    return this;
-  };
+  return this;
+};
 
 CStudioForms.Controls.NodeSelector.prototype = {
   Node: {
@@ -76,7 +73,7 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
 
   _onChange: function () {
     if (this.minSize > 0) {
-      //Needs validation
+      // Needs validation
       if (this.items.length < this.minSize) {
         this.setError('minCount', '# items are required');
         this.renderValidation(true, false);
@@ -183,7 +180,6 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     var validEl = document.createElement('span');
     YAHOO.util.Dom.addClass(validEl, 'validation-hint');
     YAHOO.util.Dom.addClass(validEl, 'cstudio-form-control-validation fa fa-check');
-    controlWidgetContainerEl.appendChild(validEl);
 
     var hiddenEl = document.createElement('input');
     hiddenEl.type = 'hidden';
@@ -209,53 +205,35 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     YAHOO.util.Dom.addClass(nodeOptionsEl, 'cstudio-form-control-node-selector-options');
     nodeControlboxEl.appendChild(nodeOptionsEl);
 
-    //Add button
-    var addButtonEl = document.createElement('input');
-    addButtonEl.type = 'button';
-    addButtonEl.value = CMgs.format(langBundle, 'add');
-    addButtonEl.disabled = true;
-    YAHOO.util.Dom.addClass(addButtonEl, 'cstudio-button');
-    YAHOO.util.Dom.addClass(addButtonEl, 'cstudio-drop-arrow-button');
-    YAHOO.util.Dom.addClass(addButtonEl, 'cstudio-button-disabled');
-    nodeOptionsEl.appendChild(addButtonEl);
-    this.addButtonEl = addButtonEl;
-
-    // Edit/View button
-    var editButtonEl = document.createElement('input');
-    editButtonEl.type = 'button';
-    editButtonEl.value = this.readonly ? this.formatMessage(this.words.view) : CMgs.format(langBundle, 'edit');
-    editButtonEl.disabled = true;
-    YAHOO.util.Dom.addClass(editButtonEl, 'cstudio-button');
-    YAHOO.util.Dom.addClass(editButtonEl, 'cstudio-button-disabled');
-    nodeOptionsEl.appendChild(editButtonEl);
-    this.editButtonEl = editButtonEl;
-
-    //Delete button
-    var deleteButtonEl = document.createElement('input');
-    deleteButtonEl.type = 'button';
-    deleteButtonEl.value = 'X';
-    YAHOO.util.Dom.addClass(deleteButtonEl, 'cstudio-button');
-    YAHOO.util.Dom.addClass(deleteButtonEl, 'cstudio-button-disabled');
-    nodeOptionsEl.appendChild(deleteButtonEl);
-    deleteButtonEl.disabled = true;
-    this.deleteButtonEl = deleteButtonEl;
-
-    if (this.readonly == true) {
-      addButtonEl.disabled = true;
-      editButtonEl.disabled = true;
-      deleteButtonEl.disabled = true;
-      YAHOO.util.Dom.addClass(addButtonEl, 'cstudio-button-disabled');
-      YAHOO.util.Dom.addClass(editButtonEl, 'cstudio-button-disabled');
-      YAHOO.util.Dom.addClass(deleteButtonEl, 'cstudio-button-disabled');
-    }
-
-    this.renderHelp(config, nodeOptionsEl);
-
     var countEl = document.createElement('div');
     YAHOO.util.Dom.addClass(countEl, 'item-count');
     YAHOO.util.Dom.addClass(countEl, 'cstudio-form-control-node-selector-count');
     this.countEl = countEl;
     nodeOptionsEl.appendChild(countEl);
+
+    // dropdownBtn and dropdownMenu
+    const $addBtn = $(
+      `<button id="add-item" class="cstudio-button btn btn-transparent dropdown-toggle cstudio-button-disabled" style="border: none !important" type="button" data-toggle="dropdown" disabled="true">${CMgs.format(
+        langBundle,
+        'add'
+      )}<i class="fa fa-plus add-icon" aria-hidden="true"></i></button>`
+    );
+    const $dropdown = $('<div class="dropdown ml-auto dropup"></div>');
+    const $dropdownMenu = $('<ul class="dropdown-menu pull-right"></ul>');
+    this.$dropdown = $dropdown;
+    this.$dropdownMenu = $dropdownMenu;
+    this.$addBtn = $addBtn;
+    $dropdown.append($addBtn);
+    $dropdown.append($dropdownMenu);
+
+    $(nodeOptionsEl).append($dropdown);
+
+    if (this.readonly == true) {
+      $addBtn.attr('disabled', 'true');
+      $addBtn.addClass('cstudio-button-disabled');
+    }
+
+    this.renderHelp(config, nodeOptionsEl);
 
     var descriptionEl = document.createElement('span');
     YAHOO.util.Dom.addClass(descriptionEl, 'description');
@@ -263,6 +241,7 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     descriptionEl.textContent = config.description;
 
     containerEl.appendChild(titleEl);
+    containerEl.appendChild(validEl);
     containerEl.appendChild(controlWidgetContainerEl);
     containerEl.appendChild(descriptionEl);
 
@@ -284,7 +263,6 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
 
   _setActions: function () {
     var _self = this;
-    //var datasource = this.form.datasourceMap[this.datasourceName];
 
     var dataSourceNames = this.datasourceName.split(','),
       datasources = [];
@@ -294,83 +272,53 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
       datasources.push(currentDatasource);
 
       if (currentDatasource.add && !this.readonly) {
-        YAHOO.util.Dom.removeClass(this.addButtonEl, 'cstudio-button-disabled');
-        this.addButtonEl.disabled = false;
+        this.$addBtn.removeClass('cstudio-button-disabled');
+        this.$addBtn.removeAttr('disabled');
       }
       if (currentDatasource.edit) {
         this.allowEdit = true;
       }
     }
 
+    this.datasources = datasources;
+
     var datasource = datasources[0];
 
-    if (datasource) {
-      if (!this.readonly) {
-        this.datasource = datasource;
+    if (datasource && !this.readonly) {
+      this.datasource = datasource;
+      if (!this.$addBtn.attr('disabled')) {
+        datasources.forEach((datasource) => {
+          datasource.add(_self, true);
+        });
 
-        if (!this.addButtonEl.disabled) {
-          YAHOO.util.Event.on(
-            this.addButtonEl,
-            'click',
-            function (evt) {
-              var selectItemsCount = _self.getItemsLeftCount();
-              _self.form.setFocusedField(_self);
-              if (selectItemsCount == 0) {
-                var CMgs = CStudioAuthoring.Messages;
-                var langBundle = CMgs.getBundle('forms', CStudioAuthoringContext.lang);
-                CStudioAuthoring.Operations.showSimpleDialog(
-                  'message-dialog',
-                  CStudioAuthoring.Operations.simpleDialogTypeINFO,
-                  CMgs.format(langBundle, 'notification'),
-                  CMgs.format(langBundle, 'addMoreItemsError'),
-                  null,
-                  YAHOO.widget.SimpleDialog.ICON_BLOCK,
-                  'studioDialog'
-                );
-              } else {
-                if (_self.addContainerEl) {
-                  var addContainerEl = _self.addContainerEl;
-                  _self.addContainerEl = null;
-                  _self.containerEl.removeChild(addContainerEl);
-                } else {
-                  for (var x = 0; x < datasources.length; x++) {
-                    datasources[x].selectItemsCount = selectItemsCount;
-                    if (datasources.length > 1) {
-                      datasources[x].add(_self, true);
-                    } else {
-                      datasources[x].add(_self);
-                    }
-                  }
-                }
-              }
-            },
-            this.addButtonEl
-          );
-        }
-
+        // adding options to $dropdownMenu;
         YAHOO.util.Event.on(
-          this.deleteButtonEl,
+          this.$addBtn[0],
           'click',
           function (evt) {
+            var selectItemsCount = _self.getItemsLeftCount();
             _self.form.setFocusedField(_self);
-            _self.deleteItem(_self.selectedItemIndex);
-            _self._renderItems();
+            if (selectItemsCount === 0) {
+              evt.preventDefault();
+              evt.stopPropagation();
+              var CMgs = CStudioAuthoring.Messages;
+              var langBundle = CMgs.getBundle('forms', CStudioAuthoringContext.lang);
+              CStudioAuthoring.Operations.showSimpleDialog(
+                'message-dialog',
+                CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                CMgs.format(langBundle, 'notification'),
+                CMgs.format(langBundle, 'addMoreItemsError'),
+                null,
+                YAHOO.widget.SimpleDialog.ICON_BLOCK,
+                'studioDialog'
+              );
+            } else {
+              datasources.forEach((datasource) => {
+                datasource.selectItemsCount = selectItemsCount;
+              });
+            }
           },
-          this.deleteButtonEl
-        );
-      }
-
-      if (this.allowEdit) {
-        YAHOO.util.Event.on(
-          this.editButtonEl,
-          'click',
-          function (evt) {
-            _self.form.setFocusedField(_self);
-            var selectedDatasource =
-              datasources.find((item) => item.id === _self.items[_self.selectedItemIndex].datasource) || datasources[0];
-            selectedDatasource.edit(_self.items[_self.selectedItemIndex].key, _self);
-          },
-          this.editButtonEl
+          this.$addBtn[0]
         );
       }
     }
@@ -378,13 +326,14 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
 
   _renderItems: function () {
     var itemsContainerEl = this.itemsContainerEl;
+    const _self = this;
 
     if (typeof this.items == 'string') {
       this.items = [];
     }
 
     var items = this.items;
-    const hasLegacyPrefix = items.some(item => Object.keys(item).filter(key => key.includes('_mvs')).length > 0);
+    const hasLegacyPrefix = items.some((item) => Object.keys(item).filter((key) => key.includes('_mvs')).length > 0);
     // only if true -> set value - for backward compatibility
     if (hasLegacyPrefix) {
       this.useMVS = true;
@@ -393,7 +342,8 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     itemsContainerEl.innerHTML = '';
     var tar = new YAHOO.util.DDTarget(itemsContainerEl);
     for (var i = 0; i < items.length; i++) {
-      var item = items[i];
+      const item = items[i];
+      const itemIndex = i;
       var itemEl = document.createElement('div');
       if (this.readonly != true) {
         var dd = new NodeSelectorDragAndDropDecorator(itemEl);
@@ -410,38 +360,44 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
       itemEl._index = i;
       itemEl.context = this;
 
-      if (this.selectedItemIndex == i) {
-        YAHOO.util.Dom.addClass(itemEl, 'cstudio-form-control-node-selector-item-selected');
+      if (this.readonly === true) {
+        itemEl.classList.add('disabled');
       }
 
-      itemEl._onMouseDown = function () {
-        this.context.selectedItemIndex = this._index;
-        const currentItem = this.context.items[this._index];
-        var selectedEl = YAHOO.util.Dom.getElementsByClassName(
-          'cstudio-form-control-node-selector-item-selected',
-          null,
-          this.context.itemsContainerEl
-        )[0];
-        if (selectedEl) {
-          YAHOO.util.Dom.removeClass(selectedEl, 'cstudio-form-control-node-selector-item-selected');
-        }
-        YAHOO.util.Dom.addClass(this, 'cstudio-form-control-node-selector-item-selected');
+      const isComponent = item.key.includes('/site') || item.inline;
+      const editBtnLabel = this.readonly ? 'View' : 'Edit';
+      const editBtnIconClass = this.readonly ? 'fa-eye' : 'fa-pencil';
 
-        if (!this.context.readonly) {
-          YAHOO.util.Dom.removeClass(this.context.deleteButtonEl, 'cstudio-button-disabled');
-          this.context.deleteButtonEl.disabled = false;
-        }
+      const $actionsContainer = $(`<span class="actions-container ml-auto" />`);
+      const editBtn = $(
+        `<span class="fa ${editBtnIconClass} node-selector-item-icon" title="${editBtnLabel}" aria-label="${editBtnLabel}" role="button" data-index="${i}"></span>`
+      );
+      const deleteBtn = $(
+        '<span class="fa fa-trash node-selector-item-icon" title="Delete" aria-label="Delete" role="button"></span>'
+      );
 
-        const isComponent = currentItem.key.includes('/site') || currentItem.inline;
-
-        if (this.context.allowEdit && (isComponent || !this.context.readonly)) {
-          YAHOO.util.Dom.removeClass(this.context.editButtonEl, 'cstudio-button-disabled');
-          this.context.editButtonEl.disabled = false;
-        } else {
-          YAHOO.util.Dom.addClass(this.context.editButtonEl, 'cstudio-button-disabled');
-          this.context.editButtonEl.disabled = true;
+      if (this.allowEdit) {
+        if (isComponent || !this.readonly) {
+          $actionsContainer.append(editBtn);
+          editBtn.on('click', function () {
+            const elIndex = $(this).data('index');
+            let selectedDatasource =
+              _self.datasources.find((item) => item.id === _self.items[elIndex].datasource) || _self.datasources[0];
+            selectedDatasource.edit(item.key, _self, elIndex);
+          });
         }
-      };
+      }
+      if (this.readonly != true) {
+        $actionsContainer.append(deleteBtn);
+        deleteBtn.on('click', function () {
+          _self.deleteItem(itemIndex);
+          _self._renderItems();
+        });
+      }
+
+      $(itemEl).append($actionsContainer);
+      itemEl._onMouseDown = function () {};
+
       itemsContainerEl.appendChild(itemEl);
     }
   },
@@ -478,7 +434,6 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     var item = this.items[onTheMoveIndex];
     this.items.splice(onTheMoveIndex, 1);
     this.items.splice(beforeItemIndex, 0, item);
-    this.selectedItemIndex = beforeItemIndex;
     this._onChangeVal(this);
   },
 
@@ -496,16 +451,19 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     }
   },
 
-  insertItem: function (key, value, fileType, fileSize, datasource, order) {
-    var successful = true;
-    var message = '';
+  checkValidations: function (key, value) {
+    let validation = {
+      successful: true,
+      message: ''
+    };
+
     if (!this.allowDuplicates) {
       var items = this.items;
       for (var i = 0; i < items.length; i++) {
         var item = items[i];
         if (item.key == key) {
-          successful = false;
-          message = `The item "${CrafterCMSNext.util.string.escapeHTML(value)}" already exists.`;
+          validation.successful = false;
+          validation.message = `The item "${CrafterCMSNext.util.string.escapeHTML(value)}" already exists.`;
           break;
         }
       }
@@ -513,12 +471,40 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
 
     if (this.maxSize > 0) {
       if (this.items.length >= this.maxSize) {
-        successful = false;
-        message = "You can't add more items, Remove one and try again.";
+        validation.successful = false;
+        validation.message = "You can't add more items, Remove one and try again.";
       }
     }
 
-    if (successful) {
+    return validation;
+  },
+
+  newInsertItem: function (key, value, type) {
+    const validation = this.checkValidations(key, value);
+
+    if (validation.successful) {
+      let item = {};
+      item = { key: key, value: value };
+
+      if (type === 'embedded') {
+        item.key = key;
+        item.inline = 'true';
+      } else {
+        item.include = key;
+        item.disableFlattening = this.disableFlattening;
+      }
+      this.items[this.items.length] = item;
+
+      this.count();
+      this._onChangeVal(this);
+    } else {
+      this.showValidationMessage(validation.message);
+    }
+  },
+
+  insertItem: function (key, value, fileType, fileSize, datasource, order) {
+    const validation = this.checkValidations(key, value);
+    if (validation.successful) {
       var item = {};
 
       if (this.useSingleValueFilename == true) {
@@ -529,7 +515,12 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
          * _s if the form definition specifies that we do so
          */
         if (fileType && fileSize) {
-          item = { key: key, value: value, fileType_s: fileType, fileSize_s: fileSize };
+          item = {
+            key: key,
+            value: value,
+            fileType_s: fileType,
+            fileSize_s: fileSize
+          };
         } else if (fileType && !fileSize) {
           item = { key: key, value: value, fileType_s: fileType };
         } else if (!fileType && fileSize) {
@@ -542,7 +533,7 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
           item = {
             key: key,
             value: value,
-            ...( this.useMVS
+            ...(this.useMVS
               ? { fileType_mvs: fileType, fileSize_s: fileSize }
               : { fileType_smv: fileType, fileSize_smv: fileSize })
           };
@@ -550,17 +541,13 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
           item = {
             key: key,
             value: value,
-            ...( this.useMVS
-              ? { fileType_mvs: fileType }
-              : { fileType_smv: fileType })
+            ...(this.useMVS ? { fileType_mvs: fileType } : { fileType_smv: fileType })
           };
         } else if (!fileType && fileSize) {
           item = {
             key: key,
             value: value,
-            ...( this.useMVS
-              ? { fileSize_mvs: fileSize }
-              : { fileSize_smv: fileSize })
+            ...(this.useMVS ? { fileSize_mvs: fileSize } : { fileSize_smv: fileSize })
           };
         } else {
           item = { key: key, value: value };
@@ -569,7 +556,7 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
 
       item.datasource = datasource;
       if (order != null) {
-        //insert on specific order
+        // insert on specific order
         this.items.splice(order, 0, item);
       } else {
         this.items[this.items.length] = item;
@@ -587,10 +574,8 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
       this.count();
       this._onChangeVal(this);
     } else {
-      this.showValidationMessage(message);
+      this.showValidationMessage(validation.message);
     }
-    this.count();
-    this._onChangeVal(this);
   },
 
   // Insert item may be called multiple times per item inserted.
@@ -638,10 +623,12 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     return this.items;
   },
 
-  updateEditedItem: function (value, datasource) {
-    var item = this.items[this.selectedItemIndex];
+  updateEditedItem: function (value, datasource, index) {
+    var item = this.items[index];
     item.value = value;
-    item.datasource = datasource;
+    if (datasource) {
+      item.datasource;
+    }
     this._renderItems();
     this._onChangeVal(this);
   },
@@ -660,7 +647,7 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
     this.edited = false;
 
     if (typeof this.items == 'string') {
-      //Check if the current value is the default value, split it by comma and load it using key/value pair
+      // Check if the current value is the default value, split it by comma and load it using key/value pair
       if (this.items === this.defaultValue && this.items != '') {
         this.items = [];
         var defaultItems = this.defaultValue.split(',');
@@ -687,7 +674,6 @@ YAHOO.extend(CStudioForms.Controls.NodeSelector, CStudioForms.CStudioFormField, 
 
     this.updateItems();
     this._onChange();
-    //this._onChangeVal();
     this.count();
   },
 
@@ -760,10 +746,12 @@ YAHOO.extend(NodeSelectorDragAndDropDecorator, YAHOO.util.DDProxy, {
     this.oldIndex = clickEl._index;
     YAHOO.util.Dom.setStyle(clickEl, 'visibility', 'hidden');
 
-    dragEl.innerHTML = clickEl.innerHTML;
+    dragEl.innerHTML = clickEl.textContent;
     YAHOO.util.Dom.setStyle(dragEl, 'color', YAHOO.util.Dom.getStyle(clickEl, 'color'));
     YAHOO.util.Dom.setStyle(dragEl, 'backgroundColor', YAHOO.util.Dom.getStyle(clickEl, 'backgroundColor'));
-    YAHOO.util.Dom.setStyle(dragEl, 'border', '2px solid #7EA6B2');
+    YAHOO.util.Dom.setStyle(dragEl, 'border', '1px solid #7EA6B2');
+    YAHOO.util.Dom.setStyle(dragEl, 'padding', '7px 5px 7px 12px');
+    YAHOO.util.Dom.setStyle(dragEl, 'border-radius', '4px');
   },
 
   endDrag: function (e) {

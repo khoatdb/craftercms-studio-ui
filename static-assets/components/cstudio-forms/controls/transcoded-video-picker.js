@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -395,8 +395,6 @@ YAHOO.extend(CStudioForms.Controls.TranscodedVideoPicker, CStudioForms.CStudioFo
 
     var previewEl = document.createElement('video');
     this.previewEl = previewEl;
-    //previewEl.setAttribute("autoplay", "0");
-    //previewEl.setAttribute("autostart", "0");
 
     YAHOO.util.Dom.addClass(previewEl, 'cstudio-form-control-asset-picker-preview-content');
 
@@ -465,10 +463,6 @@ YAHOO.extend(CStudioForms.Controls.TranscodedVideoPicker, CStudioForms.CStudioFo
 
       if (prop.name === 'videoManager') {
         if (prop.value && prop.value !== '') {
-          //var datasourceName = prop.value;
-          //datasource = this.form.datasourceMap[datasourceName];
-          //this.datasource = datasource;
-
           this.datasources = prop.value;
         } else {
           addEl.disabled = true;

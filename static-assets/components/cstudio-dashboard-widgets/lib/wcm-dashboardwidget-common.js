@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -26,7 +26,6 @@ if (typeof WcmDashboardWidgetCommon == 'undefined' || !WcmDashboardWidgetCommon)
 WcmDashboardWidgetCommon.dashboards = new Array();
 
 WcmDashboardWidgetCommon.sortClick = function (event, matchedEl, el, params) {
-  //var eventId='sorteventDate-component-1-1';
   var eventId = matchedEl.id;
   var sortBy = eventId.substring(4, eventId.indexOf('-'));
   var Widget = WcmDashboardWidgetCommon.dashboards[params.widgetId];
@@ -49,106 +48,85 @@ WcmDashboardWidgetCommon.verifyEditColumn = (widgetId, hasWritePermissions) => {
   }
 
   if (currentDashboard.totalItems === currentDashboard.renderedItems && currentDashboard.showEdit) {
-    //hide edit column
+    // Show edit column
     $(`#edit-${widgetId}`).removeClass('hidden');
     $(`.edit-${widgetId}`).removeClass('hidden');
   }
 };
 
 WcmDashboardWidgetCommon.insertEditLink = function (item, editLinkId, widgetId) {
-  if (
-    item.uri.indexOf('.ftl') == -1 &&
-    item.uri.indexOf('.css') == -1 &&
-    item.uri.indexOf('.js') == -1 &&
-    item.uri.indexOf('.groovy') == -1 &&
-    item.uri.indexOf('.txt') == -1 &&
-    item.uri.indexOf('.html') == -1 &&
-    item.uri.indexOf('.hbs') == -1 &&
-    item.uri.indexOf('.xml') == -1
-  ) {
-    WcmDashboardWidgetCommon.verifyEditColumn(widgetId, false);
-    return 0; // dont render if not these types
-  }
+  if (CStudioAuthoring.Utils.isEditableFormAsset(item.mimeType)) {
+    CStudioAuthoring.Service.getUserPermissions(CStudioAuthoringContext.site, item.uri, {
+      success: function (results) {
+        function addEditLink() {
+          var editLink = document.getElementById(editLinkId);
 
-  CStudioAuthoring.Service.getUserPermissions(CStudioAuthoringContext.site, item.uri, {
-    success: function (results) {
-      function addEditLink() {
-        var editLink = document.getElementById(editLinkId);
-
-        if (editLink) {
-          editLink.innerHTML = ''.concat(
-            '<a href="javascript:" class="editLink',
-            item.deleted || item.inFlight ? ' non-previewable-edit' : '',
-            '">' + CMgs.format(langBundle, 'dashboardEdit') + '</a>'
-          );
-        } else {
-          // We cannot assume the DOM will be ready to insert the edit link
-          // that's why we'll poll until the element is available in the DOM
-          setTimeout(addEditLink, 200);
+          if (editLink) {
+            editLink.innerHTML = ''.concat(
+              '<a href="javascript:" class="editLink',
+              item.deleted || item.inFlight ? ' non-previewable-edit' : '',
+              '">' + CMgs.format(langBundle, 'dashboardEdit') + '</a>'
+            );
+          } else {
+            // We cannot assume the DOM will be ready to insert the edit link
+            // that's why we'll poll until the element is available in the DOM
+            setTimeout(addEditLink, 200);
+          }
         }
-      }
 
-      const isWrite = CStudioAuthoring.Service.isWrite(results.permissions);
-      if (isWrite) {
-        // If the user's role is allowed to edit the content then add an edit link
-        addEditLink();
+        const isWrite = CStudioAuthoring.Service.isWrite(results.permissions);
+        if (isWrite) {
+          // If the user's role is allowed to edit the content then add an edit link
+          addEditLink();
+        }
+        WcmDashboardWidgetCommon.verifyEditColumn(widgetId, isWrite);
+      },
+      failure: function () {
+        throw new Error('Unable to retrieve user permissions');
       }
-      WcmDashboardWidgetCommon.verifyEditColumn(widgetId, isWrite);
-    },
-    failure: function () {
-      throw new Error('Unable to retrieve user permissions');
-    }
-  });
+    });
+  } else {
+    WcmDashboardWidgetCommon.verifyEditColumn(widgetId, false);
+  }
 };
 
 WcmDashboardWidgetCommon.insertViewLink = function (item, viewLinkId) {
-  if (
-    item.uri.indexOf('.ftl') == -1 &&
-    item.uri.indexOf('.css') == -1 &&
-    item.uri.indexOf('.js') == -1 &&
-    item.uri.indexOf('.groovy') == -1 &&
-    item.uri.indexOf('.txt') == -1 &&
-    item.uri.indexOf('.html') == -1 &&
-    item.uri.indexOf('.hbs') == -1 &&
-    item.uri.indexOf('.xml') == -1
-  ) {
-    return 0; // dont render if not these types
-  }
+  if (CStudioAuthoring.Utils.isEditableFormAsset(item.mimeType)) {
+    CStudioAuthoring.Service.getUserPermissions(CStudioAuthoringContext.site, item.uri, {
+      success: function (results) {
+        function addViewLink() {
+          var viewLink = document.getElementById(viewLinkId);
 
-  CStudioAuthoring.Service.getUserPermissions(CStudioAuthoringContext.site, item.uri, {
-    success: function (results) {
-      function addViewLink() {
-        var viewLink = document.getElementById(viewLinkId);
-
-        if (viewLink) {
-          viewLink.innerHTML = ''.concat(
-            '<a href="javascript:" class="viewLink',
-            item.deleted || item.inFlight ? ' non-previewable-edit' : '',
-            '">' + CMgs.format(langBundle, 'dashletGoLiveColView') + '</a>'
-          );
-        } else {
-          // We cannot assume the DOM will be ready to insert the edit link
-          // that's why we'll poll until the element is available in the DOM
-          setTimeout(addViewLink, 200);
+          if (viewLink) {
+            viewLink.innerHTML = ''.concat(
+              '<a href="javascript:" class="viewLink',
+              item.deleted || item.inFlight ? ' non-previewable-edit' : '',
+              '">' + CMgs.format(langBundle, 'dashletGoLiveColView') + '</a>'
+            );
+          } else {
+            // We cannot assume the DOM will be ready to insert the edit link
+            // that's why we'll poll until the element is available in the DOM
+            setTimeout(addViewLink, 200);
+          }
         }
-      }
 
-      var isUserAllowed = CStudioAuthoring.Service.isUserAllowed(results.permissions);
+        var isUserAllowed = CStudioAuthoring.Service.isUserAllowed(results.permissions);
 
-      if (isUserAllowed) {
-        // If the user's role is allowed to edit the content then add an edit link
-        addViewLink();
+        if (isUserAllowed) {
+          // If the user's role is allowed to edit the content then add an edit link
+          addViewLink();
+        }
+      },
+      failure: function () {
+        throw new Error('Unable to retrieve user permissions');
       }
-    },
-    failure: function () {
-      throw new Error('Unable to retrieve user permissions');
-    }
-  });
+    });
+  }
 };
 
 WcmDashboardWidgetCommon.convertDate = function (dateString) {
   if (!dateString) return 0;
-  //our eventDate are passing in the format "YYYY-MM-DDTHH:MM:SS;"
+  // our eventDate are passing in the format "YYYY-MM-DDTHH:MM:SS;"
   var dateObj = null;
   var dateArray = dateString.split('T');
   if (dateArray && dateArray.length == 2) {
@@ -252,13 +230,12 @@ WcmDashboardWidgetCommon.getSubSubChilderen = function (table, parentClass, item
 
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
-    //rowHtml += "<tr class='" + parentClass + "'><td colspan='5' class='ttBlankRow3'></td></tr>";
 
     var itemRowStart = "<tr class='" + parentClass + "'>";
 
     var itemRowEnd = '</tr>';
 
-    //create table row for this item
+    // create table row for this item
     var itemRow = WcmDashboardWidgetCommon.buildItemTableRow(item, instance, false, i, depth);
 
     rowHtml += itemRowStart + itemRow + itemRowEnd;
@@ -310,7 +287,6 @@ WcmDashboardWidgetCommon.Ajax = {
       backgroundColor = '#FFFFFF';
       opacity = '0';
       position = 'absolute';
-      //display = "block";
       width = YDom.getDocumentWidth() + 'px';
       height = YDom.getDocumentHeight() + 'px';
       top = '0';
@@ -369,9 +345,9 @@ WcmDashboardWidgetCommon.init = function (instance) {
   var pageId = instance.pageId;
   var hideEmptyRow = instance.hideEmptyRow;
 
-  /////////////////////////////////////////////////////
+  // ///////////////////////////////////////////////////
   // added to protect un wanted values in text boxes //
-  ////////////////////////////////////////////////////
+  // //////////////////////////////////////////////////
   if (YDom.get('widget-showitems-' + widgetId) != null) {
     YDom.get('widget-showitems-' + widgetId).value = 10;
     YDom.get('widget-showitems-' + widgetId + '-label').innerHTML = CMgs.format(langBundle, 'showNumItems');
@@ -454,7 +430,6 @@ WcmDashboardWidgetCommon.init = function (instance) {
           var editClick = function (event, matchedEl) {
             WcmDashboardWidgetCommon.editItem(matchedEl, matchedEl.checked);
 
-            matchedEl.style.pointerEvents = 'none';
             if (typeof CStudioAuthoring.editDisabled === 'undefined') {
               CStudioAuthoring.editDisabled = [];
             }
@@ -538,7 +513,7 @@ WcmDashboardWidgetCommon.init = function (instance) {
             YDom.setStyle(YAHOO.util.Selector.query('#' + widgetId + ' .widget-FilterBy')[0], 'display', 'none');
           }
 
-          //attach keydown event to search limit input
+          // attach keydown event to search limit input
           if (searchLimitInput) {
             var isInt = function (val) {
               var parsedVal = parseInt(val);
@@ -549,17 +524,17 @@ WcmDashboardWidgetCommon.init = function (instance) {
             var searchLimitInputEvent = function (event) {
               var searchNumber = searchLimitInput.value;
 
-              //added to protect non numeric input.
+              // added to protect non numeric input.
               if (event.keyCode == '13' || event.type === 'blur') {
                 if (!isInt(searchNumber)) {
-                  //execute the ajax only if its a number
+                  // execute the ajax only if its a number
                   searchLimitInput.value = instance.defaultSearchNumber;
                   searchNumber = searchLimitInput.value;
                 }
 
-                //var searchNumber=searchLimitInput.value;
+                // var searchNumber=searchLimitInput.value;
                 if (isInt(searchNumber)) {
-                  //execute the ajax only if its a integer number.
+                  // execute the ajax only if its a integer number.
                   searchNumber = searchNumber.replace(/\+/g, '').replace(/\-/g, '');
                   searchLimitInput.value = searchNumber;
                   CStudioAuthoring.Service.setWindowState(
@@ -590,7 +565,7 @@ WcmDashboardWidgetCommon.init = function (instance) {
 
             var validateSearchLimitInputValue = function (event) {
               var searchNum = searchLimitInput.value;
-              //insert default value if invalid
+              // insert default value if invalid
               if (!isInt(searchNum)) {
                 searchLimitInput.value = instance.defaultSearchNumber;
               } else {
@@ -855,107 +830,192 @@ WcmDashboardWidgetCommon.toggleTable = function (widgetId) {
  * edit an item
  */
 WcmDashboardWidgetCommon.editItem = function (matchedElement, isChecked) {
-  var editCallback = {
-    success: function (contentTO, editorId, name, value, draft) {
-      matchedElement.style.pointerEvents = 'auto';
-      if (CStudioAuthoringContext.isPreview) {
-        try {
-          CStudioAuthoring.Operations.refreshPreview();
-        } catch (err) {
-          if (!draft) {
-            this.callingWindow.location.reload(true);
+  const path = WcmDashboardWidgetCommon.getItemPathFromMatchedElement(matchedElement);
+  const type = CrafterCMSNext.util.content.getSystemTypeFromPath(path);
+  const site = CrafterCMSNext.system.store.getState().sites.active;
+  const authoringBase = CrafterCMSNext.system.store.getState().env.authoringBase;
+
+  if (['page', 'component', 'taxonomy'].includes(type)) {
+    CrafterCMSNext.services.content.fetchWorkflowAffectedItems(site, path).subscribe((items) => {
+      let eventIdSuccess = 'editDialogSuccess';
+      let eventIdDismissed = 'editDialogDismissed';
+      let unsubscribe, cancelUnsubscribe;
+      if (items && items.length > 0) {
+        CrafterCMSNext.system.store.dispatch({
+          type: 'SHOW_WORKFLOW_CANCELLATION_DIALOG',
+          payload: {
+            items,
+            onContinue: {
+              type: 'SHOW_EDIT_DIALOG',
+              payload: {
+                site,
+                path,
+                authoringBase,
+                onSaveSuccess: {
+                  type: 'BATCH_ACTIONS',
+                  payload: [
+                    {
+                      type: 'DISPATCH_DOM_EVENT',
+                      payload: { id: eventIdSuccess }
+                    },
+                    {
+                      type: 'SHOW_EDIT_ITEM_SUCCESS_NOTIFICATION'
+                    },
+                    {
+                      type: 'RELOAD_DETAILED_ITEM',
+                      payload: {
+                        path
+                      }
+                    },
+                    {
+                      type: 'CLOSE_EDIT_DIALOG'
+                    }
+                  ]
+                },
+                onCancel: {
+                  type: 'BATCH_ACTIONS',
+                  payload: [
+                    {
+                      type: 'CLOSE_EDIT_DIALOG'
+                    },
+                    {
+                      type: 'DISPATCH_DOM_EVENT',
+                      payload: { id: eventIdDismissed }
+                    }
+                  ]
+                }
+              }
+            },
+            onClose: {
+              type: 'BATCH_ACTIONS',
+              payload: [
+                {
+                  type: 'CLOSE_WORKFLOW_CANCELLATION_DIALOG'
+                },
+                {
+                  type: 'DISPATCH_DOM_EVENT',
+                  payload: { id: eventIdDismissed }
+                }
+              ]
+            }
           }
-        }
+        });
       } else {
-        if (!draft) {
-          //this.callingWindow.location.reload(true);
-        }
+        CrafterCMSNext.system.store.dispatch({
+          type: 'SHOW_EDIT_DIALOG',
+          payload: {
+            site,
+            path,
+            authoringBase,
+            onSaveSuccess: {
+              type: 'BATCH_ACTIONS',
+              payload: [
+                {
+                  type: 'DISPATCH_DOM_EVENT',
+                  payload: { id: eventIdSuccess }
+                },
+                {
+                  type: 'SHOW_EDIT_ITEM_SUCCESS_NOTIFICATION'
+                },
+                {
+                  type: 'RELOAD_DETAILED_ITEM',
+                  payload: {
+                    path
+                  }
+                },
+                {
+                  type: 'CLOSE_EDIT_DIALOG'
+                }
+              ]
+            },
+            onCancel: {
+              type: 'BATCH_ACTIONS',
+              payload: [
+                {
+                  type: 'CLOSE_EDIT_DIALOG'
+                },
+                {
+                  type: 'DISPATCH_DOM_EVENT',
+                  payload: { id: eventIdDismissed }
+                }
+              ]
+            }
+          }
+        });
       }
 
-      if (
-        contentTO.updatedModel &&
-        contentTO.initialModel &&
-        contentTO.updatedModel.orderDefault_f != contentTO.initialModel.orderDefault_f
-      ) {
-        if (CStudioAuthoring.ContextualNav.WcmRootFolder) {
-          eventYS.data = contentTO.item;
-          eventYS.typeAction = 'edit';
-          eventYS.draft = draft;
-          document.dispatchEvent(eventYS);
+      unsubscribe = CrafterCMSNext.createLegacyCallbackListener(eventIdSuccess, (response) => {
+        const contentTO = response;
+        const draft = response.action === 'save';
+
+        if (CStudioAuthoringContext.isPreview) {
+          try {
+            CStudioAuthoring.Operations.refreshPreview();
+          } catch (err) {
+            if (!draft) {
+              this.callingWindow.location.reload(true);
+            }
+          }
+        }
+
+        if (
+          contentTO.updatedModel &&
+          contentTO.initialModel &&
+          contentTO.updatedModel.orderDefault_f !== contentTO.initialModel.orderDefault_f
+        ) {
+          if (CStudioAuthoring.ContextualNav.WcmRootFolder) {
+            eventYS.data = contentTO.item;
+            eventYS.typeAction = 'edit';
+            eventYS.draft = draft;
+            document.dispatchEvent(eventYS);
+          } else {
+            eventNS.data = contentTO.item;
+            eventNS.typeAction = 'edit';
+            eventNS.draft = draft;
+            document.dispatchEvent(eventNS);
+          }
         } else {
           eventNS.data = contentTO.item;
           eventNS.typeAction = 'edit';
           eventNS.draft = draft;
           document.dispatchEvent(eventNS);
         }
-      } else {
-        eventNS.data = contentTO.item;
-        eventNS.typeAction = 'edit';
-        eventNS.draft = draft;
-        document.dispatchEvent(eventNS);
-      }
-    },
-    failure: function () {},
-    callingWindow: window
-  };
 
-  var getContentCallback = {
-    success: function (contentTO) {
-      WcmDashboardWidgetCommon.Ajax.enableDashboard();
+        cancelUnsubscribe();
+      });
 
-      CStudioAuthoring.Operations.editContent(
-        contentTO.form,
-        CStudioAuthoringContext.siteId,
-        contentTO.uri,
-        contentTO.nodeRef,
-        contentTO.uri,
-        false,
-        editCallback
-      );
-    },
-
-    failure: function () {
-      WcmDashboardWidgetCommon.Ajax.enableDashboard();
-    }
-  };
-  WcmDashboardWidgetCommon.Ajax.disableDashboard();
-  WcmDashboardWidgetCommon.getContentItemForMatchedElement(matchedElement, getContentCallback);
+      cancelUnsubscribe = CrafterCMSNext.createLegacyCallbackListener(eventIdDismissed, () => {
+        unsubscribe();
+      });
+    });
+  } else if (['unknown', 'template', 'asset', 'script', 'renderingTemplate'].includes(type)) {
+    CStudioAuthoring.Operations.openCodeEditor({ path, contentType: 'asset' });
+  } else {
+    console.error(`[WcmDashboardWidgetCommon.editItem] Unable to find a edit method for type: ${type}`);
+  }
 };
 
 WcmDashboardWidgetCommon.viewItem = function (matchedElement, isChecked) {
-  var editCallback = {
-    success: function () {
-      this.callingWindow.location.reload(true);
-    },
-    failure: function () {},
-    callingWindow: window
-  };
+  const path = WcmDashboardWidgetCommon.getItemPathFromMatchedElement(matchedElement);
+  const type = CrafterCMSNext.util.content.getSystemTypeFromPath(path);
+  const site = CrafterCMSNext.system.store.getState().sites.active;
+  const authoringBase = CrafterCMSNext.system.store.getState().env.authoringBase;
 
-  var getContentCallback = {
-    success: function (contentTO) {
-      WcmDashboardWidgetCommon.Ajax.enableDashboard();
-
-      if (contentTO.uri.indexOf('/site') == 0) {
-        CStudioAuthoring.Operations.viewContent(
-          contentTO.form,
-          CStudioAuthoringContext.siteId,
-          contentTO.uri,
-          contentTO.nodeRef,
-          contentTO.uri,
-          false,
-          editCallback
-        );
-      } else {
-        // CStudioAuthoring.Operations.openTemplateEditor(contentTO.uri, "default", editCallback);
+  if (['page', 'component', 'taxonomy'].includes(type)) {
+    CrafterCMSNext.system.store.dispatch({
+      type: 'SHOW_EDIT_DIALOG',
+      payload: {
+        site,
+        path,
+        authoringBase,
+        readonly: true
       }
-    },
-
-    failure: function () {
-      WcmDashboardWidgetCommon.Ajax.enableDashboard();
-    }
-  };
-  WcmDashboardWidgetCommon.Ajax.disableDashboard();
-  WcmDashboardWidgetCommon.getContentItemForMatchedElement(matchedElement, getContentCallback);
+    });
+  } else if (['config', 'template', 'asset', 'script', 'renderingTemplate'].includes(type)) {
+    CStudioAuthoring.Operations.openCodeEditor({ path, contentType: 'asset', readonly: true });
+  } else {
+    console.error(`[WcmDashboardWidgetCommon.viewItem] Unable to find a view method for type: ${type}`);
+  }
 };
 
 /**
@@ -1001,6 +1061,22 @@ WcmDashboardWidgetCommon.selectItem = function (matchedElement, isChecked, trigg
   };
 
   WcmDashboardWidgetCommon.getContentItemForMatchedElement(matchedElement, callback);
+};
+
+/**
+ * return the item Path for the matched item
+ */
+
+WcmDashboardWidgetCommon.getItemPathFromMatchedElement = function (matchedElement) {
+  // walk the DOM to get the path  get parent of current element
+  const parentTD = YDom.getAncestorByTagName(matchedElement, 'td');
+
+  // get a sibling, that is <td>, that has attribute of title
+  const urlEl = YDom.getNextSiblingBy(parentTD, function (el) {
+    return el.getAttribute('title') == 'fullUri';
+  });
+
+  return urlEl.innerHTML;
 };
 
 /**
@@ -1100,9 +1176,9 @@ WcmDashboardWidgetCommon.loadTableData = function (sortBy, container, widgetId, 
 
       if (sortFromCachedData && sortDocuments.length > 1) {
         if (instance.skipComponentSort) {
-          //Don't sort by components
+          // Don't sort by components
         } else {
-          //if skipComponentSort flag not available
+          // if skipComponentSort flag not available
           sortDocuments = WcmDashboardWidgetCommon.sortItems(sortDocuments, currentSortBy, currentSortType);
         }
       }
@@ -1129,7 +1205,7 @@ WcmDashboardWidgetCommon.loadTableData = function (sortBy, container, widgetId, 
 
           for (var i = 0; i < items.length; i++) {
             var item = items[i];
-            //table = table + "<tr class='" + parentClass + "'><td colspan='5' class='ttBlankRow3'></td></tr>";
+            // table = table + "<tr class='" + parentClass + "'><td colspan='5' class='ttBlankRow3'></td></tr>";
             var itemRowStart = "<tr class='" + parentClass + ' ' + items[i].path + "'>";
             var itemRowEnd = '</tr>';
 
@@ -1138,7 +1214,7 @@ WcmDashboardWidgetCommon.loadTableData = function (sortBy, container, widgetId, 
               parentClass +
               "'><td><span class='wcm-widget-margin'></span><span class='ttFirstCol128'><input title='All' class='dashlet-item-check1' id=tableName + 'CheckAll'  type='checkbox' /></span><span class='wcm-widget-margin'></span>";
 
-            //create table row for this item
+            // create table row for this item
             var itemRow = WcmDashboardWidgetCommon.buildItemTableRow(item, instance, false, i, 0);
             table += itemRowStart + itemRow + itemRowEnd;
 
@@ -1148,7 +1224,7 @@ WcmDashboardWidgetCommon.loadTableData = function (sortBy, container, widgetId, 
               WcmDashboardWidgetCommon.getChilderenRecursive(subItems);
               subChildren = WcmDashboardWidgetCommon.sortItems(subChildren, currentSortBy, currentSortType);
               table += WcmDashboardWidgetCommon.getSubSubChilderen(table, parentClass, subChildren, widgetId, 1);
-              //table += WcmDashboardWidgetCommon.getSubSubChilderenRecursive(table, parentClass, subItems, widgetId, 1);
+              // table += WcmDashboardWidgetCommon.getSubSubChilderenRecursive(table, parentClass, subItems, widgetId, 1);
             }
           }
           newtable += table;
@@ -1167,8 +1243,8 @@ WcmDashboardWidgetCommon.loadTableData = function (sortBy, container, widgetId, 
       var tbodyContent = '<tbody id="' + tableName + '-tbody" class="ttTbody">' + newtable + '</tbody>';
       var tableContentEnd = '</table>';
 
-      //Check for already checked items,
-      //un-check then to remove those items from selected items list.
+      // Check for already checked items,
+      // un-check then to remove those items from selected items list.
       var checkboxArray = YDom.getElementsBy(
         function (el) {
           return el.type === 'checkbox' && el.checked === true;
@@ -1321,7 +1397,7 @@ WcmDashboardWidgetCommon.loadTableData = function (sortBy, container, widgetId, 
   }
 };
 
-/////For filtering Widgets
+// For filtering Widgets
 
 WcmDashboardWidgetCommon.loadFilterTableData = function (sortBy, container, widgetId, filterByNumber, filterBy) {
   var instance = WcmDashboardWidgetCommon.dashboards[widgetId];
@@ -1345,7 +1421,7 @@ WcmDashboardWidgetCommon.loadFilterTableData = function (sortBy, container, widg
       var sortDocuments = results.documents;
       instance.tooltipLabels = new Array();
       var newtable = '';
-      var blankRow = ''; //"<tr class='avoid'><td class='ttBlankRow' colspan='5'>&nbsp;</td></tr>";
+      var blankRow = ''; // "<tr class='avoid'><td class='ttBlankRow' colspan='5'>&nbsp;</td></tr>";
       var count = 0;
       var sortedByValue = results.sortedBy;
       var sortType = results.sortType;
@@ -1387,7 +1463,7 @@ WcmDashboardWidgetCommon.loadFilterTableData = function (sortBy, container, widg
 
           for (var i = 0; i < items.length; i++) {
             var item = items[i];
-            //table = table + "<tr class='" + parentClass + "'><td colspan='5' class='ttBlankRow3'></td></tr>";
+            // table = table + "<tr class='" + parentClass + "'><td colspan='5' class='ttBlankRow3'></td></tr>";
             var itemRowStart = "<tr class='" + parentClass + "'>";
             var itemRowEnd = '</tr>';
 
@@ -1396,7 +1472,7 @@ WcmDashboardWidgetCommon.loadFilterTableData = function (sortBy, container, widg
               parentClass +
               "'><td><span class='wcm-widget-margin'></span><span class='ttFirstCol128'><input type='checkbox'/></span><span class='wcm-widget-margin'></span>";
 
-            //create table row for this item
+            // create table row for this item
             var itemRow = WcmDashboardWidgetCommon.buildItemTableRow(item, instance, false, i, 0);
             table += itemRowStart + itemRow + itemRowEnd;
 
@@ -1421,8 +1497,8 @@ WcmDashboardWidgetCommon.loadFilterTableData = function (sortBy, container, widg
       var tbodyContent = '<tbody class="ttTbody" id="' + tableName + '-tbody" class="ttTbody">' + newtable + '</tbody>';
       var tableContentEnd = '</table>';
 
-      //Check for already checked items,
-      //un-check then to remove those items from selected items list.
+      // Check for already checked items,
+      // un-check then to remove those items from selected items list.
       var checkboxArray = YDom.getElementsBy(
         function (el) {
           return el.type === 'checkbox' && el.checked === true;
@@ -1570,13 +1646,12 @@ WcmDashboardWidgetCommon.getSubSubChilderenRecursive = function (table, parentCl
 
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
-    //rowHtml += "<tr class='" + parentClass + "'><td colspan='5' class='ttBlankRow3'></td></tr>";
 
     var itemRowStart = "<tr class='" + parentClass + "'>";
 
     var itemRowEnd = '</tr>';
 
-    //create table row for this item
+    // create table row for this item
     var itemRow = WcmDashboardWidgetCommon.buildItemTableRow(item, instance, false, i, depth);
 
     rowHtml += itemRowStart + itemRow + itemRowEnd;
@@ -1745,15 +1820,25 @@ WcmDashboardWidgetCommon.refreshDashboard = function (inst) {
   );
 };
 
+const dashboardsIds = ['MyRecentActivity', 'recentlyMadeLive', 'approvedScheduledItems', 'GoLiveQueue'];
+
 /**
  * refresh all dashboards
  */
 WcmDashboardWidgetCommon.refreshAllDashboards = function () {
   if (typeof WcmDashboardWidgetCommon != 'undefined') {
-    WcmDashboardWidgetCommon.refreshDashboard('MyRecentActivity');
-    WcmDashboardWidgetCommon.refreshDashboard('recentlyMadeLive');
-    WcmDashboardWidgetCommon.refreshDashboard('approvedScheduledItems');
-    WcmDashboardWidgetCommon.refreshDashboard('GoLiveQueue');
+    dashboardsIds.forEach((dashboardId) => {
+      WcmDashboardWidgetCommon.refreshDashboard(dashboardId);
+    });
+    CStudioAuthoring.SelectedContent.clear();
+  }
+};
+
+WcmDashboardWidgetCommon.clearSelections = function () {
+  if (typeof WcmDashboardWidgetCommon != 'undefined') {
+    dashboardsIds.forEach((dashboardId) => {
+      $(`#${dashboardId}-table`).find('input[type="checkbox"]').prop('checked', false);
+    });
     CStudioAuthoring.SelectedContent.clear();
   }
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -106,7 +106,7 @@ CStudioAuthoring.ContextualNav.PreviewToolsMod = CStudioAuthoring.ContextualNav.
 
           var cstopic = crafter.studio.preview.cstopic;
 
-          containerEl.onclick = function () {
+          el.onclick = function () {
             var ptoOn = !!sessionStorage.getItem('pto-on'),
               componentsOn = !!sessionStorage.getItem('components-on');
 
@@ -135,8 +135,6 @@ CStudioAuthoring.ContextualNav.PreviewToolsMod = CStudioAuthoring.ContextualNav.
               }
             }
           };
-
-          containerEl.onClick.containerEl = containerEl;
         }
       }
     });

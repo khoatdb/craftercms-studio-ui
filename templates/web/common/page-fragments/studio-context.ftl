@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+  ~ Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License version 3 as published by
@@ -21,7 +21,6 @@
     const urlParams = new URLSearchParams(window.location.hash);
     return urlParams.get('site') ?? "${envConfig.site}";
   }
-
   const siteId = getSiteId();
 
   /**
@@ -50,6 +49,17 @@
     xsrfParameterName: "${_csrf.parameterName}",
     passwordRequirementsRegex: "${envConfig.passwordRequirementsRegex?js_string}"
   };
+
+  window.addEventListener(
+    'hashchange',
+    function (e) {
+      e.preventDefault();
+      const newSiteId = getSiteId();
+      CStudioAuthoringContext.site = newSiteId;
+      CStudioAuthoringContext.siteId = newSiteId;
+    },
+    false
+  );
 
   if (CStudioAuthoringContext.role === '') {
     document.location = CStudioAuthoringContext.baseUri;
@@ -88,17 +98,6 @@
       );
     }
   });
-
-  window.addEventListener(
-    'hashchange',
-    function (e) {
-      e.preventDefault();
-      const newSiteId = getSiteId();
-      CStudioAuthoringContext.site = newSiteId;
-      CStudioAuthoringContext.siteId = newSiteId;
-    },
-    false
-  );
 
 })(window.location.origin);
 </script>

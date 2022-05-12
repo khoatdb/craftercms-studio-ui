@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -216,7 +216,7 @@ CStudioAuthoringWidgets.MyRecentActivityDashboard = function (widgetId, pageId) 
       ),
       fmt = CStudioAuthoring.Utils.formatDateFromString;
 
-    //reducing max character length to support 1024 screen resolution
+    // reducing max character length to support 1024 screen resolution
     var removeCharCount = window.innerWidth <= 1024 ? 5 : 0;
     var displayBrowserUri = WcmDashboardWidgetCommon.getFormattedString(browserUri, 80 - removeCharCount);
     var itemNameForDisplay = CrafterCMSNext.util.string.escapeHTML(
@@ -274,7 +274,7 @@ CStudioAuthoringWidgets.MyRecentActivityDashboard = function (widgetId, pageId) 
       }"
          ${
            item.previewable
-             ? `href="/studio/preview/#/?page=${currentBrowserUri}&site=${CStudioAuthoringContext.site}"`
+             ? `href="/studio/preview#/?page=${currentBrowserUri}&site=${CStudioAuthoringContext.site}"`
              : ''
          }
        >`,
@@ -301,11 +301,11 @@ CStudioAuthoringWidgets.MyRecentActivityDashboard = function (widgetId, pageId) 
     ];
 
     var folderRow = [
-      '<td style="padding-right:0px">',
+      '<td style="padding-right:0">',
       '<div class="dashlet-ident">',
       '</div>',
       '</td>',
-      '<td style="padding-left:0px" class="itemNameCol">' + '<div class="',
+      '<td style="padding-left:0" class="itemNameCol">' + '<div class="',
       item.disabled == true ? ' disabled' : '',
       '" id="' + ttSpanId + '" title="' + itemTitle + '">',
       '<div class="icon-container  cs-item-icon"><span class="status-icon mr9 studio-fa-stack"><span class="fa studio-fa-stack-2x fa-folder-o"></span><span class=""></span></span></div>',
@@ -314,7 +314,7 @@ CStudioAuthoringWidgets.MyRecentActivityDashboard = function (widgetId, pageId) 
       item.previewable == true ? ' previewLink' : ' non-previewable-link',
       '" ',
       item.previewable == true
-        ? 'href="/studio/preview/#/?page=' + currentBrowserUri + '&site=' + CStudioAuthoringContext.site + '"'
+        ? 'href="/studio/preview#/?page=' + currentBrowserUri + '&site=' + CStudioAuthoringContext.site + '"'
         : '',
       '">',
       itemNameForDisplay,

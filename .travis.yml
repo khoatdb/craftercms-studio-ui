@@ -1,10 +1,33 @@
-language:
-   - node_js
-node_js:
-   - "6"
-before_script:
-   - gem install travis
+version: "~> 1.0"
+dist: focal
+language: java
+git:
+  depth: 1
+  quiet: true
+jdk:
+- openjdk11
+cache:
+  directories:
+  - "$HOME/.m2"
+branches:
+  only:
+  - develop
+  - support/.*
+  - master
+notifications:
+  irc:
+    channels:
+    - chat.freenode.net#craftercms
+    use_notice: true
+    skip_join: true
+  slack: craftersoftware:7YiSb41ZG5rfMgiAY7Qgprc7
+install: skip
 script:
-   - chmod +x travisTrigger.sh
-after_script:
-    ./travisTrigger.sh
+- wget -q https://raw.githubusercontent.com/craftercms/craftercms/develop/.travis-prep-jdk.sh
+- chmod +x .travis-prep-jdk.sh
+- "./.travis-prep-jdk.sh"
+- export JAVA_HOME=$HOME/jdk
+- export PATH=$HOME/jdk/bin:$PATH
+- which java
+- java -version
+- mvn -Dmaven.javadoc.skip=true clean package

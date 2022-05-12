@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -40,7 +40,7 @@ CStudioForms.Controls.RTEManager = CStudioForms.Controls.RTEManager || {
 
         // queue the first req
         this.queuedConfigCallbacks[cacheKey] = new Array();
-        //To Keep the correct style for each callback
+        // To Keep the correct style for each callback
         this.queuedConfigCallbacks[cacheKey].push({ callback: callback, style: style });
 
         // create callback

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -34,19 +34,28 @@
       return undefined;
     }
 
-    (e || window.event).returnValue = confirmationMessage; //Gecko + IE
-    return confirmationMessage; //Gecko + Webkit, Safari, Chrome etc.
+    (e || window.event).returnValue = confirmationMessage; // Gecko + IE
+    return confirmationMessage; // Gecko + Webkit, Safari, Chrome etc.
   });
 
+  const onSetDirty = (value) => {
+    CStudioAdminConsole.isDirty = value;
+    window.top.postMessage(
+      {
+        type: 'CONTENT_TYPES_ON_SUBMITTING_OR_PENDING_CHANGES_MESSAGE',
+        payload: { hasPendingChanges: value }
+      },
+      '*'
+    );
+  };
+
   function moduleLoaded() {
-    CStudioAdminConsole.Tool.ContentTypes =
-      CStudioAdminConsole.Tool.ContentTypes ||
-      function (config, el) {
-        this.containerEl = el;
-        this.config = config;
-        this.types = [];
-        return this;
-      };
+    CStudioAdminConsole.Tool.ContentTypes = function (config, el) {
+      this.containerEl = el;
+      this.config = config;
+      this.types = [];
+      return this;
+    };
 
     getPostfixData();
 
@@ -61,14 +70,11 @@
 
         workareaEl.innerHTML = `
           <section class="site-config-landing-page">
-            <header class="page-header">
-              <h1>${CMgs.format(langBundle, 'contentTypes')}</h1>
-              <div class="header-actions">
-                <button id="createNewContentTypeButton" class="btn btn-default">
-                  <i class="fa fa-plus-circle"></i>
-                  <span class="ng-binding">${CMgs.format(langBundle, 'createNewType')}</span>
-                </button>
-              </div>
+            <header>
+              <button id="createNewContentTypeButton" class="btn btn-outlined btn-outlined-primary">
+                <i class="fa fa-plus-circle"></i>
+                <span class="ng-binding">${CMgs.format(langBundle, 'createNewType')}</span>
+              </button>
             </header>
             <div id="openExistingInlineTarget"></div>
           </section>
@@ -79,15 +85,6 @@
         $('#createNewContentTypeButton').click(() => {
           this.onNewClick();
         });
-
-        CStudioAuthoring.ContextualNav.AdminConsoleNav.initActions([
-          {
-            name: CMgs.format(langBundle, 'openExistingType'),
-            context: this,
-            method: this.onOpenExistingClick
-          },
-          { name: CMgs.format(langBundle, 'createNewType'), context: this, method: this.onNewClick }
-        ]);
       },
 
       componentsValidation: function (formDef) {
@@ -123,6 +120,7 @@
               const type = currentField.type,
                 controls = this.config.controls.control,
                 postfixes = CStudioAdminConsole.getPostfixes(type, controls);
+
               if (postfixes) {
                 for (var k = 0; k < postfixes.length; k++) {
                   if (currentField.id.indexOf(postfixes[k]) > -1) {
@@ -130,7 +128,6 @@
                     break;
                   }
                 }
-
                 if (!postfixesFlag && postfixes.length > 0) {
                   postfixError.push({ title: currentField.title, type: currentField.type });
                 }
@@ -192,13 +189,19 @@
           if (properties[i].name == 'display-template' && properties[i].value !== '') {
             flagTemplateError = true;
           }
-          //if no-template-required property exists and has value "true"
+          // if no-template-required property exists and has value "true"
           if (properties[i].name == 'no-template-required' && properties[i].value === 'true') {
             flagTemplateError = true;
           }
         }
 
         return { flagTemplateError };
+      },
+
+      closeEditor: function () {
+        onSetDirty(false);
+        this.renderWorkarea();
+        CStudioAdminConsole.CommandBar.hide();
       },
 
       openExistingItemRender: function (contentType) {
@@ -217,20 +220,56 @@
                 // render save bar
                 CStudioAdminConsole.CommandBar.render([
                   {
+                    label: CMgs.format(langBundle, 'cancel'),
+                    class: 'btn-default',
+                    fn: function () {
+                      if (CStudioAdminConsole.isDirty) {
+                        CStudioAuthoring.Operations.showSimpleDialog(
+                          'error-dialog',
+                          CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                          CMgs.format(langBundle, 'notification'),
+                          CMgs.format(langBundle, 'contentTypeModifiedWarn'),
+                          [
+                            {
+                              text: CMgs.format(formsLangBundle, 'yes'),
+                              handler: function () {
+                                onSetDirty(false);
+                                _self.renderWorkarea();
+                                this.destroy();
+                                CStudioAdminConsole.CommandBar.hide();
+                              },
+                              isDefault: false
+                            },
+                            {
+                              text: CMgs.format(formsLangBundle, 'no'),
+                              handler: function () {
+                                this.destroy();
+                              },
+                              isDefault: false
+                            }
+                          ],
+                          YAHOO.widget.SimpleDialog.ICON_WARN,
+                          'studioDialog'
+                        );
+                      } else {
+                        _self.closeEditor();
+                      }
+                    }
+                  },
+                  {
                     label: CMgs.format(langBundle, 'save'),
                     class: 'btn-primary',
-                    fn: function () {
-                      function saveFn() {
+                    multiChoice: true,
+                    fn: function (e, type) {
+                      function saveFn(type) {
                         _self.loadConfig(contentType, {
                           success: function (currentConfig) {
-                            var xmlFormDef = CStudioAdminConsole.Tool.ContentTypes.FormDefMain.serializeDefinitionToXml(
-                                formDef
-                              ),
+                            var xmlFormDef =
+                                CStudioAdminConsole.Tool.ContentTypes.FormDefMain.serializeDefinitionToXml(formDef),
                               xmlConfig = CStudioAdminConsole.Tool.ContentTypes.FormDefMain.serializeConfigToXml(
                                 currentConfig,
                                 formDef
-                              ),
-                              configFilesPath = CStudioAuthoring.Constants.CONFIG_FILES_PATH;
+                              );
 
                             var doc = $.parseXML('<xml/>');
                             var json = { key1: 1, key2: 2 };
@@ -245,106 +284,62 @@
                               }
                             }
 
-                            var cb = {
-                              success: function () {
-                                var callBack = {
-                                  success: function () {
-                                    CStudioAdminConsole.isDirty = false;
-                                    CStudioAuthoring.Utils.showNotification(
-                                      CMgs.format(langBundle, 'saved'),
-                                      'top',
-                                      'left',
-                                      'success',
-                                      48,
-                                      197,
-                                      'saveContentType'
-                                    );
-                                    _self.clearCache();
-                                  },
-                                  failure: function () {
-                                    CStudioAuthoring.Operations.showSimpleDialog(
-                                      'errorDialog-dialog',
-                                      CStudioAuthoring.Operations.simpleDialogTypeINFO,
-                                      CMgs.format(langBundle, 'notification'),
-                                      CMgs.format(langBundle, 'saveFailed'),
-                                      null, // use default button
-                                      YAHOO.widget.SimpleDialog.ICON_BLOCK,
-                                      'studioDialog'
-                                    );
-                                  },
-                                  CMgs: CMgs,
-                                  langBundle: langBundle
-                                };
+                            var defPath = '/content-types' + formDef.contentType + '/form-definition.xml';
+                            var confPath = '/content-types' + formDef.contentType + '/config.xml';
 
-                                var confPath = configFilesPath + '/content-types' + formDef.contentType + '/config.xml';
-
-                                var url =
-                                  '/api/1/services/api/1/site/write-configuration.json' +
-                                  '?site=' +
-                                  CStudioAuthoringContext.site +
-                                  '&path=' +
-                                  confPath;
-
-                                YAHOO.util.Connect.resetFormState();
-                                YAHOO.util.Connect.setDefaultPostHeader(false);
-                                YAHOO.util.Connect.initHeader('Content-Type', 'application/xml; charset=utf-8');
-                                YAHOO.util.Connect.initHeader(
-                                  CStudioAuthoringContext.xsrfHeaderName,
-                                  CrafterCMSNext.util.auth.getRequestForgeryToken()
-                                );
-                                YAHOO.util.Connect.asyncRequest(
-                                  'POST',
-                                  CStudioAuthoring.Service.createServiceUri(url),
-                                  callBack,
+                            CrafterCMSNext.rxjs
+                              .forkJoin({
+                                formDef: CrafterCMSNext.services.configuration.writeConfiguration(
+                                  CStudioAuthoringContext.site,
+                                  defPath,
+                                  'studio',
+                                  xmlFormDef
+                                ),
+                                config: CrafterCMSNext.services.configuration.writeConfiguration(
+                                  CStudioAuthoringContext.site,
+                                  confPath,
+                                  'studio',
                                   xmlConfig
-                                );
-                              },
-                              failure: function () {
-                                CStudioAuthoring.Operations.showSimpleDialog(
-                                  'errorDialog-dialog',
-                                  CStudioAuthoring.Operations.simpleDialogTypeINFO,
-                                  CMgs.format(langBundle, 'notification'),
-                                  CMgs.format(langBundle, 'saveFailed'),
-                                  null, // use default button
-                                  YAHOO.widget.SimpleDialog.ICON_BLOCK,
-                                  'studioDialog'
-                                );
-                              },
-                              CMgs: CMgs,
-                              langBundle: langBundle
-                            };
-
-                            var defPath =
-                              configFilesPath + '/content-types' + formDef.contentType + '/form-definition.xml';
-
-                            var url =
-                              '/api/1/services/api/1/site/write-configuration.json' +
-                              '?site=' +
-                              CStudioAuthoringContext.site +
-                              '&path=' +
-                              defPath;
-
-                            YAHOO.util.Connect.resetFormState();
-                            YAHOO.util.Connect.setDefaultPostHeader(false);
-                            YAHOO.util.Connect.initHeader('Content-Type', 'application/xml; charset=utf-8');
-                            YAHOO.util.Connect.initHeader(
-                              CStudioAuthoringContext.xsrfHeaderName,
-                              CrafterCMSNext.util.auth.getRequestForgeryToken()
-                            );
-                            YAHOO.util.Connect.asyncRequest(
-                              'POST',
-                              CStudioAuthoring.Service.createServiceUri(url),
-                              cb,
-                              xmlFormDef
-                            );
-
-                            document.getElementById(
-                              'cstudio-admin-console-command-bar'
-                            ).children[1].value = CMgs.format(langBundle, 'close');
+                                )
+                              })
+                              .subscribe(
+                                () => {
+                                  onSetDirty(false);
+                                  CStudioAuthoring.Utils.showNotification(
+                                    CMgs.format(langBundle, 'saved'),
+                                    'top',
+                                    'left',
+                                    'success',
+                                    48,
+                                    197,
+                                    'saveContentType'
+                                  );
+                                  window.top.postMessage(
+                                    {
+                                      type: 'CONTENT_TYPES_ON_SAVED',
+                                      saveType: type
+                                    },
+                                    '*'
+                                  );
+                                  if (type === 'saveAndClose') {
+                                    _self.closeEditor();
+                                  }
+                                },
+                                () => {
+                                  CStudioAuthoring.Operations.showSimpleDialog(
+                                    'errorDialog-dialog',
+                                    CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                                    CMgs.format(langBundle, 'notification'),
+                                    CMgs.format(langBundle, 'saveFailed'),
+                                    null, // use default button
+                                    YAHOO.widget.SimpleDialog.ICON_BLOCK,
+                                    'studioDialog'
+                                  );
+                                }
+                              );
                           }
                         });
                       }
-
                       var validation = _self.componentsValidation(formDef);
                       var istemplate = _self.templateValidation(formDef);
 
@@ -428,47 +423,8 @@
                           dialogEl.dialog.show();
                         } else {
                           // otherwise, save
-                          saveFn();
+                          saveFn(type);
                         }
-                      }
-                    }
-                  },
-                  {
-                    label: CMgs.format(langBundle, 'cancel'),
-                    class: 'btn-default',
-                    fn: function () {
-                      if (CStudioAdminConsole.isDirty) {
-                        CStudioAuthoring.Operations.showSimpleDialog(
-                          'error-dialog',
-                          CStudioAuthoring.Operations.simpleDialogTypeINFO,
-                          CMgs.format(langBundle, 'notification'),
-                          CMgs.format(langBundle, 'contentTypeModifiedWarn'),
-                          [
-                            {
-                              text: CMgs.format(formsLangBundle, 'yes'),
-                              handler: function () {
-                                CStudioAdminConsole.isDirty = false;
-                                _self.renderWorkarea();
-                                this.destroy();
-                                CStudioAdminConsole.CommandBar.hide();
-                              },
-                              isDefault: false
-                            },
-                            {
-                              text: CMgs.format(formsLangBundle, 'no'),
-                              handler: function () {
-                                this.destroy();
-                              },
-                              isDefault: false
-                            }
-                          ],
-                          YAHOO.widget.SimpleDialog.ICON_WARN,
-                          'studioDialog'
-                        );
-                      } else {
-                        CStudioAdminConsole.isDirty = false;
-                        _self.renderWorkarea();
-                        CStudioAdminConsole.CommandBar.hide();
                       }
                     }
                   }
@@ -477,8 +433,6 @@
                 $('#cstudio-admin-console-command-bar').addClass('content-types-command-bar');
 
                 amplify.publish('/content-type/loaded');
-
-                _self.clearCache();
               },
               failure: function () {}
             });
@@ -517,17 +471,6 @@
         html += '</div>';
 
         return html;
-      },
-
-      clearCache: function () {
-        var serviceUri =
-          '/api/1/services/api/1/site/clear-configuration-cache.json?site=' + CStudioAuthoringContext.site;
-
-        var clearCacheCb = {
-          success: function () {}
-        };
-
-        YConnect.asyncRequest('GET', CStudioAuthoring.Service.createServiceUri(serviceUri), clearCacheCb);
       },
 
       /**
@@ -636,10 +579,7 @@
 
         let $controls = null;
         let $dataSources = null;
-        const {
-          fromEvent,
-          operators: { map, debounceTime }
-        } = CrafterCMSNext.rxjs;
+        const { fromEvent, map, debounceTime } = CrafterCMSNext.rxjs;
         fromEvent(document.querySelector('#controlsSearchInput'), 'keyup')
           .pipe(
             debounceTime(200),
@@ -715,12 +655,7 @@
                 type: 'string',
                 defaultValue: '0'
               },
-              {
-                label: CMgs.format(langBundle, 'maxOccurs'),
-                name: 'maxOccurs',
-                type: 'string',
-                defaultValue: '*'
-              }
+              { label: CMgs.format(langBundle, 'maxOccurs'), name: 'maxOccurs', type: 'string', defaultValue: '*' }
             ];
           },
           getSupportedConstraints: function () {
@@ -806,7 +741,9 @@
                 cb
               );
             })(j);
-          } catch (err) {}
+          } catch (err) {
+            console.log(err);
+          }
 
           if (pluginInfo.missingProp.length > 0) {
             pluginError.control.push(pluginInfo.missingProp);
@@ -958,7 +895,7 @@
               {
                 text: CMgs.format(formsLangBundle, 'yes'),
                 handler: function () {
-                  CStudioAdminConsole.isDirty = false;
+                  onSetDirty(false);
                   CStudioAuthoring.Service.getAllContentTypesForSite(CStudioAuthoringContext.site, chooseTemplateCb);
                   this.destroy();
                 },
@@ -976,7 +913,7 @@
             'studioDialog'
           );
         } else {
-          CStudioAdminConsole.isDirty = false;
+          onSetDirty(false);
           CStudioAuthoring.Service.getAllContentTypesForSite(CStudioAuthoringContext.site, chooseTemplateCb);
         }
       },
@@ -995,6 +932,12 @@
                 success: function (type) {
                   $('#cstudio-admin-console-workarea').html(WORK_AREA_HTML);
                   context.openExistingItemRender(type);
+                  window.top.postMessage(
+                    {
+                      type: 'CONTENT_TYPES_ON_CREATED'
+                    },
+                    '*'
+                  );
                 },
                 failure: function () {},
                 close(didCreate) {
@@ -1022,7 +965,7 @@
               {
                 text: CMgs.format(formsLangBundle, 'yes'),
                 handler: function () {
-                  CStudioAdminConsole.isDirty = false;
+                  onSetDirty(false);
                   CStudioAuthoring.Module.requireModule(
                     'new-content-type-dialog',
                     '/static-assets/components/cstudio-dialogs/new-content-type.js',
@@ -1045,7 +988,7 @@
             'studioDialog'
           );
         } else {
-          CStudioAdminConsole.isDirty = false;
+          onSetDirty(false);
           CStudioAuthoring.Module.requireModule(
             'new-content-type-dialog',
             '/static-assets/components/cstudio-dialogs/new-content-type.js',
@@ -1092,17 +1035,51 @@
         this.formVisualContainerEl = formVisualContainerEl;
         var formTarget = new YAHOO.util.DDTarget(formVisualContainerEl);
 
+        var header = document.createElement('header');
+        header.style.position = 'relative';
+
         var formNameEl = document.createElement('div');
         YDom.addClass(formNameEl, 'content-form-name');
         formNameEl.textContent = this.definition.title;
-        formVisualContainerEl.appendChild(formNameEl);
 
         var divPropertiesEl = document.createElement('div');
         YDom.addClass(divPropertiesEl, 'content-form-link');
+
         var linkPropertiesEl = document.createElement('a');
         linkPropertiesEl.innerHTML = CMgs.format(langBundle, 'basicContentTypeProp');
         divPropertiesEl.appendChild(linkPropertiesEl);
-        formVisualContainerEl.appendChild(divPropertiesEl);
+
+        var deleteTypeApp = document.createElement('div');
+        deleteTypeApp.classList.add('delete-type-container');
+        deleteTypeApp.style.position = 'absolute';
+        deleteTypeApp.style.top = '0';
+        deleteTypeApp.style.right = '0';
+        deleteTypeApp.style.bottom = '0';
+
+        header.appendChild(formNameEl);
+        header.appendChild(divPropertiesEl);
+        header.appendChild(deleteTypeApp);
+        formVisualContainerEl.appendChild(header);
+
+        let unmount;
+        CrafterCMSNext.render(deleteTypeApp, 'DeleteContentTypeButton', {
+          contentType: {
+            id: this.definition.contentType,
+            name: this.definition.title
+          },
+          onComplete() {
+            window.top.postMessage(
+              {
+                type: 'CONTENT_TYPES_ON_DELETED'
+              },
+              '*'
+            );
+            CStudioAdminConsole.renderWorkArea(null, {
+              tool: CStudioAdminConsole.toolsModules['content-types'],
+              toolbar: CStudioAdminConsole.toolbar
+            });
+          }
+        }).then((result) => (unmount = result.unmount));
 
         formVisualContainerEl.definition = this.definition;
 
@@ -1292,7 +1269,7 @@
                 listeningEl.insertBefore(deleteEl, listeningEl.children[0]);
 
                 var deleteFieldFn = function (evt) {
-                  CStudioAdminConsole.isDirty = true;
+                  onSetDirty(true);
                   CStudioAdminConsole.Tool.ContentTypes.FormDefMain.deleteSection(this.parentNode.section);
                   CStudioAdminConsole.Tool.ContentTypes.visualization.render();
                   CStudioAdminConsole.Tool.ContentTypes.propertySheet.renderEmpty();
@@ -1390,7 +1367,7 @@
               listeningEl.insertBefore(deleteEl, listeningEl.children[0]);
 
               var deleteFieldFn = function (evt) {
-                CStudioAdminConsole.isDirty = true;
+                onSetDirty(true);
                 CStudioAdminConsole.Tool.ContentTypes.FormDefMain.deleteField(this.parentNode.field);
                 CStudioAdminConsole.Tool.ContentTypes.visualization.render();
                 CStudioAdminConsole.Tool.ContentTypes.propertySheet.renderEmpty();
@@ -1431,6 +1408,7 @@
 
         var fieldTypeEl = document.createElement('span');
         YDom.addClass(fieldTypeEl, 'content-field-type');
+        fieldTypeEl.dataset.fieldType = field.id;
         fieldTypeEl.textContent = field.type;
         fieldContainerEl.appendChild(fieldTypeEl);
 
@@ -1487,14 +1465,20 @@
             // add delete control
             var deleteEl = YDom.getElementsByClassName('deleteControl', null, listeningEl)[0];
 
-            if (!deleteEl) {
+            let showDeleteBtn = !defaultField;
+            // if is a default field, and there are more than one in the content-type, delete button should be displayed
+            if (defaultField) {
+              showDeleteBtn = $(`.content-type-visual-container [data-field-type='${field.id}']`).length > 1;
+            }
+
+            if (!deleteEl && showDeleteBtn) {
               deleteEl = document.createElement('i');
               YDom.addClass(deleteEl, 'deleteControl fa fa-times-circle');
 
-              !defaultField && listeningEl.appendChild(deleteEl);
+              listeningEl.appendChild(deleteEl);
 
               var deleteFieldFn = function (evt) {
-                CStudioAdminConsole.isDirty = true;
+                onSetDirty(true);
                 CStudioAdminConsole.Tool.ContentTypes.FormDefMain.deleteField(this.parentNode.field);
                 CStudioAdminConsole.Tool.ContentTypes.visualization.render();
                 CStudioAdminConsole.Tool.ContentTypes.propertySheet.renderEmpty();
@@ -2056,13 +2040,18 @@
 
       renderFormPropertySheet: function (item, sheetEl) {
         this.createRowHeading(CMgs.format(langBundle, 'formBasics'), sheetEl);
-        this.createRowFn(CMgs.format(langBundle, 'formTitle'), 'title', item.title, '', 'string', sheetEl, function (
-          e,
-          el
-        ) {
-          item.title = el.value;
-          CStudioAdminConsole.isDirty = true;
-        });
+        this.createRowFn(
+          CMgs.format(langBundle, 'formTitle'),
+          'title',
+          item.title,
+          '',
+          'string',
+          sheetEl,
+          function (e, el) {
+            item.title = el.value;
+            onSetDirty(true);
+          }
+        );
         this.createRowFn(
           CMgs.format(langBundle, 'description'),
           'description',
@@ -2072,7 +2061,7 @@
           sheetEl,
           function (e, el) {
             item.description = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2084,7 +2073,7 @@
           sheetEl,
           function (e, el) {
             item.objectType = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2096,7 +2085,7 @@
           sheetEl,
           function (e, el) {
             item['content-type'] = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2108,7 +2097,7 @@
           sheetEl,
           function (e, el) {
             item.imageThumbnail = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2119,7 +2108,7 @@
           'config',
           sheetEl,
           function (e, el) {
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2130,7 +2119,7 @@
           'controller',
           sheetEl,
           function (e, el) {
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
 
@@ -2155,7 +2144,7 @@
               if (item.properties[l].name === name) {
                 propFound = true;
                 item.properties[l].value = value;
-                CStudioAdminConsole.isDirty = true;
+                onSetDirty(true);
                 break;
               }
             }
@@ -2204,7 +2193,7 @@
           sheetEl,
           function (e, el) {
             item.quickCreate = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
 
@@ -2217,7 +2206,7 @@
           sheetEl,
           function (e, el) {
             item.quickCreatePath = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           },
           true,
           CMgs.format(langBundle, 'pattern'),
@@ -2268,20 +2257,25 @@
         var valueSelected, defaultSelected;
 
         this.createRowHeading(CMgs.format(langBundle, 'datasourceBasics'), sheetEl);
-        this.createRowFn(CMgs.format(langBundle, 'title'), 'title', item.title, '', 'variable', sheetEl, function (
-          e,
-          el
-        ) {
-          CStudioAdminConsole.isDirty = true;
-          if (YDom.hasClass(el, 'property-input-title')) {
-            item.title = el.value;
-          } else {
-            item.id = el.value;
+        this.createRowFn(
+          CMgs.format(langBundle, 'title'),
+          'title',
+          item.title,
+          '',
+          'variable',
+          sheetEl,
+          function (e, el) {
+            onSetDirty(true);
+            if (YDom.hasClass(el, 'property-input-title')) {
+              item.title = el.value;
+            } else {
+              item.id = el.value;
+            }
           }
-        });
+        );
         this.createRowFn(CMgs.format(langBundle, 'name'), 'name', item.id, '', 'variable', sheetEl, function (e, el) {
           item.id = el.value;
-          CStudioAdminConsole.isDirty = true;
+          onSetDirty(true);
         });
 
         this.createRowHeading(CMgs.format(langBundle, 'properties'), sheetEl);
@@ -2326,7 +2320,7 @@
             var propFound = false;
             for (var l = 0; l < item.properties.length; l++) {
               if (item.properties[l].name === name) {
-                CStudioAdminConsole.isDirty = true;
+                onSetDirty(true);
                 propFound = true;
                 item.properties[l].value = value;
                 break;
@@ -2347,7 +2341,13 @@
             sheetEl,
             function (e, el) {
               updatePropertyFn(el.fieldName, el.value);
-            }
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            property
           );
         }
       },
@@ -2361,13 +2361,18 @@
         }
 
         this.createRowHeading(CMgs.format(langBundle, 'sectionBasics'), sheetEl);
-        this.createRowFn(CMgs.format(langBundle, 'title'), 'title', item.title, '', 'string', sheetEl, function (
-          e,
-          el
-        ) {
-          item.title = el.value;
-          CStudioAdminConsole.isDirty = true;
-        });
+        this.createRowFn(
+          CMgs.format(langBundle, 'title'),
+          'title',
+          item.title,
+          '',
+          'string',
+          sheetEl,
+          function (e, el) {
+            item.title = el.value;
+            onSetDirty(true);
+          }
+        );
         this.createRowFn(
           CMgs.format(langBundle, 'description'),
           'description',
@@ -2377,7 +2382,7 @@
           sheetEl,
           function (e, el) {
             item.description = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2389,7 +2394,7 @@
           sheetEl,
           function (e, el) {
             item.defaultOpen = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
       },
@@ -2412,7 +2417,7 @@
           'variable',
           sheetEl,
           function (e, el) {
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
             if (YDom.hasClass(el, 'property-input-title')) {
               item.title = el.value;
             } else {
@@ -2433,20 +2438,25 @@
           sheetEl,
           function (e, el) {
             item.id = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           },
           showPostFixes,
           'Postfixes',
           this.renderPostfixesVariable(item.type)
         );
 
-        this.createRowFn(CMgs.format(langBundle, 'iceGroup'), 'iceGroup', item.iceId, '', 'string', sheetEl, function (
-          e,
-          el
-        ) {
-          item.iceId = el.value;
-          CStudioAdminConsole.isDirty = true;
-        });
+        this.createRowFn(
+          CMgs.format(langBundle, 'iceGroup'),
+          'iceGroup',
+          item.iceId,
+          '',
+          'string',
+          sheetEl,
+          function (e, el) {
+            item.iceId = el.value;
+            onSetDirty(true);
+          }
+        );
         this.createRowFn(
           CMgs.format(langBundle, 'description'),
           'description',
@@ -2456,7 +2466,7 @@
           sheetEl,
           function (e, el) {
             item.description = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2468,7 +2478,7 @@
           sheetEl,
           function (e, el) {
             item.properties[0].value = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2480,7 +2490,7 @@
           sheetEl,
           function (e, el) {
             item.properties[1].value = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
       },
@@ -2502,7 +2512,7 @@
           'variable',
           sheetEl,
           function (e, el) {
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
             if (YDom.hasClass(el, 'property-input-title')) {
               item.title = el.value;
             } else {
@@ -2523,7 +2533,7 @@
           sheetEl,
           function (e, el) {
             item.id = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           },
           showPostFixes,
           formatMessage(contentTypesMessages.postfixes),
@@ -2531,13 +2541,18 @@
           null,
           defaultField
         );
-        this.createRowFn(CMgs.format(langBundle, 'iceGroup'), 'iceGroup', item.iceId, '', 'string', sheetEl, function (
-          e,
-          el
-        ) {
-          item.iceId = el.value;
-          CStudioAdminConsole.isDirty = true;
-        });
+        this.createRowFn(
+          CMgs.format(langBundle, 'iceGroup'),
+          'iceGroup',
+          item.iceId,
+          '',
+          'string',
+          sheetEl,
+          function (e, el) {
+            item.iceId = el.value;
+            onSetDirty(true);
+          }
+        );
         this.createRowFn(
           CMgs.format(langBundle, 'description'),
           'description',
@@ -2547,7 +2562,7 @@
           sheetEl,
           function (e, el) {
             item.description = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(
@@ -2559,12 +2574,12 @@
           sheetEl,
           function (e, el) {
             item.defaultValue = el.value;
-            CStudioAdminConsole.isDirty = true;
+            onSetDirty(true);
           }
         );
         this.createRowFn(CMgs.format(langBundle, 'help'), 'help', item.help, '', 'richText', sheetEl, function (e, el) {
           item.help = el.value;
-          CStudioAdminConsole.isDirty = true;
+          onSetDirty(true);
         });
 
         //////////////////////
@@ -2609,7 +2624,7 @@
           var updatePropertyFn = function (name, value) {
             for (var l = item.properties.length - 1; l >= 0; l--) {
               if (item.properties[l].name === name) {
-                CStudioAdminConsole.isDirty = true;
+                onSetDirty(true);
                 item.properties[l].value =
                   typeof value == 'object' && !Array.isArray(value) ? JSON.stringify(value) : value;
                 break;
@@ -2626,7 +2641,13 @@
             sheetEl,
             function (e, el) {
               updatePropertyFn(el.fieldName, el.value);
-            }
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            property
           );
         }
 
@@ -2656,7 +2677,7 @@
             for (l = 0; l < item.constraints.length; l++) {
               if (item.constraints[l].name === name) {
                 constraintFound = true;
-                CStudioAdminConsole.isDirty = true;
+                onSetDirty(true);
                 item.constraints[l].value = value;
                 break;
               }
@@ -2706,7 +2727,8 @@
         helpTitle,
         helpHTML,
         typeControl,
-        disabled
+        disabled,
+        properties
       ) {
         var itemId = this.itemId;
         var helpIcon = '';
@@ -2769,7 +2791,7 @@
           moduleLoaded: function (moduleName, moduleClass, moduleConfig) {
             try {
               var propControl = new moduleClass(fName, propertyContainerEl, this.self.form, type);
-              propControl.render(value, fn, fName, itemId, defaultValue, typeControl, disabled);
+              propControl.render(value, fn, fName, itemId, defaultValue, typeControl, disabled, properties);
             } catch (e) {}
           },
           self: this
@@ -2806,6 +2828,75 @@
 
       getValue: function () {
         return '';
+      },
+
+      handleDependencyPopover: function (element, dependency, show) {
+        if (show) {
+          $(element)
+            .parent()
+            .popover({
+              content: formatMessage(contentTypesMessages.dependsOn, { dependency }),
+              container: 'body',
+              placement: 'left',
+              trigger: 'hover'
+            });
+        } else {
+          $(element).parent().popover('destroy');
+        }
+      },
+
+      // TODO: handle validations with other types
+      dependencyStatus: function (dependencyEl) {
+        const status = {
+          dependencyMet: false,
+          supported: true
+        };
+
+        if (dependencyEl && dependencyEl.type) {
+          switch (dependencyEl.type) {
+            case 'text':
+              status.dependencyMet = dependencyEl.value !== '';
+              break;
+            case 'checkbox':
+              status.dependencyMet = dependencyEl.checked;
+              break;
+            default:
+              status.supported = false;
+              break;
+          }
+        } else {
+          status.supported = false;
+        }
+
+        return status;
+      },
+
+      handleDependency: function (dependency, valueEl, properties, fieldToUpdate, emptyValue, updateFieldFn) {
+        const _self = this;
+        const dependencyStatus = _self.dependencyStatus(dependency);
+        const isDependencyMet = dependencyStatus.dependencyMet;
+
+        if (dependencyStatus.supported) {
+          valueEl.disabled = !isDependencyMet;
+          this.handleDependencyPopover(valueEl, properties.dependsOn, !isDependencyMet);
+          dependency.addEventListener('propertyUpdate', (e) => {
+            const isDependencyMet = _self.dependencyStatus(dependency).dependencyMet;
+
+            const dependencyLabel = e.target.getAttribute('data-label')
+              ? e.target.getAttribute('data-label')
+              : properties.dependsOn;
+
+            valueEl.disabled = !isDependencyMet;
+            valueEl[fieldToUpdate] = !isDependencyMet ? emptyValue : valueEl[fieldToUpdate];
+            _self.handleDependencyPopover(valueEl, dependencyLabel, !isDependencyMet);
+
+            updateFieldFn(e, valueEl);
+          });
+        } else {
+          console.log(
+            `[content-types.js] Control dependency not implemented for input of type "${properties.dependsOn}". Dependency will be ignored.`
+          );
+        }
       }
     };
 
@@ -2841,7 +2932,7 @@
       },
 
       insertNewDatasource: function (form, datasourcePrototype) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         var newDataSource = {
           id: '',
           title: '',
@@ -2876,7 +2967,7 @@
        * delete a datasource
        */
       deleteDatasource: function (datasource) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         var index = this.findDatasourceIndex(datasource);
 
         datasource.form.datasources.splice(index, 1);
@@ -2886,7 +2977,7 @@
        * insert a field
        */
       insertNewField: function (section, fieldPrototype) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         if (section.type && section.type == 'repeat' && fieldPrototype.getName() == 'repeat') {
           // you cannot add repeats to repeats at this time
           return;
@@ -2942,7 +3033,7 @@
       },
 
       moveField: function (srcEl, destEl, goingUp, callback) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         var src = srcEl.field ? srcEl.field : srcEl.section ? srcEl.section : null;
         var dest = destEl.field ? destEl.field : destEl.section ? destEl.section : null;
 
@@ -2965,7 +3056,7 @@
        * move a field before or after another field
        */
       moveFieldLogic: function (srcEl, destEl, before) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         if (srcEl.form) {
           // Moving sections; only section containers have the form attribute
           var srcElIndex = this.findSectionIndex(srcEl);
@@ -2994,7 +3085,7 @@
       },
 
       moveInside: function (srcEl, destEl, goingUp, callback) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         if (goingUp) {
           var lastChild = YDom.getLastChildBy(destEl, function (el) {
             return el.nodeName == 'DIV';
@@ -3026,7 +3117,7 @@
        * move a field inside a container (repeat or section)
        */
       moveInsideLogic: function (srcEl, container, insertFirst) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         // Get the source item and remove it from it's section
         var srcElIndex = this.findFieldIndex(srcEl);
         srcEl.section.fields.splice(srcElIndex, 1);
@@ -3041,7 +3132,7 @@
       },
 
       moveOutside: function (srcEl, destEl, goingUp, callback) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         if (goingUp) {
           YDom.insertBefore(srcEl, destEl);
           this.moveOutsideLogic(srcEl.field, destEl.section, true);
@@ -3059,7 +3150,7 @@
        * move a field outside its container (into the container's parent)
        */
       moveOutsideLogic: function (srcEl, container, insertFirst) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         var srcElIndex = this.findFieldIndex(srcEl),
           containerIndex = this.findFieldIndex(container);
 
@@ -3081,7 +3172,7 @@
        * insert new section
        */
       insertNewSection: function (form) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         var section = {
           description: '',
           title: '',
@@ -3099,7 +3190,7 @@
        * delete a section
        */
       deleteField: function (field) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         var index = this.findFieldIndex(field);
         field.section.fields.splice(index, 1);
       },
@@ -3108,7 +3199,7 @@
        * edit a field
        */
       editField: function (field, update) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         var index = this.findFieldIndex(field);
         field.section.fields[index] = {
           ...field.section.fields[index],
@@ -3120,7 +3211,7 @@
        * delete a section
        */
       deleteSection: function (section) {
-        CStudioAdminConsole.isDirty = true;
+        onSetDirty(true);
         var index = this.findSectionIndex(section);
 
         section.form.sections.splice(index, 1);
@@ -3199,7 +3290,7 @@
           definition.contentType +
           '</content-type>\r\n' +
           '\t<imageThumbnail>' +
-          definition.imageThumbnail +
+          (definition.imageThumbnail ?? '') +
           '</imageThumbnail>\r\n' +
           '\t<quickCreate>' +
           quickCreate +
@@ -3453,9 +3544,16 @@
       renderFieldToXml: function (field) {
         // Instantiate control to get its additional fields.
         const controlClass = CStudioAdminConsole.Tool.ContentTypes.types[field.type].moduleClass;
-        const control = new controlClass(field.id, {}, {
-          registerField: function () {}
-        }, [], [], []);
+        const control = new controlClass(
+          field.id,
+          {},
+          {
+            registerField: function () {}
+          },
+          [],
+          [],
+          []
+        );
         const additionalFields = control.getAdditionalFields?.() ?? [];
 
         var xml = '';
@@ -3486,6 +3584,9 @@
             '</help>\r\n';
           if (field.plugin) {
             xml += '\t\t\t\t\t<plugin>\r\n';
+            if (field.plugin.pluginId) {
+              xml += '\t\t\t\t\t\t<pluginId>' + field.plugin.pluginId + '</pluginId>\r\n';
+            }
             if (field.plugin.type) {
               xml += '\t\t\t\t\t\t<type>' + field.plugin.type + '</type>\r\n';
             }
@@ -3546,10 +3647,7 @@
           if (additionalFields.length > 0) {
             xml += '\t\t\t\t\t<additionalFields>\r\n';
             additionalFields.forEach((field) => {
-              xml +=
-                '\t\t\t\t\t\t<id>' +
-                field +
-                '</id>\r\n';
+              xml += '\t\t\t\t\t\t<id>' + field + '</id>\r\n';
             });
             xml += '\t\t\t\t\t</additionalFields>\r\n';
           }
@@ -3653,6 +3751,9 @@
             if (datasource.plugin.filename) {
               xml += '\t\t\t\t\t\t<filename>' + datasource.plugin.filename + '</filename>\r\n';
             }
+            if (datasource.plugin.pluginId) {
+              xml += '\t\t\t\t\t\t<pluginId>' + datasource.plugin.pluginId + '</pluginId>\r\n';
+            }
             xml += '\t\t\t\t\t</plugin>\r\n';
           }
           xml += '\t\t\t\t\t<properties>\r\n';
@@ -3687,7 +3788,7 @@
 
     CStudioAdminConsole.helpInsert = function (button, identifier) {
       var $button = $(button);
-      var $input = $(identifier).siblings('input');
+      const $input = $(identifier).parent().find('input');
       $input.val($input.val() + $button.attr('data-insert'));
 
       $input.change();

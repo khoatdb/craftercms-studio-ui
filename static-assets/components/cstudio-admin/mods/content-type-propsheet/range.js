@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -52,6 +52,7 @@ YAHOO.extend(
               isExact = true;
             }
           }
+          this.lastValidValue = JSON.parse(JSON.stringify(this.fieldValue));
         } catch (err) {}
       }
 
@@ -111,7 +112,7 @@ YAHOO.extend(
 
       YAHOO.util.Event.on(switchCtrl, 'click', switchFn, switchCtrl);
 
-      //Update the model with the same value but with the correct format ( see valueToJsonString )
+      // Update the model with the same value but with the correct format ( see valueToJsonString )
       updateFn(null, { fieldName: this.fieldName, value: this.valueToJsonString(this.fieldValue) });
     },
 

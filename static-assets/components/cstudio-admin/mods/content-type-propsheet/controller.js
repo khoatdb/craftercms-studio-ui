@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -97,13 +97,7 @@ YAHOO.extend(
           var contentType = _self.contentType,
             path = '/config/studio/content-types' + contentType + '/controller.groovy';
 
-          CStudioAuthoring.Operations.openTemplateEditor(
-            path,
-            'default',
-            { success: function () {}, failure: function () {} },
-            null,
-            null
-          );
+          CStudioAuthoring.Operations.openCodeEditor({ path, contentType, mode: 'groovy' });
         };
       }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -176,7 +176,7 @@ CStudioAuthoringWidgets.GoLiveQueueDashboard = function (widgetId, pageId) {
         name = item.internalName,
         editLinkId;
 
-      //reducing max character length to support 1024 screen resolution
+      // reducing max character length to support 1024 screen resolution
       var removeCharCount = window.innerWidth <= 1024 ? 5 : 0;
       var displayName = CrafterCMSNext.util.string.escapeHTML(
         WcmDashboardWidgetCommon.getFormattedString(name, 80 - removeCharCount, item.newFile)
@@ -209,13 +209,12 @@ CStudioAuthoringWidgets.GoLiveQueueDashboard = function (widgetId, pageId) {
           ')',
           '</span>',
           '</td>',
-          '<td colspan="3"></td>'
+          '<td colspan="3">&nbsp;</td>'
         ]);
       } else {
         var browserUri = CStudioAuthoring.Operations.getPreviewUrl(item, false, true),
           displayBrowserUri = WcmDashboardWidgetCommon.getFormattedString(browserUri, 50 - removeCharCount),
           uri = item.uri,
-          fmt = CStudioAuthoring.Utils.formatDateFromString,
           environment = item.submittedToEnvironment ? item.submittedToEnvironment : '';
 
         editLinkId = encodeURIComponent(
@@ -265,7 +264,7 @@ CStudioAuthoringWidgets.GoLiveQueueDashboard = function (widgetId, pageId) {
           `<a class="anchorRow"
            ${
              item.previewable
-               ? `href="/studio/preview/#/?page=${currentBrowserUri}&site=${CStudioAuthoringContext.site}"`
+               ? `href="/studio/preview#/?page=${currentBrowserUri}&site=${CStudioAuthoringContext.site}"`
                : ''
            }
            class="itemNameCol ${item.previewable ? 'previewLink' : 'non-previewable-link'} ${
@@ -280,7 +279,7 @@ CStudioAuthoringWidgets.GoLiveQueueDashboard = function (widgetId, pageId) {
           '</div>',
           '</td>',
           '<td id="' + viewLinkId + '"></td>',
-          `<td id="${editLinkId}" class="edit-${widgetId} hidden test"></td>`,
+          `<td id="${editLinkId}" class="edit-${widgetId} hidden"></td>`,
           `<td class='urlCol' title="${browserUri}">`,
           displayBrowserUri,
           '</td>',
@@ -291,9 +290,7 @@ CStudioAuthoringWidgets.GoLiveQueueDashboard = function (widgetId, pageId) {
           environment,
           '</td>',
           '<td class="">',
-          item.scheduled
-            ? CStudioAuthoring.Utils.formatDateFromUTC(item.scheduledDate, studioTimeZone, 'tooltipformat')
-            : '',
+          item.scheduled ? CStudioAuthoring.Utils.formatDateFromUTC(item.scheduledDate, studioTimeZone) : '',
           '</td>',
           "<td class='alignRight username trim'>",
           WcmDashboardWidgetCommon.getDisplayName(item),
@@ -328,7 +325,7 @@ CStudioAuthoringWidgets.GoLiveQueueDashboard = function (widgetId, pageId) {
     WcmDashboardWidgetCommon.selectItem(matchedEl, matchedEl.checked);
 
     if (isChecked) {
-      //check all parents
+      // check all parents
       var parentURI = item.mandatoryParent;
       if (parentURI) {
         var parentInputElement = YDom.get(parentURI);
@@ -338,7 +335,7 @@ CStudioAuthoringWidgets.GoLiveQueueDashboard = function (widgetId, pageId) {
         }
       }
     } else {
-      //deselect all children
+      // deselect all children
       var children = CStudioAuthoring.Service.getChildren(item, CStudioAuthoringWidgets.GoLiveQueueDashboard.resultMap);
       if (children.length > 0) {
         for (var i = 0; i < children.length; i++) {

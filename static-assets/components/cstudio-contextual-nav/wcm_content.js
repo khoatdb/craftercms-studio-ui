@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -150,9 +150,12 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
 
               CStudioAuthoring.Events.contentSelected.subscribe(function (evtName, contentTO) {
                 var selectedContent, callback;
-
                 if (contentTO[0] && contentTO[0].path) {
                   selectedContent = CStudioAuthoring.SelectedContent.getSelectedContent();
+
+                  if (selectedContent.length) {
+                    $('#activeContentActions').addClass('selected-content');
+                  }
 
                   callback = {
                     success: function (isWrite, perms) {
@@ -313,6 +316,10 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                 if (contentTO[0] && contentTO[0].path) {
                   selectedContent = CStudioAuthoring.SelectedContent.getSelectedContent();
 
+                  if (!selectedContent.length) {
+                    $('#activeContentActions').removeClass('selected-content');
+                  }
+
                   var saveDraftFlag = false;
                   var noticeEls = YDom.getElementsByClassName(
                     'acnDraftContent',
@@ -467,44 +474,42 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
               var selectedContent = CStudioAuthoring.SelectedContent.getSelectedContent(),
                 me = this;
 
-              var callback = {
-                success: function (isWrite, perms) {
-                  this._self._drawNav(selectedContent, isWrite, perms);
+              if (selectedContent.length != 0) {
+                this.checkWritePermission(selectedContent[0].uri, {
+                  success: function (isWrite, perms) {
+                    this._self._drawNav(selectedContent, isWrite, perms);
 
-                  if (CStudioAuthoringContext.isPreview == true && selectedContent[0].disabled == true) {
-                    createNoticeElement(this._self.containerEl.parentNode.parentNode, 'disabled');
-                  } else {
-                    me.removeDisableMessage();
-                  }
+                    if (CStudioAuthoringContext.isPreview == true && selectedContent[0].disabled == true) {
+                      createNoticeElement(this._self.containerEl.parentNode.parentNode, 'disabled');
+                    } else {
+                      me.removeDisableMessage();
+                    }
 
-                  var thisContext = this;
-                  for (var s = 0; s < selectedContent.length; s++) {
-                    CStudioAuthoring.Service.lookupContentItem(CStudioAuthoringContext.site, selectedContent[s].uri, {
-                      success: function (content) {
-                        if (content.item.savedAsDraft == true) {
-                          var noticeEls = YDom.getElementsByClassName(
-                            'acnDraftContent',
-                            null,
-                            _this.containerEl.parentNode.parentNode
-                          );
-                          if (noticeEls.length < 1) {
-                            createNoticeElement(thisContext._self.containerEl.parentNode.parentNode, 'draft');
+                    var thisContext = this;
+                    for (var s = 0; s < selectedContent.length; s++) {
+                      CStudioAuthoring.Service.lookupContentItem(CStudioAuthoringContext.site, selectedContent[s].uri, {
+                        success: function (content) {
+                          if (content.item.savedAsDraft == true) {
+                            var noticeEls = YDom.getElementsByClassName(
+                              'acnDraftContent',
+                              null,
+                              _this.containerEl.parentNode.parentNode
+                            );
+                            if (noticeEls.length < 1) {
+                              createNoticeElement(thisContext._self.containerEl.parentNode.parentNode, 'draft');
+                            }
                           }
                         }
-                      }
-                    });
-                  }
-                },
-                failure: function () {
-                  //TDOD: log error, not mute it
-                },
+                      });
+                    }
+                  },
+                  failure: function () {
+                    //TDOD: log error, not mute it
+                  },
 
-                selectedContent: selectedContent,
-                _self: this
-              };
-
-              if (selectedContent.length != 0) {
-                this.checkWritePermission(selectedContent[0].uri, callback);
+                  selectedContent: selectedContent,
+                  _self: this
+                });
               } else {
                 this.renderSelectNone();
               }
@@ -527,7 +532,7 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                 itemLocked,
                 spanIcon;
 
-              if (selectedContent.length == 0) {
+              if (selectedContent.length === 0) {
                 this.renderSelectNone();
               } else {
                 if (selectedContent.length > 1) {
@@ -580,12 +585,21 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                   isBulk = false;
                   state = CStudioAuthoring.Utils.getContentItemStatus(selectedContent[0], true).string;
                   stateKey = CStudioAuthoring.Utils.getContentItemStatus(selectedContent[0], true).key;
+
                   icon = CStudioAuthoring.Utils.getContentItemIcon(selectedContent[0]);
-                  // icon = CStudioAuthoring.Utils.getIconFWClasses(selectedContent[0]);
+                  if (selectedContent[0].internalName) {
+                    $(icon)
+                      .append(selectedContent[0].internalName)
+                      .attr('title', selectedContent[0].internalName)
+                      .addClass('active-content-icon-with-item-name')
+                      .find('.status-icon')
+                      .css('marginRight', 20);
+                  }
+
                   isInFlight = selectedContent[0].inFlight;
                   isOneItemLocked = CStudioAuthoring.Utils.isItemLocked(selectedContent[0]);
 
-                  if (selectedContent[0].lockOwner != '') {
+                  if (selectedContent[0].lockOwner !== '') {
                     if (selectedContent[0].lockOwner != CStudioAuthoringContext.user) {
                       isWrite = false;
                     } else {
@@ -614,7 +628,7 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                   stateKey
                 );
               }
-              //add class to remove border from last item - would be more efficient using YUI Selector module, but it's currently not loaded
+              // add class to remove border from last item - would be more efficient using YUI Selector module, but it's currently not loaded
               var itemContainer = document.getElementById('acn-active-content');
               if (itemContainer.hasChildNodes()) {
                 var lastItem = itemContainer.lastChild;
@@ -627,6 +641,38 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                   }
                 }
               }
+
+              this.renderSelectedItemsCount(selectedContent);
+            },
+
+            renderSelectedItemsCount: function (selectedContent) {
+              const $activeContentContainer = $('#activeContentActions');
+              $activeContentContainer.off('click', '.clear-selected', this.clearSelectedContent);
+
+              if ($('body').hasClass('embedded') && selectedContent.length) {
+                $activeContentContainer.append(
+                  '<li class="acn-link items-count">' +
+                    `<p>${selectedContent.length} item${selectedContent.length > 1 ? 's' : ''} selected` +
+                    '<a class="clear-selected" href="#">' +
+                    '<svg class="MuiSvgIcon-root" focusable="false" viewBox="0 0 24 24" aria-hidden="true">' +
+                    '<path d="M14.59 8L12 10.59 9.41 8 8 9.41 10.59 12 8 14.59 9.41 16 12 13.41 14.59 16 16 14.59 13.41 12 16 9.41 14.59 8zM12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"></path>' +
+                    '</svg>' +
+                    '</a>' +
+                    '</p>' +
+                    '</li>'
+                );
+
+                $activeContentContainer.on('click', '.clear-selected', this.clearSelectedContent);
+              } else {
+                $activeContentContainer.remove('.items-count');
+              }
+            },
+
+            clearSelectedContent: function (e) {
+              e.preventDefault();
+              $('#activeContentActions').removeClass('selected-content');
+              WcmDashboardWidgetCommon.clearSelections();
+              CStudioAuthoring.SelectedContent.clear();
             },
 
             hasWritePermission: function hasWritePermission(permissions) {
@@ -679,10 +725,8 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
               stateKey
             ) {
               this.containerEl.innerHTML = '';
-              var navLabelElContainer = document.createElement('li'),
-                navLabelEl = document.createElement('span'),
-                statSplit = state.split('|'),
-                hasOperations;
+              var navLabelElContainer = document.createElement('li');
+              var navLabelEl = document.createElement('span');
 
               navLabelEl.innerHTML = '';
 
@@ -710,15 +754,11 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                 }
               }
 
-              hasOperations = YDom.getElementsByClassName('acn-link', null, this.containerEl).length;
-
               if ('string' === typeof icon) {
-                YDom.addClass(navLabelEl, [icon, 'context-nav-title-element', 'navbar-text'].join(' '));
+                $(navLabelEl).addClass(`${icon} context-nav-title-element navbar-text`);
               } else {
-                YDom.addClass(navLabelEl, ['context-nav-title-element', 'navbar-text'].join(' '));
+                $(navLabelEl).addClass('context-nav-title-element navbar-text');
                 navLabelEl.appendChild(icon);
-                navLabelEl.innerHTML +=
-                  "<span style='line-height: 15px;color: #777;font-weight: bold;font-size: 21px;'>|</span>";
               }
 
               navLabelElContainer.appendChild(navLabelEl);
@@ -747,134 +787,214 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
              */
             renderEdit: {
               render: function (option, isBulk, isAdmin, state, isRelevant, isWrite, perms, isOneItemLocked, stateKey) {
-                var content = CStudioAuthoring.SelectedContent.getSelectedContent();
+                const content = CStudioAuthoring.SelectedContent.getSelectedContent();
 
-                //                            for (var i = 0, l = content.length; i < l; ++i) {
-                //                                if (content[i].asset) return;
-                //                            }
-
-                var editCallback = {
-                  success: function (contentTO, editorId, name, value, draft) {
-                    var oCurrentTextNodeOldPath = CStudioAuthoring.SelectedContent.getSelectedContent()[0].browserUri;
-                    var pageParameter = CStudioAuthoring.Utils.getQueryParameterURL('page');
-                    if (
-                      CStudioAuthoring.SelectedContent.getSelectedContent()[0].browserUri != contentTO.item.browserUri
-                    ) {
-                      eventNS.oldPath = CStudioAuthoring.SelectedContent.getSelectedContent()[0].uri;
-                      CStudioAuthoring.SelectedContent.getSelectedContent()[0] = contentTO.item;
-                      if (oCurrentTextNodeOldPath.split('.')[0] == pageParameter.split('.')[0]) {
-                        var currentURL = CStudioAuthoring.Utils.replaceQueryParameterURL(
-                          window.location.href,
-                          'page',
-                          contentTO.item.browserUri.indexOf('.xml') > 0
-                            ? contentTO.item.browserUri.split('.')[0] + '.html'
-                            : contentTO.item.browserUri
-                        );
-                        window.location.href = currentURL;
+                option.onclick = function () {
+                  const path = content[0].uri;
+                  const site = CrafterCMSNext.system.store.getState().sites.active;
+                  const authoringBase = CrafterCMSNext.system.store.getState().env.authoringBase;
+                  if (isWrite) {
+                    // Edit Mode
+                    CrafterCMSNext.services.content.fetchWorkflowAffectedItems(site, path).subscribe((items) => {
+                      let eventIdSuccess = 'editDialogSuccess';
+                      let eventIdDismissed = 'editDialogDismissed';
+                      let unsubscribe, cancelUnsubscribe;
+                      if (items && items.length > 0) {
+                        CrafterCMSNext.system.store.dispatch({
+                          type: 'SHOW_WORKFLOW_CANCELLATION_DIALOG',
+                          payload: {
+                            items,
+                            onContinue: {
+                              type: 'SHOW_EDIT_DIALOG',
+                              payload: {
+                                authoringBase,
+                                site,
+                                path,
+                                onSaveSuccess: {
+                                  type: 'BATCH_ACTIONS',
+                                  payload: [
+                                    {
+                                      type: 'DISPATCH_DOM_EVENT',
+                                      payload: { id: eventIdSuccess }
+                                    },
+                                    {
+                                      type: 'SHOW_EDIT_ITEM_SUCCESS_NOTIFICATION'
+                                    },
+                                    {
+                                      type: 'RELOAD_DETAILED_ITEM',
+                                      payload: {
+                                        path
+                                      }
+                                    }
+                                  ]
+                                },
+                                onCancel: {
+                                  type: 'BATCH_ACTIONS',
+                                  payload: [
+                                    {
+                                      type: 'CLOSE_EDIT_DIALOG'
+                                    },
+                                    {
+                                      type: 'DISPATCH_DOM_EVENT',
+                                      payload: { id: eventIdDismissed }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            onClose: {
+                              type: 'BATCH_ACTIONS',
+                              payload: [
+                                {
+                                  type: 'CLOSE_WORKFLOW_CANCELLATION_DIALOG'
+                                },
+                                {
+                                  type: 'DISPATCH_DOM_EVENT',
+                                  payload: { id: eventIdDismissed }
+                                }
+                              ]
+                            }
+                          }
+                        });
+                      } else {
+                        CrafterCMSNext.system.store.dispatch({
+                          type: 'SHOW_EDIT_DIALOG',
+                          payload: {
+                            authoringBase,
+                            site,
+                            path,
+                            onSaveSuccess: {
+                              type: 'BATCH_ACTIONS',
+                              payload: [
+                                {
+                                  type: 'DISPATCH_DOM_EVENT',
+                                  payload: { id: eventIdSuccess }
+                                },
+                                {
+                                  type: 'SHOW_EDIT_ITEM_SUCCESS_NOTIFICATION'
+                                },
+                                {
+                                  type: 'RELOAD_DETAILED_ITEM',
+                                  payload: {
+                                    path
+                                  }
+                                }
+                              ]
+                            },
+                            onCancel: {
+                              type: 'BATCH_ACTIONS',
+                              payload: [
+                                {
+                                  type: 'CLOSE_EDIT_DIALOG'
+                                },
+                                {
+                                  type: 'DISPATCH_DOM_EVENT',
+                                  payload: { id: eventIdDismissed }
+                                }
+                              ]
+                            }
+                          }
+                        });
                       }
-                    }
-                    if (CStudioAuthoringContext.isPreview) {
-                      try {
-                        var currentContentTO,
-                          URLBrowseUri = pageParameter,
-                          contentTOBrowseUri = contentTO.item.browserUri == '' ? '/' : contentTO.item.browserUri;
 
-                        if (URLBrowseUri == contentTOBrowseUri) {
-                          currentContentTO = null;
-                        } else {
-                          currentContentTO = contentTO.item;
-                        }
-
-                        CStudioAuthoring.Operations.refreshPreview(currentContentTO);
-                      } catch (err) {
-                        if (!draft) {
-                          this.callingWindow.location.reload(true);
-                        } else {
-                          var previewFrameEl = document.getElementById('engineWindow');
-                          if (previewFrameEl) {
-                            previewFrameEl.contentWindow.location.reload();
+                      unsubscribe = CrafterCMSNext.createLegacyCallbackListener(eventIdSuccess, (response) => {
+                        const contentTO = response;
+                        const draft = response.action === 'save';
+                        const oCurrentTextNodeOldPath =
+                          CStudioAuthoring.SelectedContent.getSelectedContent()[0].browserUri;
+                        const pageParameter = CStudioAuthoring.Utils.getQueryParameterURL('page');
+                        if (
+                          CStudioAuthoring.SelectedContent.getSelectedContent()[0].browserUri !==
+                          contentTO.item.browserUri
+                        ) {
+                          eventNS.oldPath = CStudioAuthoring.SelectedContent.getSelectedContent()[0].uri;
+                          CStudioAuthoring.SelectedContent.getSelectedContent()[0] = contentTO.item;
+                          if (oCurrentTextNodeOldPath.split('.')[0] === pageParameter.split('.')[0]) {
+                            const currentURL = CStudioAuthoring.Utils.replaceQueryParameterURL(
+                              window.location.href,
+                              'page',
+                              contentTO.item.browserUri.indexOf('.xml') > 0
+                                ? contentTO.item.browserUri.split('.')[0] + '.html'
+                                : contentTO.item.browserUri
+                            );
+                            window.location.href = currentURL;
                           }
                         }
-                      }
-                    } else {
-                      if (!draft) {
-                        //this.callingWindow.location.reload(true);
-                      }
-                    }
+                        if (CStudioAuthoringContext.isPreview) {
+                          try {
+                            let currentContentTO,
+                              contentTOBrowseUri = contentTO.item.browserUri === '' ? '/' : contentTO.item.browserUri;
 
-                    if (
-                      contentTO.updatedModel &&
-                      contentTO.initialModel &&
-                      contentTO.updatedModel.orderDefault_f != contentTO.initialModel.orderDefault_f
-                    ) {
-                      if (CStudioAuthoring.ContextualNav.WcmRootFolder) {
-                        eventYS.data = contentTO.item;
-                        eventYS.typeAction = 'edit';
-                        eventYS.draft = draft;
-                        document.dispatchEvent(eventYS);
-                      } else {
-                        eventNS.data = contentTO.item;
-                        eventNS.typeAction = 'edit';
-                        eventNS.draft = draft;
-                        document.dispatchEvent(eventNS);
-                      }
-                    } else {
-                      eventNS.data = contentTO.item;
-                      eventNS.typeAction = 'edit';
-                      eventNS.draft = draft;
-                      document.dispatchEvent(eventNS);
-                    }
+                            if (pageParameter === contentTOBrowseUri) {
+                              currentContentTO = null;
+                            } else {
+                              currentContentTO = contentTO.item;
+                            }
 
-                    if (!CStudioAuthoringContext.isPreview) {
-                      if (draft) {
-                        //console.log(CStudioAuthoring.Utils.Cookies.readCookie("dashboard-selected"));
-                        CStudioAuthoring.Utils.Cookies.createCookie(
-                          'dashboard-checked',
-                          JSON.stringify(CStudioAuthoring.SelectedContent.getSelectedContent())
-                        );
-                      } else {
-                        CStudioAuthoring.Utils.Cookies.eraseCookie('dashboard-checked');
-                      }
-                    }
-                  },
-                  failure: function () {},
-                  callingWindow: window
-                };
+                            CStudioAuthoring.Operations.refreshPreview(currentContentTO);
+                          } catch (err) {
+                            if (!draft) {
+                              this.callingWindow.location.reload(true);
+                            } else {
+                              const previewFrameEl = document.getElementById('engineWindow');
+                              if (previewFrameEl) {
+                                previewFrameEl.contentWindow.location.reload();
+                              }
+                            }
+                          }
+                        }
 
-                var viewCb = {
-                  success: function () {},
-                  failure: function () {},
-                  callingWindow: window
-                };
+                        if (
+                          contentTO.updatedModel &&
+                          contentTO.initialModel &&
+                          contentTO.updatedModel.orderDefault_f !== contentTO.initialModel.orderDefault_f
+                        ) {
+                          if (CStudioAuthoring.ContextualNav.WcmRootFolder) {
+                            eventYS.data = contentTO.item;
+                            eventYS.typeAction = 'edit';
+                            eventYS.draft = draft;
+                            document.dispatchEvent(eventYS);
+                          } else {
+                            eventNS.data = contentTO.item;
+                            eventNS.typeAction = 'edit';
+                            eventNS.draft = draft;
+                            document.dispatchEvent(eventNS);
+                          }
+                        } else {
+                          eventNS.data = contentTO.item;
+                          eventNS.typeAction = 'edit';
+                          eventNS.draft = draft;
+                          document.dispatchEvent(eventNS);
+                        }
 
-                content = content[0];
-                option.onclick = function () {
-                  this.style.pointerEvents = 'none';
-                  if (typeof CStudioAuthoring.editDisabled === 'undefined') {
-                    CStudioAuthoring.editDisabled = [];
-                  }
-                  CStudioAuthoring.editDisabled.push(this);
+                        if (!CStudioAuthoringContext.isPreview) {
+                          if (draft) {
+                            CStudioAuthoring.Utils.Cookies.createCookie(
+                              'dashboard-checked',
+                              JSON.stringify(CStudioAuthoring.SelectedContent.getSelectedContent())
+                            );
+                          } else {
+                            CStudioAuthoring.Utils.Cookies.eraseCookie('dashboard-checked');
+                          }
+                        }
+                        cancelUnsubscribe();
+                      });
 
-                  if (isWrite == false) {
-                    CStudioAuthoring.Operations.viewContent(
-                      content.form,
-                      CStudioAuthoringContext.siteId,
-                      content.uri,
-                      content.nodeRef,
-                      content.uri,
-                      false,
-                      viewCb
-                    );
+                      cancelUnsubscribe = CrafterCMSNext.createLegacyCallbackListener(eventIdDismissed, () => {
+                        unsubscribe();
+                      });
+                    });
                   } else {
-                    CStudioAuthoring.Operations.editContent(
-                      content.form,
-                      CStudioAuthoringContext.siteId,
-                      content.uri,
-                      content.nodeRef,
-                      content.uri,
-                      false,
-                      editCallback
-                    );
+                    // View Mode
+                    CrafterCMSNext.system.store.dispatch({
+                      type: 'SHOW_EDIT_DIALOG',
+                      payload: {
+                        authoringBase,
+                        site,
+                        path,
+                        readonly: true
+                      }
+                    });
                   }
                 };
 
@@ -886,12 +1006,12 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                     content.document ||
                     (content.component && content.contentType.indexOf('level-descriptor') != -1)) &&
                   state.indexOf('Delete') == -1;
-                //if item is deleted and in the go live queue , enable edit.
+                // if item is deleted and in the go live queue , enable edit.
                 if (state.indexOf('Submitted for Delete') >= 0 || state.indexOf('Scheduled for Delete') >= 0) {
                   rflag = true;
                 }
 
-                /** for edit, if in read-only mode, it should display View, not Edit **/
+                // for edit, if in read-only mode, it should display View, not Edit
                 if (isWrite == false) {
                   option.name = CMgs.format(contextNavLangBundle, 'wcmContentView');
                 } else {
@@ -910,49 +1030,41 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                   uri = content.uri;
 
                 if (isWrite && '/site/website/index.xml' != uri) {
-                  var duplicateContentCallback = {
-                    success: function () {
-                      if (YDom.get('duplicate-loading')) {
-                        YDom.get('duplicate-loading').style.display = 'none';
-                      }
-                    },
-                    failure: function () {
-                      if (YDom.get('duplicate-loading')) {
-                        YDom.get('duplicate-loading').style.display = 'none';
-                      }
-                    }
-                  };
                   option.onclick = function () {
-                    //YDom.get("duplicate-loading").style.display = "block";
-                    CStudioAuthoring.Operations.showSimpleDialog(
-                      'duplicate-dialog',
-                      CStudioAuthoring.Operations.simpleDialogTypeINFO,
-                      'Duplicate',
-                      "A new copy of this item and all of it's item specific content will be created. Are you sure you wish to proceed?",
-                      [
-                        {
-                          text: 'Duplicate',
-                          handler: function () {
-                            this.hide();
-                            CStudioAuthoring.Operations.duplicateContent(
-                              CStudioAuthoringContext.site,
-                              content.uri,
-                              duplicateContentCallback
-                            );
-                          },
-                          isDefault: false
+                    CrafterCMSNext.system.store.dispatch({
+                      type: 'SHOW_CONFIRM_DIALOG',
+                      payload: {
+                        title: CrafterCMSNext.i18n.intl.formatMessage({
+                          id: 'words.duplicate',
+                          defaultMessage: 'Duplicate'
+                        }),
+                        body: CrafterCMSNext.i18n.intl.formatMessage({
+                          id: 'itemMenu.duplicateDialogBody',
+                          defaultMessage:
+                            "A new copy of this item and all of it's item specific content will be created. Are you sure you wish to proceed?"
+                        }),
+                        onCancel: {
+                          type: 'CLOSE_CONFIRM_DIALOG'
                         },
-                        {
-                          text: CMgs.format(formsLangBundle, 'cancel'),
-                          handler: function () {
-                            this.hide();
-                          },
-                          isDefault: true
+                        onOk: {
+                          type: 'BATCH_ACTIONS',
+                          payload: [
+                            {
+                              type: 'CLOSE_CONFIRM_DIALOG'
+                            },
+                            {
+                              type: 'DUPLICATE_ITEM',
+                              payload: {
+                                path: uri,
+                                onSuccess: {
+                                  type: 'SHOW_DUPLICATED_ITEM_SUCCESS_NOTIFICATION'
+                                }
+                              }
+                            }
+                          ]
                         }
-                      ],
-                      YAHOO.widget.SimpleDialog.ICON_WARN,
-                      'studioDialog'
-                    );
+                      }
+                    });
                   };
 
                   if (content.document || content.component) {
@@ -1075,7 +1187,6 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
                   var items = CStudioAuthoring.SelectedContent.getSelectedContent();
 
                   option.onclick = function () {
-                    CStudioAuthoring.Utils.createLoadingIcon();
                     CStudioAuthoring.Operations.approveCommon(
                       CStudioAuthoringContext.site,
                       CStudioAuthoring.SelectedContent.getSelectedContent(),
@@ -1109,58 +1220,6 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
               }
             },
 
-            /**
-             * render approve / golive option
-             */
-            renderApprove: {
-              render: function (option, isBulk, isAdmin, state, isRelevant, isWrite, perms, isOneItemLocked, stateKey) {
-                if (CStudioAuthoring.Service.isPublishAllowed(perms)) {
-                  var isRelevant = !isOneItemLocked;
-                  var items = CStudioAuthoring.SelectedContent.getSelectedContent();
-                  if (isRelevant) {
-                    for (var i = 0; i < items.length; i++) {
-                      if (items[i].live) {
-                        isRelevant = false;
-                        break;
-                      }
-                    }
-                  }
-                  option.onclick = function () {
-                    CStudioAuthoring.Operations.approveContent(
-                      CStudioAuthoringContext.site,
-                      CStudioAuthoring.SelectedContent.getSelectedContent()
-                    );
-                  };
-                  _this.createNavItem(option, isBulk, isAdmin, isRelevant, false);
-                }
-              }
-            },
-            /**
-             * render approve-schedule option
-             */
-            renderApproveSchedule: {
-              render: function (option, isBulk, isAdmin, state, isRelevant, isWrite, perms, isOneItemLocked, stateKey) {
-                if (CStudioAuthoring.Service.isPublishAllowed(perms)) {
-                  var isRelevant = !isOneItemLocked;
-                  var items = CStudioAuthoring.SelectedContent.getSelectedContent();
-                  if (isRelevant) {
-                    for (var i = 0; i < items.length; i++) {
-                      if (items[i].live) {
-                        isRelevant = false;
-                        break;
-                      }
-                    }
-                  }
-                  option.onclick = function () {
-                    CStudioAuthoring.Operations.approveScheduleContent(
-                      CStudioAuthoringContext.site,
-                      CStudioAuthoring.SelectedContent.getSelectedContent()
-                    );
-                  };
-                  _this.createNavItem(option, isBulk, isAdmin, isRelevant, false);
-                }
-              }
-            },
             /**
              * render reject option
              */
@@ -1246,8 +1305,12 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
               var content = CStudioAuthoring.SelectedContent.getSelectedContent();
               var showItem = !item.isInFlight && ((isAdmin && item.allowAdmin) || (!isAdmin && item.allowAuthor));
 
-              if (content[0] && content[0].mimeType) {
-                showItem = content[0].mimeType.match(/\bimage\b/) && 'Edit' === item.renderId ? false : showItem;
+              const mimeType = content[0].mimeType;
+              if (content[0] && mimeType) {
+                const nonEditable =
+                  mimeType.match(/\bimage\b/) || mimeType.match(/\bpdf\b/) || mimeType.match(/\bvideo\b/);
+
+                showItem = nonEditable && 'Edit' === item.renderId ? false : showItem;
               }
 
               if (showItem) {
@@ -1294,19 +1357,6 @@ CStudioAuthoring.ContextualNav.WcmActiveContentMod =
 
                 parentEl.appendChild(linkContainerEl);
                 linkContainerEl.appendChild(linkEl);
-
-                /**
-                 * adding ajax status image for item who has renderId
-                 */
-                if (item.renderId != null) {
-                  var loadingImageEl = document.createElement('img');
-                  loadingImageEl.id = item.renderId.toLowerCase() + '-loading';
-                  loadingImageEl.src =
-                    contextPath +
-                    CStudioAuthoringContext.baseUri +
-                    '/static-assets/themes/cstudioTheme/images/treeview-loading.gif';
-                  linkContainerEl.appendChild(loadingImageEl);
-                }
               }
             },
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -55,7 +55,6 @@ YAHOO.extend(
         },
         valueEl
       );
-      //YAHOO.util.Event.on(valueEl, 'blur', function(evt) { _self.hideTemplateEdit();  }, valueEl);
 
       if (updateFn) {
         var updateFieldFn = function (event, el) {};
@@ -93,34 +92,64 @@ YAHOO.extend(
         this.controlsContainerEl = controlsContainerEl;
 
         editEl.onclick = function () {
-          var contentType = _self.valueEl.value;
+          const path = _self.valueEl.value;
+          const contentType = _self.currentContenType.contentType;
+          const customEventId = 'createFileDialogEventId';
 
-          if (contentType == '') {
-            CStudioAuthoring.Operations.createNewTemplate(null, function (templatePath) {
-              _self.valueEl.value = templatePath;
-              _self.value = templatePath;
-              _self.updateFn(null, _self.valueEl);
+          if (path === '') {
+            CrafterCMSNext.system.store.dispatch({
+              type: 'SHOW_CREATE_FILE_DIALOG',
+              payload: {
+                path: '/templates/web',
+                type: 'template',
+                onCreated: {
+                  type: 'BATCH_ACTIONS',
+                  payload: [
+                    {
+                      type: 'DISPATCH_DOM_EVENT',
+                      payload: { id: customEventId, type: 'onCreated' }
+                    },
+                    { type: 'CLOSE_CREATE_FILE_DIALOG' }
+                  ]
+                },
+                onClosed: {
+                  type: 'BATCH_ACTIONS',
+                  payload: [
+                    {
+                      type: 'DISPATCH_DOM_EVENT',
+                      payload: { id: customEventId, type: 'onClosed' }
+                    },
+                    { type: 'CREATE_FILE_DIALOG_CLOSED' }
+                  ]
+                }
+              }
+            });
+
+            CrafterCMSNext.createLegacyCallbackListener(customEventId, (response) => {
+              const { openOnSuccess, fileName, path, type } = response;
+              if (type === 'onCreated') {
+                const templatePath = `${path}/${fileName}`;
+                _self.valueEl.value = templatePath;
+                _self.value = templatePath;
+                _self.updateFn(null, _self.valueEl);
+                if (openOnSuccess) {
+                  CStudioAuthoring.Operations.openCodeEditor({ path: templatePath, contentType, mode: 'ftl' });
+                }
+              }
             });
           } else {
-            CStudioAuthoring.Operations.openTemplateEditor(
-              contentType,
-              'default',
-              { success: function () {}, failure: function () {} },
-              _self.currentContenType.contentType,
-              null
-            );
+            CStudioAuthoring.Operations.openCodeEditor({ path, contentType, mode: 'ftl' });
           }
         };
 
         pickEl.onclick = function () {
-          CStudioAuthoring.Operations.openBrowse('', '/templates/web', '1', 'select', true, {
-            success: function (searchId, selectedTOs) {
-              var item = selectedTOs[0];
-              _self.valueEl.value = item.uri;
-              _self.value = item.uri;
+          CStudioAuthoring.Operations.openBrowseFilesDialog({
+            path: '/templates/web',
+            onSuccess: ({ path }) => {
+              _self.valueEl.value = path;
+              _self.value = path;
               _self.updateFn(null, _self.valueEl);
-            },
-            failure: function () {}
+            }
           });
         };
       }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -40,7 +40,7 @@ YAHOO.extend(CStudioForms.Datasources.ImgWebDAVUpload, CStudioForms.CStudioFormD
   /**
    * action called when user clicks insert file
    */
-  insertImageAction: function (insertCb) {
+  insertImageAction: function (insertCb, file) {
     (this._self = this), (me = this);
 
     var site = CStudioAuthoringContext.site;
@@ -57,8 +57,8 @@ YAHOO.extend(CStudioForms.Datasources.ImgWebDAVUpload, CStudioForms.CStudioFormD
 
     var callback = {
       success: function (fileData) {
-        var uri = fileData;
-        var fileExtension = fileData.split('.').pop();
+        var uri = fileData.url ? fileData.url : fileData;
+        var fileExtension = uri.split('.').pop();
 
         var imageData = {
           previewUrl: uri,
@@ -66,6 +66,10 @@ YAHOO.extend(CStudioForms.Datasources.ImgWebDAVUpload, CStudioForms.CStudioFormD
           fileExtension: fileExtension,
           remote: true
         };
+
+        if (fileData.name) {
+          imageData.fileName = fileData.name;
+        }
 
         insertCb.success(imageData);
       },
@@ -77,7 +81,20 @@ YAHOO.extend(CStudioForms.Datasources.ImgWebDAVUpload, CStudioForms.CStudioFormD
       context: this
     };
 
-    CStudioAuthoring.Operations.uploadWebDAVAsset(site, path, me.profileId, callback, ['image/*']);
+    if (!file) {
+      CStudioAuthoring.Operations.uploadWebDAVAsset(site, path, me.profileId, callback, ['image/*']);
+    } else {
+      CrafterCMSNext.services.content.uploadToWebDAV(site, file, path, me.profileId, '_csrf').subscribe(
+        (response) => {
+          if (response.type === 'complete') {
+            callback.success(response.payload.body.item);
+          }
+        },
+        (error) => {
+          insertCb.failure(error);
+        }
+      );
+    }
   },
 
   getLabel: function () {

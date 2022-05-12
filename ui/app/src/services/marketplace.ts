@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,24 +14,105 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { get, post } from '../utils/ajax';
-import { MarketplaceSite } from '../models/Site';
+import { get, postJSON } from '../utils/ajax';
+import {
+  Api2BulkResponseFormat,
+  Api2ResponseFormat,
+  LookupTable,
+  MarketplacePlugin,
+  MarketplacePluginVersion,
+  MarketplaceSite,
+  PagedArray,
+  PluginRecord,
+  SandboxItem
+} from '../models';
+import { map, mapTo, pluck, switchMap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { pluckProps, toQueryString } from '../utils/object';
+import { fetchItemsByPath } from './content';
 
-export function fetchBlueprints(options?: { type?: string; limit?: number; showIncompatible?: boolean }) {
-  const params = {
-    type: 'blueprint',
+export function fetchBlueprints(options?: {
+  type?: string;
+  limit?: number;
+  showIncompatible?: boolean;
+}): Observable<PagedArray<MarketplacePlugin>> {
+  return fetchMarketplacePlugins({
     limit: 1000,
     showIncompatible: true,
-    ...options
-  };
+    ...options,
+    type: 'blueprint'
+  });
+}
 
-  return get(
-    `/studio/api/2/marketplace/search?type=${params.type}&limit=${params.limit}&showIncompatible=${params.showIncompatible}`
+interface MarketplacePluginSearchOptions {
+  type: string;
+  limit: number;
+  offset: number;
+  keywords: string;
+  showIncompatible: boolean;
+}
+
+export function fetchMarketplacePlugins(
+  options: Partial<MarketplacePluginSearchOptions>
+): Observable<PagedArray<MarketplacePlugin>> {
+  const qs = toQueryString(options);
+  return get<
+    Api2BulkResponseFormat<{
+      plugins: MarketplacePlugin[];
+    }>
+  >(`/studio/api/2/marketplace/search${qs}`).pipe(
+    map((response) =>
+      Object.assign(response.response.plugins, pluckProps(response.response, 'limit', 'total', 'offset'))
+    )
   );
 }
 
-export function createSite(site: MarketplaceSite) {
-  return post('/studio/api/2/sites/create_site_from_marketplace', site, {
-    'Content-Type': 'application/json'
-  });
+export function installMarketplacePlugin(
+  siteId: string,
+  pluginId: string,
+  pluginVersion: MarketplacePluginVersion,
+  parameters?: LookupTable<string>
+): Observable<boolean> {
+  return postJSON('/studio/api/2/marketplace/install', { siteId, pluginId, pluginVersion, parameters }).pipe(
+    mapTo(true)
+  );
+}
+
+export function uninstallMarketplacePlugin(
+  siteId: string,
+  pluginId: string,
+  force: boolean = false
+): Observable<boolean> {
+  return postJSON('/studio/api/2/marketplace/remove', {
+    siteId,
+    pluginId,
+    force
+  }).pipe(mapTo(true));
+}
+
+export function getPluginConfiguration(siteId: string, pluginId: string): Observable<string> {
+  const qs = toQueryString({ siteId, pluginId });
+  return get(`/studio/api/2/plugin/get_configuration${qs}`).pipe(pluck('response', 'content'));
+}
+
+export function setPluginConfiguration(siteId: string, pluginId: string, content: string): Observable<boolean> {
+  return postJSON('/studio/api/2/plugin/write_configuration', { siteId, pluginId, content }).pipe(mapTo(true));
+}
+
+export function fetchMarketplacePluginUsage(siteId: string, pluginId: string): Observable<SandboxItem[]> {
+  const qs = toQueryString({ siteId, pluginId });
+  return get(`/studio/api/2/marketplace/usage${qs}`).pipe(
+    pluck('response', 'items'),
+    switchMap((items) => (items.length === 0 ? of(items) : fetchItemsByPath(siteId, items)))
+  );
+}
+
+export function fetchInstalledMarketplacePlugins(siteId: string): Observable<PluginRecord[]> {
+  return get<Api2ResponseFormat<{ plugins: PluginRecord[] }>>(
+    `/studio/api/2/marketplace/installed?siteId=${siteId}`
+  ).pipe(pluck('response', 'plugins'));
+}
+
+export function createSite(site: MarketplaceSite): Observable<boolean> {
+  return postJSON('/studio/api/2/sites/create_site_from_marketplace', site).pipe(mapTo(true));
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -93,7 +93,6 @@ YAHOO.extend(CStudioForms.Controls.Input, CStudioForms.CStudioFormField, {
     // renderValidation does not require the result being passed
     obj.renderValidation(validationExist, validationResult);
     obj.owner.notifyValidation();
-
     const valueToSet = obj.escapeContent ? CStudioForms.Util.escapeXml(obj.getValue()) : obj.getValue();
     obj.form.updateModel(obj.id, valueToSet);
   },
@@ -169,7 +168,6 @@ YAHOO.extend(CStudioForms.Controls.Input, CStudioForms.CStudioFormField, {
     var validEl = document.createElement('span');
     YAHOO.util.Dom.addClass(validEl, 'validation-hint');
     YAHOO.util.Dom.addClass(validEl, 'cstudio-form-control-validation fa fa-check');
-    controlWidgetContainerEl.appendChild(validEl);
 
     var inputEl = document.createElement('input');
     this.inputEl = inputEl;
@@ -240,6 +238,7 @@ YAHOO.extend(CStudioForms.Controls.Input, CStudioForms.CStudioFormField, {
     descriptionEl.textContent = config.description;
 
     containerEl.appendChild(titleEl);
+    containerEl.appendChild(validEl);
     containerEl.appendChild(controlWidgetContainerEl);
     containerEl.appendChild(descriptionEl);
   },

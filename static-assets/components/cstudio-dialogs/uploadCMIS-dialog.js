@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -91,7 +91,6 @@ CStudioAuthoring.Dialogs.UploadCMISDialog = CStudioAuthoring.Dialogs.UploadCMISD
       '<div class="contentTypePopupHeader">Upload</div> ' +
       '<div><form id="asset_upload_form">' +
       '<div class="contentTypeOuter">' +
-      '<div id="uploadContainer"></div>' +
       '<div><table><tr><td><input type="hidden" name="siteId" value="' +
       site +
       '"/></td>' +
@@ -102,9 +101,11 @@ CStudioAuthoring.Dialogs.UploadCMISDialog = CStudioAuthoring.Dialogs.UploadCMISD
       repositoryId +
       '"/></td></tr>' +
       '</table></div>' +
+      '<div id="uploadContainer"></div>' +
       '</div>' +
       '<div class="contentTypePopupBtn"> ' +
-      '<input type="button" class="btn btn-default cstudio-xform-button" id="uploadCancelButton" value="Cancel"  /></div>' +
+      '<input type="button" class="btn btn-default cstudio-xform-button" id="uploadCancelButton" value="Cancel"  />' +
+      '</div>' +
       '</form></div>' +
       '</div> ' +
       '</div>';
@@ -112,7 +113,7 @@ CStudioAuthoring.Dialogs.UploadCMISDialog = CStudioAuthoring.Dialogs.UploadCMISD
     // Instantiate the Dialog
     upload_dialog = new YAHOO.widget.Dialog('cstudio-wcm-popup-div', {
       width: '410px',
-      height: '255px',
+      'min-height': '255px',
       effect: {
         effect: YAHOO.widget.ContainerEffect.FADE,
         duration: 0.25
@@ -150,14 +151,16 @@ CStudioAuthoring.Dialogs.UploadCMISDialog = CStudioAuthoring.Dialogs.UploadCMISD
 
     CrafterCMSNext.render(document.getElementById('uploadContainer'), 'SingleFileUpload', {
       formTarget: '#asset_upload_form',
+      site: site,
+      path: path,
       url: url,
       fileTypes: me.fileTypes,
       onUploadStart: function () {
         me.uploadingFile = true;
         $('#uploadCancelButton').attr('disabled', true);
       },
-      onComplete: function (result) {
-        let uploaded = result.successful[0].response.body.item;
+      onComplete: function ({ successful }) {
+        let uploaded = JSON.parse(successful[0].response.body.response).item;
 
         $('#uploadCancelButton').attr('disabled', false);
         me.uploadingFile = false;
@@ -165,8 +168,8 @@ CStudioAuthoring.Dialogs.UploadCMISDialog = CStudioAuthoring.Dialogs.UploadCMISD
         me.callback.success(uploaded);
         CStudioAuthoring.Dialogs.UploadCMISDialog.closeDialog();
       },
-      onError: function (file, error, response) {
-        const res = response.body.response,
+      onError: function ({ response }) {
+        const res = JSON.parse(response.body.response).response,
           errorMsg = `${res.message}. ${res.remedialAction}`;
 
         me.uploadingFile = false;

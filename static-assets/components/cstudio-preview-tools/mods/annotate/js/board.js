@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -31,7 +31,7 @@ window.DrawingBoard = typeof DrawingBoard !== 'undefined' ? DrawingBoard : {};
  *	errorMessage: html string to put in the board's element on browsers that don't support canvas.
  * }
  */
-DrawingBoard.Board = function (id, opts) {
+DrawingBoard.Board = function(id, opts) {
   this.opts = this.mergeOptions(opts);
 
   this.ev = new DrawingBoard.Utils.MicroEvent();
@@ -42,8 +42,7 @@ DrawingBoard.Board = function (id, opts) {
 
   var tpl =
     '<div class="drawing-board-canvas-wrapper"></canvas><canvas class="drawing-board-canvas"></canvas><div class="drawing-board-cursor drawing-board-utils-hidden"></div></div>';
-  if (this.opts.controlsPosition.indexOf('bottom') > -1)
-    tpl += '<div class="drawing-board-controls"></div>';
+  if (this.opts.controlsPosition.indexOf('bottom') > -1) tpl += '<div class="drawing-board-controls"></div>';
   else tpl = '<div class="drawing-board-controls"></div>' + tpl;
 
   this.$el.addClass('drawing-board').append(tpl);
@@ -56,7 +55,7 @@ DrawingBoard.Board = function (id, opts) {
 
   $.each(
     ['left', 'right', 'center'],
-    $.proxy(function (n, val) {
+    $.proxy(function(n, val) {
       if (this.opts.controlsPosition.indexOf(val) > -1) {
         this.dom.$controls.attr('data-align', val);
         return false;
@@ -66,9 +65,7 @@ DrawingBoard.Board = function (id, opts) {
 
   this.canvas = this.dom.$canvas.get(0);
   this.ctx =
-    this.canvas && this.canvas.getContext && this.canvas.getContext('2d')
-      ? this.canvas.getContext('2d')
-      : null;
+    this.canvas && this.canvas.getContext && this.canvas.getContext('2d') ? this.canvas.getContext('2d') : null;
   this.color = this.opts.color;
 
   if (!this.ctx) {
@@ -108,7 +105,7 @@ DrawingBoard.Board.defaultOpts = {
 };
 
 DrawingBoard.Board.prototype = {
-  mergeOptions: function (opts) {
+  mergeOptions: function(opts) {
     opts = $.extend({}, DrawingBoard.Board.defaultOpts, opts);
     if (!opts.background && opts.eraserColor === 'background') opts.eraserColor = 'transparent';
     return opts;
@@ -123,7 +120,7 @@ DrawingBoard.Board.prototype = {
    * resize values depend on the `enlargeYourContainer` option
    */
 
-  reset: function (opts) {
+  reset: function(opts) {
     opts = $.extend(
       {
         color: this.opts.color,
@@ -155,7 +152,7 @@ DrawingBoard.Board.prototype = {
     this.ev.trigger('board:reset', opts);
   },
 
-  resetBackground: function (background, historize) {
+  resetBackground: function(background, historize) {
     background = background || this.opts.background;
     historize = typeof historize !== 'undefined' ? historize : true;
     var bgIsColor = DrawingBoard.Utils.isColor(background);
@@ -170,11 +167,8 @@ DrawingBoard.Board.prototype = {
     if (historize) this.saveHistory();
   },
 
-  resize: function () {
-    this.dom.$controls.toggleClass(
-      'drawing-board-controls-hidden',
-      !this.controls || !this.controls.length
-    );
+  resize: function() {
+    this.dom.$controls.toggleClass('drawing-board-controls-hidden', !this.controls || !this.controls.length);
 
     var canvasWidth, canvasHeight;
     var widths = [
@@ -190,7 +184,7 @@ DrawingBoard.Board.prototype = {
       DrawingBoard.Utils.boxBorderHeight(this.dom.$canvasWrapper, true, true)
     ];
     var that = this;
-    var sum = function (values, multiplier) {
+    var sum = function(values, multiplier) {
       //make the sum of all array values
       multiplier = multiplier || 1;
       var res = values[0];
@@ -199,7 +193,7 @@ DrawingBoard.Board.prototype = {
       }
       return res;
     };
-    var sub = function (values) {
+    var sub = function(values) {
       return sum(values, -1);
     }; //substract all array values from the first one
 
@@ -232,7 +226,7 @@ DrawingBoard.Board.prototype = {
    *
    */
 
-  initControls: function () {
+  initControls: function() {
     this.controls = [];
     if (!this.opts.controls.length || !DrawingBoard.Control) return false;
     for (var i = 0; i < this.opts.controls.length; i++) {
@@ -241,10 +235,7 @@ DrawingBoard.Board.prototype = {
         c = new window['DrawingBoard']['Control'][this.opts.controls[i]](this);
       else if (typeof this.opts.controls[i] == 'object') {
         for (var controlName in this.opts.controls[i]) break;
-        c = new window['DrawingBoard']['Control'][controlName](
-          this,
-          this.opts.controls[i][controlName]
-        );
+        c = new window['DrawingBoard']['Control'][controlName](this, this.opts.controls[i][controlName]);
       }
       if (c) {
         this.addControl(c);
@@ -255,20 +246,20 @@ DrawingBoard.Board.prototype = {
   //add a new control or an existing one at the position you want in the UI
   //to add a totally new control, you can pass a string with the js class as 1st parameter and control options as 2nd ie "addControl('Navigation', { reset: false }"
   //the last parameter (2nd or 3rd depending on the situation) is always the position you want to place the control at
-  addControl: function (control, optsOrPos, pos) {
-    if (
-      typeof control !== 'string' &&
-      (typeof control !== 'object' || !control instanceof DrawingBoard.Control)
-    )
+  addControl: function(control, optsOrPos, pos) {
+    if (typeof control !== 'string' && (typeof control !== 'object' || !control instanceof DrawingBoard.Control))
       return false;
 
     var opts = typeof optsOrPos == 'object' ? optsOrPos : {};
     pos = pos ? pos * 1 : typeof optsOrPos == 'number' ? optsOrPos : null;
 
-    if (typeof control == 'string')
-      control = new window['DrawingBoard']['Control'][control](this, opts);
+    if (typeof control == 'string') control = new window['DrawingBoard']['Control'][control](this, opts);
 
-    if (pos) this.dom.$controls.children().eq(pos).before(control.$el);
+    if (pos)
+      this.dom.$controls
+        .children()
+        .eq(pos)
+        .before(control.$el);
     else this.dom.$controls.append(control.$el);
 
     if (!this.controls) this.controls = [];
@@ -280,14 +271,14 @@ DrawingBoard.Board.prototype = {
    * History methods: undo and redo drawed lines
    */
 
-  initHistory: function () {
+  initHistory: function() {
     this.history = {
       values: [],
       position: 0
     };
   },
 
-  saveHistory: function () {
+  saveHistory: function() {
     while (this.history.values.length > 30) {
       this.history.values.shift();
       this.history.position--;
@@ -302,11 +293,8 @@ DrawingBoard.Board.prototype = {
     this.ev.trigger('historyNavigation', this.history.position);
   },
 
-  _goThroughHistory: function (goForth) {
-    if (
-      (goForth && this.history.position == this.history.values.length) ||
-      (!goForth && this.history.position == 1)
-    )
+  _goThroughHistory: function(goForth) {
+    if ((goForth && this.history.position == this.history.values.length) || (!goForth && this.history.position == 1))
       return;
     var pos = goForth ? this.history.position + 1 : this.history.position - 1;
     if (this.history.values.length && this.history.values[pos - 1] !== undefined) {
@@ -317,11 +305,11 @@ DrawingBoard.Board.prototype = {
     this.saveWebStorage();
   },
 
-  goBackInHistory: function () {
+  goBackInHistory: function() {
     this._goThroughHistory(false);
   },
 
-  goForthInHistory: function () {
+  goForthInHistory: function() {
     this._goThroughHistory(true);
   },
 
@@ -329,11 +317,11 @@ DrawingBoard.Board.prototype = {
    * Image methods: you can directly put an image on the canvas, get it in base64 data url or start a download
    */
 
-  setImg: function (src) {
+  setImg: function(src) {
     var ctx = this.ctx;
     var img = new Image();
     var oldGCO = ctx.globalCompositeOperation;
-    img.onload = function () {
+    img.onload = function() {
       ctx.globalCompositeOperation = 'source-over';
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.width);
       ctx.drawImage(img, 0, 0);
@@ -342,11 +330,11 @@ DrawingBoard.Board.prototype = {
     img.src = src;
   },
 
-  getImg: function () {
+  getImg: function() {
     return this.canvas.toDataURL('image/png');
   },
 
-  downloadImg: function () {
+  downloadImg: function() {
     var img = this.getImg();
     img = img.replace('image/png', 'image/octet-stream');
     window.location.href = img;
@@ -356,17 +344,14 @@ DrawingBoard.Board.prototype = {
    * WebStorage handling : save and restore to local or session storage
    */
 
-  saveWebStorage: function () {
+  saveWebStorage: function() {
     if (window[this.storage]) {
       window[this.storage].setItem('drawing-board-' + this.id, this.getImg());
-      this.ev.trigger(
-        'board:save' + this.storage.charAt(0).toUpperCase() + this.storage.slice(1),
-        this.getImg()
-      );
+      this.ev.trigger('board:save' + this.storage.charAt(0).toUpperCase() + this.storage.slice(1), this.getImg());
     }
   },
 
-  restoreWebStorage: function () {
+  restoreWebStorage: function() {
     if (window[this.storage] && window[this.storage].getItem('drawing-board-' + this.id) !== null) {
       this.setImg(window[this.storage].getItem('drawing-board-' + this.id));
       this.ev.trigger(
@@ -376,18 +361,15 @@ DrawingBoard.Board.prototype = {
     }
   },
 
-  clearWebStorage: function () {
+  clearWebStorage: function() {
     if (window[this.storage] && window[this.storage].getItem('drawing-board-' + this.id) !== null) {
       window[this.storage].removeItem('drawing-board-' + this.id);
       this.ev.trigger('board:clear' + this.storage.charAt(0).toUpperCase() + this.storage.slice(1));
     }
   },
 
-  _getStorage: function () {
-    if (
-      !this.opts.webStorage ||
-      !(this.opts.webStorage === 'session' || this.opts.webStorage === 'local')
-    )
+  _getStorage: function() {
+    if (!this.opts.webStorage || !(this.opts.webStorage === 'session' || this.opts.webStorage === 'local'))
       return false;
     return this.opts.webStorage + 'Storage';
   },
@@ -396,10 +378,10 @@ DrawingBoard.Board.prototype = {
    * Drop an image on the canvas to draw on it
    */
 
-  initDropEvents: function () {
+  initDropEvents: function() {
     if (!this.opts.droppable) return false;
 
-    this.dom.$canvas.on('dragover dragenter drop', function (e) {
+    this.dom.$canvas.on('dragover dragenter drop', function(e) {
       e.stopPropagation();
       e.preventDefault();
     });
@@ -407,14 +389,13 @@ DrawingBoard.Board.prototype = {
     this.dom.$canvas.on('drop', $.proxy(this._onCanvasDrop, this));
   },
 
-  _onCanvasDrop: function (e) {
+  _onCanvasDrop: function(e) {
     e = e.originalEvent ? e.originalEvent : e;
     var files = e.dataTransfer.files;
-    if (!files || !files.length || files[0].type.indexOf('image') == -1 || !window.FileReader)
-      return false;
+    if (!files || !files.length || files[0].type.indexOf('image') == -1 || !window.FileReader) return false;
     var fr = new FileReader();
     fr.readAsDataURL(files[0]);
-    fr.onload = $.proxy(function (ev) {
+    fr.onload = $.proxy(function(ev) {
       this.setImg(ev.target.result);
       this.ev.trigger('board:imageDropped', ev.target.result);
       this.ev.trigger('board:userAction');
@@ -428,7 +409,7 @@ DrawingBoard.Board.prototype = {
    * possible modes are "pencil" (draw normally), "eraser" (draw transparent, like, erase, you know), "filler" (paint can)
    */
 
-  setMode: function (newMode, silent) {
+  setMode: function(newMode, silent) {
     silent = silent || false;
     newMode = newMode || 'pencil';
 
@@ -438,13 +419,9 @@ DrawingBoard.Board.prototype = {
       this.ctx.globalCompositeOperation = newMode === 'eraser' ? 'destination-out' : 'source-over';
     else {
       if (newMode === 'eraser') {
-        if (
-          this.opts.eraserColor === 'background' &&
-          DrawingBoard.Utils.isColor(this.opts.background)
-        )
+        if (this.opts.eraserColor === 'background' && DrawingBoard.Utils.isColor(this.opts.background))
           this.ctx.strokeStyle = this.opts.background;
-        else if (DrawingBoard.Utils.isColor(this.opts.eraserColor))
-          this.ctx.strokeStyle = this.opts.eraserColor;
+        else if (DrawingBoard.Utils.isColor(this.opts.eraserColor)) this.ctx.strokeStyle = this.opts.eraserColor;
       } else if (!this.mode || this.mode === 'eraser') {
         this.ctx.strokeStyle = this.color;
       }
@@ -455,17 +432,17 @@ DrawingBoard.Board.prototype = {
     if (!silent) this.ev.trigger('board:mode', this.mode);
   },
 
-  getMode: function () {
+  getMode: function() {
     return this.mode || 'pencil';
   },
 
-  setColor: function (color) {
+  setColor: function(color) {
     var that = this;
     color = color || this.color;
     if (!DrawingBoard.Utils.isColor(color)) return false;
     this.color = color;
     if (this.opts.eraserColor !== 'transparent' && this.mode === 'eraser') {
-      var setStrokeStyle = function (mode) {
+      var setStrokeStyle = function(mode) {
         if (mode !== 'eraser') that.strokeStyle = that.color;
         that.ev.unbind('board:mode', setStrokeStyle);
       };
@@ -476,7 +453,7 @@ DrawingBoard.Board.prototype = {
   /**
    * Fills an area with the current stroke color.
    */
-  fill: function (e) {
+  fill: function(e) {
     if (this.getImg() === this.blankCanvas) {
       this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.width);
       this.ctx.fillStyle = this.color;
@@ -504,10 +481,7 @@ DrawingBoard.Board.prototype = {
     var tolerance = this.opts.fillTolerance;
 
     // no need to continue if starting and target colors are the same
-    if (
-      DrawingBoard.Utils.compareColors(startColor, DrawingBoard.Utils.RGBToInt(r, g, b), tolerance)
-    )
-      return;
+    if (DrawingBoard.Utils.compareColors(startColor, DrawingBoard.Utils.RGBToInt(r, g, b), tolerance)) return;
 
     // pixels to evaluate
     var queue = [start];
@@ -544,7 +518,7 @@ DrawingBoard.Board.prototype = {
    * Drawing handling, with mouse or touch
    */
 
-  initDrawEvents: function () {
+  initDrawEvents: function() {
     this.isDrawing = false;
     this.isMouseHovering = false;
     this.coords = {};
@@ -552,47 +526,47 @@ DrawingBoard.Board.prototype = {
 
     this.dom.$canvas.on(
       'mousedown touchstart',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onInputStart(e, this._getInputCoords(e));
       }, this)
     );
 
     this.dom.$canvas.on(
       'mousemove touchmove',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onInputMove(e, this._getInputCoords(e));
       }, this)
     );
 
     this.dom.$canvas.on(
       'mousemove',
-      $.proxy(function (e) {}, this)
+      $.proxy(function(e) {}, this)
     );
 
     this.dom.$canvas.on(
       'mouseup touchend',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onInputStop(e, this._getInputCoords(e));
       }, this)
     );
 
     this.dom.$canvas.on(
       'mouseover',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onMouseOver(e, this._getInputCoords(e));
       }, this)
     );
 
     this.dom.$canvas.on(
       'mouseout',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onMouseOut(e, this._getInputCoords(e));
       }, this)
     );
 
     $('body').on(
       'mouseup touchend',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this.isDrawing = false;
       }, this)
     );
@@ -600,21 +574,17 @@ DrawingBoard.Board.prototype = {
     if (window.requestAnimationFrame) requestAnimationFrame($.proxy(this.draw, this));
   },
 
-  draw: function () {
-    //if the pencil size is big (>10), the small crosshair makes a friend: a circle of the size of the pencil
-    //todo: have the circle works on every browser - it currently should be added only when CSS pointer-events are supported
-    //we assume that if requestAnimationFrame is supported, pointer-events is too, but this is terribad.
+  draw: function() {
+    // if the pencil size is big (>10), the small crosshair makes a friend: a circle of the size of the pencil
+    // TODO: have the circle works on every browser - it currently should be added only when CSS pointer-events are supported
+    // we assume that if requestAnimationFrame is supported, pointer-events is too, but this is terribad.
     if (window.requestAnimationFrame && this.ctx.lineWidth > 10 && this.isMouseHovering) {
       this.dom.$cursor.css({ width: this.ctx.lineWidth + 'px', height: this.ctx.lineWidth + 'px' });
       var transform = DrawingBoard.Utils.tpl('translateX({{x}}px) translateY({{y}}px)', {
         x: this.coords.current.x - this.ctx.lineWidth / 2,
         y: this.coords.current.y - this.ctx.lineWidth / 2
       });
-      this.dom.$cursor.css({
-        transform: transform,
-        '-webkit-transform': transform,
-        '-ms-transform': transform
-      });
+      this.dom.$cursor.css({ transform: transform, '-webkit-transform': transform, '-ms-transform': transform });
       this.dom.$cursor.removeClass('drawing-board-utils-hidden');
     } else {
       this.dom.$cursor.addClass('drawing-board-utils-hidden');
@@ -624,12 +594,7 @@ DrawingBoard.Board.prototype = {
       var currentMid = this._getMidInputCoords(this.coords.current);
       this.ctx.beginPath();
       this.ctx.moveTo(currentMid.x, currentMid.y);
-      this.ctx.quadraticCurveTo(
-        this.coords.old.x,
-        this.coords.old.y,
-        this.coords.oldMid.x,
-        this.coords.oldMid.y
-      );
+      this.ctx.quadraticCurveTo(this.coords.old.x, this.coords.old.y, this.coords.oldMid.x, this.coords.oldMid.y);
       this.ctx.stroke();
 
       this.coords.old = this.coords.current;
@@ -638,13 +603,13 @@ DrawingBoard.Board.prototype = {
 
     if (window.requestAnimationFrame)
       requestAnimationFrame(
-        $.proxy(function () {
+        $.proxy(function() {
           this.draw();
         }, this)
       );
   },
 
-  _onInputStart: function (e, coords) {
+  _onInputStart: function(e, coords) {
     this.coords.current = this.coords.old = coords;
     this.coords.oldMid = this._getMidInputCoords(coords);
     this.isDrawing = true;
@@ -656,7 +621,7 @@ DrawingBoard.Board.prototype = {
     e.preventDefault();
   },
 
-  _onInputMove: function (e, coords) {
+  _onInputMove: function(e, coords) {
     this.coords.current = coords;
     this.ev.trigger('board:drawing', { e: e, coords: coords });
 
@@ -666,7 +631,7 @@ DrawingBoard.Board.prototype = {
     e.preventDefault();
   },
 
-  _onInputStop: function (e, coords) {
+  _onInputStop: function(e, coords) {
     if (this.isDrawing && (!e.touches || e.touches.length === 0)) {
       this.isDrawing = false;
 
@@ -680,7 +645,7 @@ DrawingBoard.Board.prototype = {
     }
   },
 
-  _onMouseOver: function (e, coords) {
+  _onMouseOver: function(e, coords) {
     this.isMouseHovering = true;
     this.coords.old = this._getInputCoords(e);
     this.coords.oldMid = this._getMidInputCoords(this.coords.old);
@@ -688,13 +653,13 @@ DrawingBoard.Board.prototype = {
     this.ev.trigger('board:mouseOver', { e: e, coords: coords });
   },
 
-  _onMouseOut: function (e, coords) {
+  _onMouseOut: function(e, coords) {
     this.isMouseHovering = false;
 
     this.ev.trigger('board:mouseOut', { e: e, coords: coords });
   },
 
-  _getInputCoords: function (e) {
+  _getInputCoords: function(e) {
     e = e.originalEvent ? e.originalEvent : e;
     var x, y;
     if (e.touches && e.touches.length == 1) {
@@ -710,7 +675,7 @@ DrawingBoard.Board.prototype = {
     };
   },
 
-  _getMidInputCoords: function (coords) {
+  _getMidInputCoords: function(coords) {
     return {
       x: (this.coords.old.x + coords.x) >> 1,
       y: (this.coords.old.y + coords.y) >> 1

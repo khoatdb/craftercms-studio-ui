@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -150,7 +150,6 @@
      * @param selector {String} The CSS selector to query upon
      */
     getComponent: function (selector) {
-      //return Selector.query(selector, this.cfg.getProperty("context"), true);
       var parent = document.querySelector('#' + this.cfg.getProperty('context'));
       return parent ? parent.querySelector(selector) : null;
     },
@@ -160,10 +159,9 @@
      * @param selector {String} The CSS selector to query upon
      */
     getComponents: function (selector) {
-      //return Selector.query(selector, this.cfg.getProperty("context"));
       var parent = document.querySelector('#' + this.cfg.getProperty('context'));
       var components = parent.querySelectorAll(selector);
-      return Array.prototype.slice.call(components); //Convert to Array.
+      return Array.prototype.slice.call(components); // Convert to Array.
     },
     /**
      * Disables one, multiple or all actions

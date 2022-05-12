@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -167,7 +167,6 @@
           var validEl = document.createElement('span');
           YAHOO.util.Dom.addClass(validEl, 'validation-hint');
           YAHOO.util.Dom.addClass(validEl, 'cstudio-form-control-validation fa fa-check');
-          controlWidgetContainerEl.appendChild(validEl);
 
           var hiddenEl = document.createElement('input');
           hiddenEl.type = 'hidden';
@@ -248,6 +247,7 @@
           descriptionEl.textContent = config.description;
 
           containerEl.appendChild(titleEl);
+          containerEl.appendChild(validEl);
           containerEl.appendChild(controlWidgetContainerEl);
           containerEl.appendChild(descriptionEl);
 

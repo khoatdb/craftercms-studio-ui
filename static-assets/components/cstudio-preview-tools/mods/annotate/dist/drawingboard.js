@@ -10,7 +10,7 @@ DrawingBoard.Utils = {}; /*
 /*!
  * Tim (lite)
  *   github.com/premasagar/tim
- */ DrawingBoard.Utils.tpl = (function () {
+ */ DrawingBoard.Utils.tpl = (function() {
   'use strict';
 
   var start = '{{',
@@ -19,9 +19,9 @@ DrawingBoard.Utils = {}; /*
     pattern = new RegExp(start + '\\s*(' + path + ')\\s*' + end, 'gi'),
     undef;
 
-  return function (template, data) {
+  return function(template, data) {
     // Merge data into the template string
-    return template.replace(pattern, function (tag, token) {
+    return template.replace(pattern, function(tag, token) {
       var path = token.split('.'),
         len = path.length,
         lookup = data,
@@ -55,20 +55,20 @@ DrawingBoard.Utils = {}; /*
  * - create a MicroEventDebug with goodies to debug
  *   - make it safer to use
  */
-DrawingBoard.Utils.MicroEvent = function () {};
+DrawingBoard.Utils.MicroEvent = function() {};
 
 DrawingBoard.Utils.MicroEvent.prototype = {
-  bind: function (event, fct) {
+  bind: function(event, fct) {
     this._events = this._events || {};
     this._events[event] = this._events[event] || [];
     this._events[event].push(fct);
   },
-  unbind: function (event, fct) {
+  unbind: function(event, fct) {
     this._events = this._events || {};
     if (event in this._events === false) return;
     this._events[event].splice(this._events[event].indexOf(fct), 1);
   },
-  trigger: function (event /* , args... */) {
+  trigger: function(event /* , args... */) {
     this._events = this._events || {};
     if (event in this._events === false) return;
     for (var i = 0; i < this._events[event].length; i++) {
@@ -77,8 +77,8 @@ DrawingBoard.Utils.MicroEvent.prototype = {
   }
 };
 
-//I know.
-DrawingBoard.Utils._boxBorderSize = function ($el, withPadding, withMargin, direction) {
+// I know.
+DrawingBoard.Utils._boxBorderSize = function($el, withPadding, withMargin, direction) {
   withPadding = !!withPadding || true;
   withMargin = !!withMargin || false;
   var width = 0,
@@ -92,31 +92,27 @@ DrawingBoard.Utils._boxBorderSize = function ($el, withPadding, withMargin, dire
     if (withPadding) props.push('padding-top', 'padding-bottom');
     if (withMargin) props.push('margin-top', 'margin-bottom');
   }
-  for (var i = props.length - 1; i >= 0; i--)
-    width += parseInt($el.css(props[i]).replace('px', ''), 10);
+  for (var i = props.length - 1; i >= 0; i--) width += parseInt($el.css(props[i]).replace('px', ''), 10);
   return width;
 };
 
-DrawingBoard.Utils.boxBorderWidth = function ($el, withPadding, withMargin) {
+DrawingBoard.Utils.boxBorderWidth = function($el, withPadding, withMargin) {
   return DrawingBoard.Utils._boxBorderSize($el, withPadding, withMargin, 'width');
 };
 
-DrawingBoard.Utils.boxBorderHeight = function ($el, withPadding, withMargin) {
+DrawingBoard.Utils.boxBorderHeight = function($el, withPadding, withMargin) {
   return DrawingBoard.Utils._boxBorderSize($el, withPadding, withMargin, 'height');
 };
 
-DrawingBoard.Utils.isColor = function (string) {
+DrawingBoard.Utils.isColor = function(string) {
   if (!string || !string.length) return false;
-  return (
-    /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(string) ||
-    $.inArray(string.substring(0, 3), ['rgb', 'hsl']) !== -1
-  );
+  return /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i.test(string) || $.inArray(string.substring(0, 3), ['rgb', 'hsl']) !== -1;
 };
 
 /**
  * Packs an RGB color into a single integer.
  */
-DrawingBoard.Utils.RGBToInt = function (r, g, b) {
+DrawingBoard.Utils.RGBToInt = function(r, g, b) {
   var c = 0;
   c |= (r & 255) << 16;
   c |= (g & 255) << 8;
@@ -127,7 +123,7 @@ DrawingBoard.Utils.RGBToInt = function (r, g, b) {
 /**
  * Returns informations on the pixel located at (x,y).
  */
-DrawingBoard.Utils.pixelAt = function (image, x, y) {
+DrawingBoard.Utils.pixelAt = function(image, x, y) {
   var i = (y * image.width + x) * 4;
   var c = DrawingBoard.Utils.RGBToInt(image.data[i], image.data[i + 1], image.data[i + 2]);
 
@@ -142,7 +138,7 @@ DrawingBoard.Utils.pixelAt = function (image, x, y) {
 /**
  * Compares two colors with the given tolerance (between 0 and 255).
  */
-DrawingBoard.Utils.compareColors = function (a, b, tolerance) {
+DrawingBoard.Utils.compareColors = function(a, b, tolerance) {
   if (tolerance === 0) {
     return a === b;
   }
@@ -154,21 +150,16 @@ DrawingBoard.Utils.compareColors = function (a, b, tolerance) {
     ba = a & 255,
     bb = b & 255;
 
-  return (
-    Math.abs(ra - rb) <= tolerance &&
-    Math.abs(ga - gb) <= tolerance &&
-    Math.abs(ba - bb) <= tolerance
-  );
+  return Math.abs(ra - rb) <= tolerance && Math.abs(ga - gb) <= tolerance && Math.abs(ba - bb) <= tolerance;
 };
 
-(function () {
+(function() {
   var lastTime = 0;
   var vendors = ['ms', 'moz', 'webkit', 'o'];
   for (var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
     window.requestAnimationFrame = window[vendors[x] + 'RequestAnimationFrame'];
     window.cancelAnimationFrame =
-      window[vendors[x] + 'CancelAnimationFrame'] ||
-      window[vendors[x] + 'CancelRequestAnimationFrame'];
+      window[vendors[x] + 'CancelAnimationFrame'] || window[vendors[x] + 'CancelRequestAnimationFrame'];
   }
 })();
 
@@ -189,7 +180,7 @@ window.DrawingBoard = typeof DrawingBoard !== 'undefined' ? DrawingBoard : {};
  *	errorMessage: html string to put in the board's element on browsers that don't support canvas.
  * }
  */
-DrawingBoard.Board = function (id, opts) {
+DrawingBoard.Board = function(id, opts) {
   this.opts = this.mergeOptions(opts);
 
   this.ev = new DrawingBoard.Utils.MicroEvent();
@@ -200,8 +191,7 @@ DrawingBoard.Board = function (id, opts) {
 
   var tpl =
     '<div class="drawing-board-canvas-wrapper"></canvas><canvas class="drawing-board-canvas"></canvas><div class="drawing-board-cursor drawing-board-utils-hidden"></div></div>';
-  if (this.opts.controlsPosition.indexOf('bottom') > -1)
-    tpl += '<div class="drawing-board-controls"></div>';
+  if (this.opts.controlsPosition.indexOf('bottom') > -1) tpl += '<div class="drawing-board-controls"></div>';
   else tpl = '<div class="drawing-board-controls"></div>' + tpl;
 
   this.$el.addClass('drawing-board').append(tpl);
@@ -214,7 +204,7 @@ DrawingBoard.Board = function (id, opts) {
 
   $.each(
     ['left', 'right', 'center'],
-    $.proxy(function (n, val) {
+    $.proxy(function(n, val) {
       if (this.opts.controlsPosition.indexOf(val) > -1) {
         this.dom.$controls.attr('data-align', val);
         return false;
@@ -224,9 +214,7 @@ DrawingBoard.Board = function (id, opts) {
 
   this.canvas = this.dom.$canvas.get(0);
   this.ctx =
-    this.canvas && this.canvas.getContext && this.canvas.getContext('2d')
-      ? this.canvas.getContext('2d')
-      : null;
+    this.canvas && this.canvas.getContext && this.canvas.getContext('2d') ? this.canvas.getContext('2d') : null;
   this.color = this.opts.color;
 
   if (!this.ctx) {
@@ -266,7 +254,7 @@ DrawingBoard.Board.defaultOpts = {
 };
 
 DrawingBoard.Board.prototype = {
-  mergeOptions: function (opts) {
+  mergeOptions: function(opts) {
     opts = $.extend({}, DrawingBoard.Board.defaultOpts, opts);
     if (!opts.background && opts.eraserColor === 'background') opts.eraserColor = 'transparent';
     return opts;
@@ -281,7 +269,7 @@ DrawingBoard.Board.prototype = {
    * resize values depend on the `enlargeYourContainer` option
    */
 
-  reset: function (opts) {
+  reset: function(opts) {
     opts = $.extend(
       {
         color: this.opts.color,
@@ -313,7 +301,7 @@ DrawingBoard.Board.prototype = {
     this.ev.trigger('board:reset', opts);
   },
 
-  resetBackground: function (background, historize) {
+  resetBackground: function(background, historize) {
     background = background || this.opts.background;
     historize = typeof historize !== 'undefined' ? historize : true;
     var bgIsColor = DrawingBoard.Utils.isColor(background);
@@ -328,11 +316,8 @@ DrawingBoard.Board.prototype = {
     if (historize) this.saveHistory();
   },
 
-  resize: function () {
-    this.dom.$controls.toggleClass(
-      'drawing-board-controls-hidden',
-      !this.controls || !this.controls.length
-    );
+  resize: function() {
+    this.dom.$controls.toggleClass('drawing-board-controls-hidden', !this.controls || !this.controls.length);
 
     var canvasWidth, canvasHeight;
     var widths = [
@@ -348,7 +333,7 @@ DrawingBoard.Board.prototype = {
       DrawingBoard.Utils.boxBorderHeight(this.dom.$canvasWrapper, true, true)
     ];
     var that = this;
-    var sum = function (values, multiplier) {
+    var sum = function(values, multiplier) {
       //make the sum of all array values
       multiplier = multiplier || 1;
       var res = values[0];
@@ -357,7 +342,7 @@ DrawingBoard.Board.prototype = {
       }
       return res;
     };
-    var sub = function (values) {
+    var sub = function(values) {
       return sum(values, -1);
     }; //substract all array values from the first one
 
@@ -390,7 +375,7 @@ DrawingBoard.Board.prototype = {
    *
    */
 
-  initControls: function () {
+  initControls: function() {
     this.controls = [];
     if (!this.opts.controls.length || !DrawingBoard.Control) return false;
     for (var i = 0; i < this.opts.controls.length; i++) {
@@ -399,10 +384,7 @@ DrawingBoard.Board.prototype = {
         c = new window['DrawingBoard']['Control'][this.opts.controls[i]](this);
       else if (typeof this.opts.controls[i] == 'object') {
         for (var controlName in this.opts.controls[i]) break;
-        c = new window['DrawingBoard']['Control'][controlName](
-          this,
-          this.opts.controls[i][controlName]
-        );
+        c = new window['DrawingBoard']['Control'][controlName](this, this.opts.controls[i][controlName]);
       }
       if (c) {
         this.addControl(c);
@@ -413,20 +395,20 @@ DrawingBoard.Board.prototype = {
   //add a new control or an existing one at the position you want in the UI
   //to add a totally new control, you can pass a string with the js class as 1st parameter and control options as 2nd ie "addControl('Navigation', { reset: false }"
   //the last parameter (2nd or 3rd depending on the situation) is always the position you want to place the control at
-  addControl: function (control, optsOrPos, pos) {
-    if (
-      typeof control !== 'string' &&
-      (typeof control !== 'object' || !control instanceof DrawingBoard.Control)
-    )
+  addControl: function(control, optsOrPos, pos) {
+    if (typeof control !== 'string' && (typeof control !== 'object' || !control instanceof DrawingBoard.Control))
       return false;
 
     var opts = typeof optsOrPos == 'object' ? optsOrPos : {};
     pos = pos ? pos * 1 : typeof optsOrPos == 'number' ? optsOrPos : null;
 
-    if (typeof control == 'string')
-      control = new window['DrawingBoard']['Control'][control](this, opts);
+    if (typeof control == 'string') control = new window['DrawingBoard']['Control'][control](this, opts);
 
-    if (pos) this.dom.$controls.children().eq(pos).before(control.$el);
+    if (pos)
+      this.dom.$controls
+        .children()
+        .eq(pos)
+        .before(control.$el);
     else this.dom.$controls.append(control.$el);
 
     if (!this.controls) this.controls = [];
@@ -438,14 +420,14 @@ DrawingBoard.Board.prototype = {
    * History methods: undo and redo drawed lines
    */
 
-  initHistory: function () {
+  initHistory: function() {
     this.history = {
       values: [],
       position: 0
     };
   },
 
-  saveHistory: function () {
+  saveHistory: function() {
     while (this.history.values.length > 30) {
       this.history.values.shift();
       this.history.position--;
@@ -460,11 +442,8 @@ DrawingBoard.Board.prototype = {
     this.ev.trigger('historyNavigation', this.history.position);
   },
 
-  _goThroughHistory: function (goForth) {
-    if (
-      (goForth && this.history.position == this.history.values.length) ||
-      (!goForth && this.history.position == 1)
-    )
+  _goThroughHistory: function(goForth) {
+    if ((goForth && this.history.position == this.history.values.length) || (!goForth && this.history.position == 1))
       return;
     var pos = goForth ? this.history.position + 1 : this.history.position - 1;
     if (this.history.values.length && this.history.values[pos - 1] !== undefined) {
@@ -475,11 +454,11 @@ DrawingBoard.Board.prototype = {
     this.saveWebStorage();
   },
 
-  goBackInHistory: function () {
+  goBackInHistory: function() {
     this._goThroughHistory(false);
   },
 
-  goForthInHistory: function () {
+  goForthInHistory: function() {
     this._goThroughHistory(true);
   },
 
@@ -487,11 +466,11 @@ DrawingBoard.Board.prototype = {
    * Image methods: you can directly put an image on the canvas, get it in base64 data url or start a download
    */
 
-  setImg: function (src) {
+  setImg: function(src) {
     var ctx = this.ctx;
     var img = new Image();
     var oldGCO = ctx.globalCompositeOperation;
-    img.onload = function () {
+    img.onload = function() {
       ctx.globalCompositeOperation = 'source-over';
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.width);
       ctx.drawImage(img, 0, 0);
@@ -500,11 +479,11 @@ DrawingBoard.Board.prototype = {
     img.src = src;
   },
 
-  getImg: function () {
+  getImg: function() {
     return this.canvas.toDataURL('image/png');
   },
 
-  downloadImg: function () {
+  downloadImg: function() {
     var img = this.getImg();
     img = img.replace('image/png', 'image/octet-stream');
     window.location.href = img;
@@ -514,17 +493,14 @@ DrawingBoard.Board.prototype = {
    * WebStorage handling : save and restore to local or session storage
    */
 
-  saveWebStorage: function () {
+  saveWebStorage: function() {
     if (window[this.storage]) {
       window[this.storage].setItem('drawing-board-' + this.id, this.getImg());
-      this.ev.trigger(
-        'board:save' + this.storage.charAt(0).toUpperCase() + this.storage.slice(1),
-        this.getImg()
-      );
+      this.ev.trigger('board:save' + this.storage.charAt(0).toUpperCase() + this.storage.slice(1), this.getImg());
     }
   },
 
-  restoreWebStorage: function () {
+  restoreWebStorage: function() {
     if (window[this.storage] && window[this.storage].getItem('drawing-board-' + this.id) !== null) {
       this.setImg(window[this.storage].getItem('drawing-board-' + this.id));
       this.ev.trigger(
@@ -534,18 +510,15 @@ DrawingBoard.Board.prototype = {
     }
   },
 
-  clearWebStorage: function () {
+  clearWebStorage: function() {
     if (window[this.storage] && window[this.storage].getItem('drawing-board-' + this.id) !== null) {
       window[this.storage].removeItem('drawing-board-' + this.id);
       this.ev.trigger('board:clear' + this.storage.charAt(0).toUpperCase() + this.storage.slice(1));
     }
   },
 
-  _getStorage: function () {
-    if (
-      !this.opts.webStorage ||
-      !(this.opts.webStorage === 'session' || this.opts.webStorage === 'local')
-    )
+  _getStorage: function() {
+    if (!this.opts.webStorage || !(this.opts.webStorage === 'session' || this.opts.webStorage === 'local'))
       return false;
     return this.opts.webStorage + 'Storage';
   },
@@ -554,10 +527,10 @@ DrawingBoard.Board.prototype = {
    * Drop an image on the canvas to draw on it
    */
 
-  initDropEvents: function () {
+  initDropEvents: function() {
     if (!this.opts.droppable) return false;
 
-    this.dom.$canvas.on('dragover dragenter drop', function (e) {
+    this.dom.$canvas.on('dragover dragenter drop', function(e) {
       e.stopPropagation();
       e.preventDefault();
     });
@@ -565,14 +538,13 @@ DrawingBoard.Board.prototype = {
     this.dom.$canvas.on('drop', $.proxy(this._onCanvasDrop, this));
   },
 
-  _onCanvasDrop: function (e) {
+  _onCanvasDrop: function(e) {
     e = e.originalEvent ? e.originalEvent : e;
     var files = e.dataTransfer.files;
-    if (!files || !files.length || files[0].type.indexOf('image') == -1 || !window.FileReader)
-      return false;
+    if (!files || !files.length || files[0].type.indexOf('image') == -1 || !window.FileReader) return false;
     var fr = new FileReader();
     fr.readAsDataURL(files[0]);
-    fr.onload = $.proxy(function (ev) {
+    fr.onload = $.proxy(function(ev) {
       this.setImg(ev.target.result);
       this.ev.trigger('board:imageDropped', ev.target.result);
       this.ev.trigger('board:userAction');
@@ -586,7 +558,7 @@ DrawingBoard.Board.prototype = {
    * possible modes are "pencil" (draw normally), "eraser" (draw transparent, like, erase, you know), "filler" (paint can)
    */
 
-  setMode: function (newMode, silent) {
+  setMode: function(newMode, silent) {
     silent = silent || false;
     newMode = newMode || 'pencil';
 
@@ -596,13 +568,9 @@ DrawingBoard.Board.prototype = {
       this.ctx.globalCompositeOperation = newMode === 'eraser' ? 'destination-out' : 'source-over';
     else {
       if (newMode === 'eraser') {
-        if (
-          this.opts.eraserColor === 'background' &&
-          DrawingBoard.Utils.isColor(this.opts.background)
-        )
+        if (this.opts.eraserColor === 'background' && DrawingBoard.Utils.isColor(this.opts.background))
           this.ctx.strokeStyle = this.opts.background;
-        else if (DrawingBoard.Utils.isColor(this.opts.eraserColor))
-          this.ctx.strokeStyle = this.opts.eraserColor;
+        else if (DrawingBoard.Utils.isColor(this.opts.eraserColor)) this.ctx.strokeStyle = this.opts.eraserColor;
       } else if (!this.mode || this.mode === 'eraser') {
         this.ctx.strokeStyle = this.color;
       }
@@ -613,17 +581,17 @@ DrawingBoard.Board.prototype = {
     if (!silent) this.ev.trigger('board:mode', this.mode);
   },
 
-  getMode: function () {
+  getMode: function() {
     return this.mode || 'pencil';
   },
 
-  setColor: function (color) {
+  setColor: function(color) {
     var that = this;
     color = color || this.color;
     if (!DrawingBoard.Utils.isColor(color)) return false;
     this.color = color;
     if (this.opts.eraserColor !== 'transparent' && this.mode === 'eraser') {
-      var setStrokeStyle = function (mode) {
+      var setStrokeStyle = function(mode) {
         if (mode !== 'eraser') that.strokeStyle = that.color;
         that.ev.unbind('board:mode', setStrokeStyle);
       };
@@ -634,7 +602,7 @@ DrawingBoard.Board.prototype = {
   /**
    * Fills an area with the current stroke color.
    */
-  fill: function (e) {
+  fill: function(e) {
     if (this.getImg() === this.blankCanvas) {
       this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.width);
       this.ctx.fillStyle = this.color;
@@ -662,10 +630,7 @@ DrawingBoard.Board.prototype = {
     var tolerance = this.opts.fillTolerance;
 
     // no need to continue if starting and target colors are the same
-    if (
-      DrawingBoard.Utils.compareColors(startColor, DrawingBoard.Utils.RGBToInt(r, g, b), tolerance)
-    )
-      return;
+    if (DrawingBoard.Utils.compareColors(startColor, DrawingBoard.Utils.RGBToInt(r, g, b), tolerance)) return;
 
     // pixels to evaluate
     var queue = [start];
@@ -702,7 +667,7 @@ DrawingBoard.Board.prototype = {
    * Drawing handling, with mouse or touch
    */
 
-  initDrawEvents: function () {
+  initDrawEvents: function() {
     this.isDrawing = false;
     this.isMouseHovering = false;
     this.coords = {};
@@ -710,47 +675,47 @@ DrawingBoard.Board.prototype = {
 
     this.dom.$canvas.on(
       'mousedown touchstart',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onInputStart(e, this._getInputCoords(e));
       }, this)
     );
 
     this.dom.$canvas.on(
       'mousemove touchmove',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onInputMove(e, this._getInputCoords(e));
       }, this)
     );
 
     this.dom.$canvas.on(
       'mousemove',
-      $.proxy(function (e) {}, this)
+      $.proxy(function(e) {}, this)
     );
 
     this.dom.$canvas.on(
       'mouseup touchend',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onInputStop(e, this._getInputCoords(e));
       }, this)
     );
 
     this.dom.$canvas.on(
       'mouseover',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onMouseOver(e, this._getInputCoords(e));
       }, this)
     );
 
     this.dom.$canvas.on(
       'mouseout',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this._onMouseOut(e, this._getInputCoords(e));
       }, this)
     );
 
     $('body').on(
       'mouseup touchend',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this.isDrawing = false;
       }, this)
     );
@@ -758,9 +723,9 @@ DrawingBoard.Board.prototype = {
     if (window.requestAnimationFrame) requestAnimationFrame($.proxy(this.draw, this));
   },
 
-  draw: function () {
+  draw: function() {
     //if the pencil size is big (>10), the small crosshair makes a friend: a circle of the size of the pencil
-    //todo: have the circle works on every browser - it currently should be added only when CSS pointer-events are supported
+    // TODO: have the circle works on every browser - it currently should be added only when CSS pointer-events are supported
     //we assume that if requestAnimationFrame is supported, pointer-events is too, but this is terribad.
     if (window.requestAnimationFrame && this.ctx.lineWidth > 10 && this.isMouseHovering) {
       this.dom.$cursor.css({ width: this.ctx.lineWidth + 'px', height: this.ctx.lineWidth + 'px' });
@@ -768,11 +733,7 @@ DrawingBoard.Board.prototype = {
         x: this.coords.current.x - this.ctx.lineWidth / 2,
         y: this.coords.current.y - this.ctx.lineWidth / 2
       });
-      this.dom.$cursor.css({
-        transform: transform,
-        '-webkit-transform': transform,
-        '-ms-transform': transform
-      });
+      this.dom.$cursor.css({ transform: transform, '-webkit-transform': transform, '-ms-transform': transform });
       this.dom.$cursor.removeClass('drawing-board-utils-hidden');
     } else {
       this.dom.$cursor.addClass('drawing-board-utils-hidden');
@@ -782,12 +743,7 @@ DrawingBoard.Board.prototype = {
       var currentMid = this._getMidInputCoords(this.coords.current);
       this.ctx.beginPath();
       this.ctx.moveTo(currentMid.x, currentMid.y);
-      this.ctx.quadraticCurveTo(
-        this.coords.old.x,
-        this.coords.old.y,
-        this.coords.oldMid.x,
-        this.coords.oldMid.y
-      );
+      this.ctx.quadraticCurveTo(this.coords.old.x, this.coords.old.y, this.coords.oldMid.x, this.coords.oldMid.y);
       this.ctx.stroke();
 
       this.coords.old = this.coords.current;
@@ -796,13 +752,13 @@ DrawingBoard.Board.prototype = {
 
     if (window.requestAnimationFrame)
       requestAnimationFrame(
-        $.proxy(function () {
+        $.proxy(function() {
           this.draw();
         }, this)
       );
   },
 
-  _onInputStart: function (e, coords) {
+  _onInputStart: function(e, coords) {
     this.coords.current = this.coords.old = coords;
     this.coords.oldMid = this._getMidInputCoords(coords);
     this.isDrawing = true;
@@ -814,7 +770,7 @@ DrawingBoard.Board.prototype = {
     e.preventDefault();
   },
 
-  _onInputMove: function (e, coords) {
+  _onInputMove: function(e, coords) {
     this.coords.current = coords;
     this.ev.trigger('board:drawing', { e: e, coords: coords });
 
@@ -824,7 +780,7 @@ DrawingBoard.Board.prototype = {
     e.preventDefault();
   },
 
-  _onInputStop: function (e, coords) {
+  _onInputStop: function(e, coords) {
     if (this.isDrawing && (!e.touches || e.touches.length === 0)) {
       this.isDrawing = false;
 
@@ -838,7 +794,7 @@ DrawingBoard.Board.prototype = {
     }
   },
 
-  _onMouseOver: function (e, coords) {
+  _onMouseOver: function(e, coords) {
     this.isMouseHovering = true;
     this.coords.old = this._getInputCoords(e);
     this.coords.oldMid = this._getMidInputCoords(this.coords.old);
@@ -846,13 +802,13 @@ DrawingBoard.Board.prototype = {
     this.ev.trigger('board:mouseOver', { e: e, coords: coords });
   },
 
-  _onMouseOut: function (e, coords) {
+  _onMouseOut: function(e, coords) {
     this.isMouseHovering = false;
 
     this.ev.trigger('board:mouseOut', { e: e, coords: coords });
   },
 
-  _getInputCoords: function (e) {
+  _getInputCoords: function(e) {
     e = e.originalEvent ? e.originalEvent : e;
     var x, y;
     if (e.touches && e.touches.length == 1) {
@@ -868,7 +824,7 @@ DrawingBoard.Board.prototype = {
     };
   },
 
-  _getMidInputCoords: function (coords) {
+  _getMidInputCoords: function(coords) {
     return {
       x: (this.coords.old.x + coords.x) >> 1,
       y: (this.coords.old.y + coords.y) >> 1
@@ -876,7 +832,7 @@ DrawingBoard.Board.prototype = {
   }
 };
 
-DrawingBoard.Control = function (drawingBoard, opts) {
+DrawingBoard.Control = function(drawingBoard, opts) {
   this.board = drawingBoard;
   this.opts = $.extend({}, this.defaults, opts);
 
@@ -894,28 +850,28 @@ DrawingBoard.Control.prototype = {
 
   defaults: {},
 
-  initialize: function () {},
+  initialize: function() {},
 
-  addToBoard: function () {
+  addToBoard: function() {
     this.board.addControl(this);
   },
 
-  onBoardReset: function (opts) {}
+  onBoardReset: function(opts) {}
 };
 
-//extend directly taken from backbone.js
-DrawingBoard.Control.extend = function (protoProps, staticProps) {
+// extend directly taken from backbone.js
+DrawingBoard.Control.extend = function(protoProps, staticProps) {
   var parent = this;
   var child;
   if (protoProps && protoProps.hasOwnProperty('constructor')) {
     child = protoProps.constructor;
   } else {
-    child = function () {
+    child = function() {
       return parent.apply(this, arguments);
     };
   }
   $.extend(child, parent, staticProps);
-  var Surrogate = function () {
+  var Surrogate = function() {
     this.constructor = child;
   };
   Surrogate.prototype = parent.prototype;
@@ -927,11 +883,11 @@ DrawingBoard.Control.extend = function (protoProps, staticProps) {
 DrawingBoard.Control.Color = DrawingBoard.Control.extend({
   name: 'colors',
 
-  initialize: function () {
+  initialize: function() {
     this.initTemplate();
 
     var that = this;
-    this.$el.on('click', '.drawing-board-control-colors-picker', function (e) {
+    this.$el.on('click', '.drawing-board-control-colors-picker', function(e) {
       var color = $(this).attr('data-color');
       that.board.setColor(color);
       that.$el
@@ -940,21 +896,17 @@ DrawingBoard.Control.Color = DrawingBoard.Control.extend({
         .attr('data-color', color);
 
       that.board.ev.trigger('color:changed', color);
-      that.$el
-        .find('.drawing-board-control-colors-rainbows')
-        .addClass('drawing-board-utils-hidden');
+      that.$el.find('.drawing-board-control-colors-rainbows').addClass('drawing-board-utils-hidden');
 
       e.preventDefault();
     });
 
-    this.$el.on('click', '.drawing-board-control-colors-current', function (e) {
-      that.$el
-        .find('.drawing-board-control-colors-rainbows')
-        .toggleClass('drawing-board-utils-hidden');
+    this.$el.on('click', '.drawing-board-control-colors-current', function(e) {
+      that.$el.find('.drawing-board-control-colors-rainbows').toggleClass('drawing-board-utils-hidden');
       e.preventDefault();
     });
 
-    $('body').on('click', function (e) {
+    $('body').on('click', function(e) {
       var $target = $(e.target);
       var $relatedButton = $target.hasClass('drawing-board-control-colors-current')
         ? $target
@@ -969,7 +921,7 @@ DrawingBoard.Control.Color = DrawingBoard.Control.extend({
     });
   },
 
-  initTemplate: function () {
+  initTemplate: function() {
     var tpl =
       '<div class="drawing-board-control-inner">' +
       '<div class="drawing-board-control-colors-current" style="background-color: {{color}}" data-color="{{color}}"></div>' +
@@ -980,7 +932,7 @@ DrawingBoard.Control.Color = DrawingBoard.Control.extend({
     var rainbows = '';
     $.each(
       [0.75, 0.5, 0.25],
-      $.proxy(function (key, val) {
+      $.proxy(function(key, val) {
         var i = 0;
         var additionalColor = null;
         rainbows += '<div class="drawing-board-control-colors-rainbow">';
@@ -998,46 +950,44 @@ DrawingBoard.Control.Color = DrawingBoard.Control.extend({
       }, this)
     );
 
-    this.$el.append(
-      $(DrawingBoard.Utils.tpl(tpl, { color: this.board.color, rainbows: rainbows }))
-    );
+    this.$el.append($(DrawingBoard.Utils.tpl(tpl, { color: this.board.color, rainbows: rainbows })));
     this.$el.find('.drawing-board-control-colors-rainbows').addClass('drawing-board-utils-hidden');
   },
 
-  onBoardReset: function (opts) {
+  onBoardReset: function(opts) {
     this.board.setColor(this.$el.find('.drawing-board-control-colors-current').attr('data-color'));
   },
 
-  _rgba: function (r, g, b, a) {
+  _rgba: function(r, g, b, a) {
     return {
       r: r,
       g: g,
       b: b,
       a: a,
-      toString: function () {
+      toString: function() {
         return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + a + ')';
       }
     };
   },
 
-  _hsl: function (h, s, l) {
+  _hsl: function(h, s, l) {
     return {
       h: h,
       s: s,
       l: l,
-      toString: function () {
+      toString: function() {
         return 'hsl(' + h + ', ' + s * 100 + '%, ' + l * 100 + '%)';
       }
     };
   },
 
-  _hex2Rgba: function (hex) {
+  _hex2Rgba: function(hex) {
     var num = parseInt(hex.substring(1), 16);
     return this._rgba(num >> 16, (num >> 8) & 255, num & 255, 1);
   },
 
   //conversion function (modified a bit) taken from http://mjijackson.com/2008/02/rgb-to-hsl-and-rgb-to-hsv-color-model-conversion-algorithms-in-javascript
-  _hsl2Rgba: function (hsl) {
+  _hsl2Rgba: function(hsl) {
     var h = hsl.h / 360,
       s = hsl.s,
       l = hsl.l,
@@ -1073,19 +1023,15 @@ DrawingBoard.Control.DrawingMode = DrawingBoard.Control.extend({
     filler: true
   },
 
-  initialize: function () {
+  initialize: function() {
     this.prevMode = this.board.getMode();
 
     $.each(
       ['pencil', 'eraser', 'filler'],
-      $.proxy(function (k, value) {
+      $.proxy(function(k, value) {
         if (this.opts[value]) {
           this.$el.append(
-            '<button class="drawing-board-control-drawingmode-' +
-              value +
-              '-button" data-mode="' +
-              value +
-              '"></button>'
+            '<button class="drawing-board-control-drawingmode-' + value + '-button" data-mode="' + value + '"></button>'
           );
         }
       }, this)
@@ -1094,7 +1040,7 @@ DrawingBoard.Control.DrawingMode = DrawingBoard.Control.extend({
     this.$el.on(
       'click',
       'button[data-mode]',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         var value = $(e.currentTarget).attr('data-mode');
         var mode = this.board.getMode();
         if (mode !== value) this.prevMode = mode;
@@ -1106,7 +1052,7 @@ DrawingBoard.Control.DrawingMode = DrawingBoard.Control.extend({
 
     this.board.ev.bind(
       'board:mode',
-      $.proxy(function (mode) {
+      $.proxy(function(mode) {
         this.toggleButtons(mode);
       }, this)
     );
@@ -1114,8 +1060,8 @@ DrawingBoard.Control.DrawingMode = DrawingBoard.Control.extend({
     this.toggleButtons(this.board.getMode());
   },
 
-  toggleButtons: function (mode) {
-    this.$el.find('button[data-mode]').each(function (k, item) {
+  toggleButtons: function(mode) {
+    this.$el.find('button[data-mode]').each(function(k, item) {
       var $item = $(item);
       $item.toggleClass('active', mode === $item.attr('data-mode'));
     });
@@ -1131,21 +1077,18 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
     reset: true
   },
 
-  initialize: function () {
+  initialize: function() {
     var el = '';
-    if (this.opts.back)
-      el += '<button class="drawing-board-control-navigation-back">&larr;</button>';
-    if (this.opts.forward)
-      el += '<button class="drawing-board-control-navigation-forward">&rarr;</button>';
-    if (this.opts.reset)
-      el += '<button class="drawing-board-control-navigation-reset">&times;</button>';
+    if (this.opts.back) el += '<button class="drawing-board-control-navigation-back">&larr;</button>';
+    if (this.opts.forward) el += '<button class="drawing-board-control-navigation-forward">&rarr;</button>';
+    if (this.opts.reset) el += '<button class="drawing-board-control-navigation-reset">&times;</button>';
     this.$el.append(el);
 
     if (this.opts.back) {
       var $back = this.$el.find('.drawing-board-control-navigation-back');
       this.board.ev.bind(
         'historyNavigation',
-        $.proxy(function (pos) {
+        $.proxy(function(pos) {
           if (pos === 1) $back.attr('disabled', 'disabled');
           else $back.removeAttr('disabled');
         }, this)
@@ -1153,7 +1096,7 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
       this.$el.on(
         'click',
         '.drawing-board-control-navigation-back',
-        $.proxy(function (e) {
+        $.proxy(function(e) {
           this.board.goBackInHistory();
           e.preventDefault();
         }, this)
@@ -1164,7 +1107,7 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
       var $forward = this.$el.find('.drawing-board-control-navigation-forward');
       this.board.ev.bind(
         'historyNavigation',
-        $.proxy(function (pos) {
+        $.proxy(function(pos) {
           if (pos === this.board.history.values.length) $forward.attr('disabled', 'disabled');
           else $forward.removeAttr('disabled');
         }, this)
@@ -1172,7 +1115,7 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
       this.$el.on(
         'click',
         '.drawing-board-control-navigation-forward',
-        $.proxy(function (e) {
+        $.proxy(function(e) {
           this.board.goForthInHistory();
           e.preventDefault();
         }, this)
@@ -1183,7 +1126,7 @@ DrawingBoard.Control.Navigation = DrawingBoard.Control.extend({
       this.$el.on(
         'click',
         '.drawing-board-control-navigation-reset',
-        $.proxy(function (e) {
+        $.proxy(function(e) {
           this.board.reset({ background: true });
           e.preventDefault();
         }, this)
@@ -1203,12 +1146,9 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
 
   types: ['dropdown', 'range'],
 
-  initialize: function () {
+  initialize: function() {
     if (this.opts.type == 'auto') this.opts.type = this._iHasRangeInput() ? 'range' : 'dropdown';
-    var tpl =
-      $.inArray(this.opts.type, this.types) > -1
-        ? this['_' + this.opts.type + 'Template']()
-        : false;
+    var tpl = $.inArray(this.opts.type, this.types) > -1 ? this['_' + this.opts.type + 'Template']() : false;
     if (!tpl) return false;
 
     this.val = this.board.opts.size;
@@ -1220,7 +1160,7 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
     var that = this;
 
     if (this.opts.type == 'range') {
-      this.$el.on('change', '.drawing-board-control-size-range-input', function (e) {
+      this.$el.on('change', '.drawing-board-control-size-range-input', function(e) {
         that.val = $(this).val();
         that.updateView();
 
@@ -1234,14 +1174,12 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
       this.$el.on(
         'click',
         '.drawing-board-control-size-dropdown-current',
-        $.proxy(function (e) {
-          this.$el
-            .find('.drawing-board-control-size-dropdown')
-            .toggleClass('drawing-board-utils-hidden');
+        $.proxy(function(e) {
+          this.$el.find('.drawing-board-control-size-dropdown').toggleClass('drawing-board-utils-hidden');
         }, this)
       );
 
-      this.$el.on('click', '[data-size]', function (e) {
+      this.$el.on('click', '[data-size]', function(e) {
         that.val = parseInt($(this).attr('data-size'), 0);
         that.updateView();
 
@@ -1252,7 +1190,7 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
     }
   },
 
-  _rangeTemplate: function () {
+  _rangeTemplate: function() {
     var tpl =
       '<div class="drawing-board-control-inner" title="{{size}}">' +
       '<input type="range" min="{{min}}" max="{{max}}" value="{{size}}" step="1" class="drawing-board-control-size-range-input">' +
@@ -1265,12 +1203,12 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
     });
   },
 
-  _dropdownTemplate: function () {
+  _dropdownTemplate: function() {
     var tpl =
       '<div class="drawing-board-control-inner" title="{{size}}">' +
       '<div class="drawing-board-control-size-dropdown-current"><span></span></div>' +
       '<ul class="drawing-board-control-size-dropdown">';
-    $.each(this.opts.dropdownValues, function (i, size) {
+    $.each(this.opts.dropdownValues, function(i, size) {
       tpl += DrawingBoard.Utils.tpl(
         '<li data-size="{{size}}"><span style="width: {{size}}px; height: {{size}}px; border-radius: {{size}}px;"></span></li>',
         { size: size }
@@ -1280,38 +1218,34 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
     return tpl;
   },
 
-  onBoardReset: function (opts) {
+  onBoardReset: function(opts) {
     this.updateView();
   },
 
-  updateView: function () {
+  updateView: function() {
     var val = this.val;
     this.board.ctx.lineWidth = val;
 
-    this.$el
-      .find(
-        '.drawing-board-control-size-range-current, .drawing-board-control-size-dropdown-current span'
-      )
-      .css({
-        width: val + 'px',
-        height: val + 'px',
-        borderRadius: val + 'px',
-        marginLeft: (-1 * val) / 2 + 'px',
-        marginTop: (-1 * val) / 2 + 'px'
-      });
+    this.$el.find('.drawing-board-control-size-range-current, .drawing-board-control-size-dropdown-current span').css({
+      width: val + 'px',
+      height: val + 'px',
+      borderRadius: val + 'px',
+      marginLeft: (-1 * val) / 2 + 'px',
+      marginTop: (-1 * val) / 2 + 'px'
+    });
 
     this.$el.find('.drawing-board-control-inner').attr('title', val);
 
     if (this.opts.type == 'dropdown') {
       var closest = null;
-      $.each(this.opts.dropdownValues, function (i, size) {
+      $.each(this.opts.dropdownValues, function(i, size) {
         if (closest === null || Math.abs(size - val) < Math.abs(closest - val)) closest = size;
       });
       this.$el.find('.drawing-board-control-size-dropdown').addClass('drawing-board-utils-hidden');
     }
   },
 
-  _iHasRangeInput: function () {
+  _iHasRangeInput: function() {
     var inputElem = document.createElement('input'),
       smile = ':)',
       docElement = document.documentElement,
@@ -1336,12 +1270,12 @@ DrawingBoard.Control.Size = DrawingBoard.Control.extend({
 DrawingBoard.Control.Download = DrawingBoard.Control.extend({
   name: 'download',
 
-  initialize: function () {
+  initialize: function() {
     this.$el.append('<button class="drawing-board-control-download-button"></button>');
     this.$el.on(
       'click',
       '.drawing-board-control-download-button',
-      $.proxy(function (e) {
+      $.proxy(function(e) {
         this.board.downloadImg();
         e.preventDefault();
       }, this)

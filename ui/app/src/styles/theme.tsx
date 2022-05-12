@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,145 +14,105 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { createTheme, ThemeOptions } from '@material-ui/core/styles';
-import { darken, fade } from '@material-ui/core/styles';
-
-export const palette = {
-  white: '#fff',
-  black: '#000',
-  blue: { tint: '#409CFF', main: '#007AFF', shade: '#0040DD', highlight: '#E6F2FF' },
-  green: { tint: '#30DB5B', main: '#34C759', shade: '#248A3D' },
-  indigo: { tint: '#7D7AFF', main: '#5856D6', shade: '#3634A3' },
-  orange: { tint: '#FFB340', main: '#FF9500', shade: '#C93400' },
-  pink: { tint: '#FF6482', main: '#FF2D55', shade: '#D30F45' },
-  purple: { tint: '#DA8FFF', main: '#AF52DE', shade: '#8944AB' },
-  red: { tint: '#FF6961', main: '#FF3B30', shade: '#D70015', highlight: '#FFEBEA' },
-  teal: { tint: '#70D7FF', main: '#5AC8FA', shade: '#0071A4' },
-  yellow: { tint: '#FFD426', main: '#FFCC00', shade: '#A05A00' },
-  gray: {
-    light0: '#FAFAFA',
-    light1: '#F3F3F3',
-    light2: '#F2F2F7',
-    light3: '#EBEBF0',
-    light4: '#E5E5EA',
-    light5: '#D8D8DC',
-    light6: '#D1D1D6',
-    light7: '#C7C7CC',
-    medium1: '#BCBCC0',
-    medium2: '#AEAEB2',
-    medium3: '#8E8E93',
-    medium4: '#7C7C80',
-    medium5: '#6C6C70',
-    medium6: '#636366',
-    medium7: '#545456',
-    dark1: '#48484A',
-    dark2: '#444446',
-    dark3: '#3A3A3C',
-    dark4: '#363638',
-    dark5: '#2C2C2E',
-    dark6: '#242426',
-    dark7: '#1C1C1E'
-  }
-};
+import { createTheme, ThemeOptions } from '@mui/material/styles';
+import createGenerateClassName from '@mui/styles/createGenerateClassName';
+import palette from './palette';
+import { GenerateId } from 'jss';
 
 export const backgroundColor = palette.gray.light1;
 export const RedColor = palette.red.main;
 
-const defaultTheme = createTheme();
-
-export const themeOptions: ThemeOptions = {
-  typography: {
-    button: {
-      textTransform: 'none'
-    },
-    fontSize: 14,
-    fontFamily: '"Source Sans Pro", "Open Sans", sans-serif'
-  },
-  palette: {
-    primary: {
-      main: '#7E9DBB',
-      contrastText: '#FFFFFF'
-    },
-    text: {
-      secondary: palette.gray.medium3
-    },
-    error: {
-      main: palette.red.main,
-      light: palette.red.highlight,
-      contrastText: palette.black
-    },
-    type: 'light'
-  },
-  overrides: {
-    MuiFormLabel: {
-      root: {
-        transform: 'translate(0, 1.5px) scale(1) !important',
-        transformOrigin: 'top left !important'
+export function createDefaultThemeOptions({ mode }: { mode: ThemeOptions['palette']['mode'] }) {
+  const defaultTheme = createTheme({ palette: { mode } });
+  const theme: ThemeOptions = {
+    typography: {
+      button: {
+        textTransform: 'none'
       },
-      asterisk: {
-        color: RedColor
-      }
+      fontSize: 14,
+      fontFamily: '"Source Sans Pro", "Open Sans", sans-serif',
+      fontWeightMedium: 600,
+      fontWeightBold: 700,
+      fontWeightLight: 300,
+      fontWeightRegular: 400
     },
-    MuiInputBase: {
-      root: {
-        'label + &': {
-          marginTop: `${defaultTheme.spacing(3)}px !important`
-        },
-        '&.MuiInput-underline::before': {
-          display: 'none'
-        },
-        '&.MuiInput-underline::after': {
-          display: 'none'
-        },
-        '&$error .MuiInputBase-input': {
-          color: RedColor,
-          borderColor: RedColor,
-          '&:focus': {
-            boxShadow: 'rgba(244, 67, 54, 0.25) 0 0 0 0.2rem'
+    components: {
+      MuiListItem: {
+        styleOverrides: {
+          root: {
+            '&.Mui-selected, &.Mui-selected:hover': {
+              backgroundColor: palette.blue.highlight
+            }
           }
-        },
-        '&$multiline textarea': {
-          padding: '10px 12px'
         }
       },
-      input: {
-        borderRadius: 4,
-        position: 'relative',
-        border: '1px solid #ced4da',
-        background: palette.white,
-        fontSize: 16,
-        width: '100%',
-        padding: '10px 12px',
-        transition: defaultTheme.transitions.create(['border-color', 'box-shadow']),
-        '&:focus:invalid': {
-          boxShadow: `${fade('#7E9DBB', 0.25)} 0 0 0 0.2rem`
-        },
-        '&:focus': {
-          boxShadow: `${fade('#7E9DBB', 0.25)} 0 0 0 0.2rem`,
-          borderColor: '#7E9DBB'
-        }
-      }
-    },
-    MuiTabs: {
-      indicator: {
-        backgroundColor: '#7E9DBB'
-      }
-    },
-    MuiButton: {
-      contained: {
-        color: '#4F4F4F',
-        backgroundColor: '#FFFFFF',
-        textTransform: 'inherit',
-        '&:hover': {
-          backgroundColor: '#FFFFFF'
+      MuiListItemIcon: {
+        styleOverrides: {
+          root: {
+            marginRight: 10,
+            minWidth: 'auto'
+          }
         }
       },
-      outlinedPrimary: {
-        color: darken('#7E9DBB', 0.1),
-        border: `1px solid ${darken('#7E9DBB', 0.1)}`
+      MuiFormLabel: {
+        styleOverrides: {
+          asterisk: {
+            color: RedColor
+          }
+        }
+      },
+      MuiTabs: {
+        styleOverrides: {
+          indicator: {
+            backgroundColor: palette.blue.main
+          }
+        }
+      },
+      MuiAccordion: {
+        styleOverrides: {
+          root: {
+            '&:before': {
+              display: 'none'
+            }
+          }
+        }
+      },
+      MuiAccordionSummary: {
+        styleOverrides: {
+          root: {
+            '&:hover:not(.Mui-disabled)': {
+              background: defaultTheme.palette.action.hover
+            }
+          },
+          content: {
+            '&$expanded': {
+              margin: '12px 0'
+            }
+          }
+        }
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          sizeSmall: {
+            padding: '6px 10px'
+          }
+        }
+      },
+      MuiTextField: {
+        defaultProps: {
+          variant: 'outlined'
+        }
+      },
+      MuiSelect: {
+        defaultProps: {
+          variant: 'outlined'
+        }
       }
     }
-  }
-};
+  };
+  return theme;
+}
 
-export const theme = createTheme(themeOptions);
+export const generateClassName: GenerateId = createGenerateClassName({
+  productionPrefix: 'craftercms-'
+});

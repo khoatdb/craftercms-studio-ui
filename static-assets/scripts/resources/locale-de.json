@@ -164,7 +164,8 @@
       "ADD_TO_GROUP_TEXT": "Um Benutzer zu einer Gruppe hinzuzufügen, wählen Sie bitte den Eintrag \"Gruppen\" aus dem Hauptmenü.",
       "DELETE_ERROR": "Der Benutzer konnte nicht gelöscht werden. Bitte wenden Sie sich an Ihren Systemadministator.",
       "ERROR": "Fehler:",
-      "USERS_PER_PAGE": "Benutzer pro Seite"
+      "USERS_PER_PAGE": "Benutzer pro Seite",
+      "EXTERNALLY_MANAGED": "Extern verwaltet"
     },
     "audit": {
       "AUDIT": "Audit",
@@ -214,7 +215,8 @@
       "SITE_ID": "Projekt",
       "SITE_NAME": "Projektname",
       "PRIMARY_TARGET_VALUE": "Primärer Zielwert",
-      "TARGET": "Ziel",
+      "TARGET": "Zielwert",
+      "TARGET_TYPE": "Zieltyp",
       "USERNAME": "Nutzername",
       "NAME": "Name",
       "ORIGIN": "Ursprung",
@@ -259,9 +261,10 @@
         "PUBLISHSTARTED":"Massen-Publizierung wurde gestartet.",
         "PUBLISHBYCOMMITS": "Publizierung anhand eines oder mehrerer Commit-Hashs",
         "PUBLISHBYCOMMITS_SUCCESS": "Erfolgreich verpflichtet",
-        "COMMITIDS": "Commit-Hash(s)",
+        "COMMITIDS": "Etikett oder Commit IDs",
         "COMMENT": "Kommentar",
-        "COMMITIDSEXAMPLE": "(z.B. bd9f54aaf0e67aa887ea3d562caf5ccdc5f9cee7, c327bbbb5b91fb31841303b0c428f14b0e66f8a7)"
+        "COMMITIDSEXAMPLE": "",
+        "COMMITIDSTIP": "Sie können mehrere durch Komma getrennte eingeben"
     },
     "repositories": {
         "REPOSITORIES": "Repositories",
@@ -373,7 +376,7 @@
     "OK":"OK",
     "HELP": "Hilfe",
     "DOCUMENTATION": "Dokumentation",
-    "ABOUT": "Über Crafter CMS",
+    "ABOUT": "Über CrafterCMS",
     "SETTINGS": "Einstellungen",
     "SIGN_OUT": "Abmelden",
     "NOTIFICATION": "Benachrichtigung",

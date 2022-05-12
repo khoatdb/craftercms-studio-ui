@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -174,7 +174,7 @@ CStudioAuthoringWidgets.ApprovedScheduledItemsDashboard = function (widgetId, pa
         editLinkId;
 
       if (isFirst) {
-        const formattedDate = CStudioAuthoring.Utils.formatDateFromUTC(name, studioTimeZone, 'medium');
+        const formattedDate = CStudioAuthoring.Utils.formatDateFromUTC(name, studioTimeZone);
 
         html.push('<td colspan="5">');
 
@@ -229,7 +229,11 @@ CStudioAuthoringWidgets.ApprovedScheduledItemsDashboard = function (widgetId, pa
         // to resolve page display issue
         displayName = CStudioAuthoring.Utils.replaceWithASCIICharacter(displayName);
 
-        var lastEditTime = CStudioAuthoring.Utils.formatDateFromUTC(item.lastEditDate, studioTimeZone);
+        var lastEditTime = CStudioAuthoring.Utils.formatDateFromUTC(item.eventDate, studioTimeZone);
+        if (item.lastEditDateAsString !== undefined && item.lastEditDateAsString !== '') {
+          lastEditTime = CStudioAuthoring.Utils.formatDateFromUTC(item.eventDate, studioTimeZone);
+        }
+
         WcmDashboardWidgetCommon.insertEditLink(item, editLinkId, this.widgetId);
 
         var currentDashboard = CStudioAuthoring.Utils.Cookies.readCookie('dashboard-selected'),
@@ -239,7 +243,7 @@ CStudioAuthoringWidgets.ApprovedScheduledItemsDashboard = function (widgetId, pa
           currentBrowserUri = browserUri !== '' ? browserUri : '/';
 
         html = html.concat([
-          '<td style="padding-right:0px">',
+          '<td style="padding-right:0">',
           '<div class="dashlet-ident">',
           '<input type="checkbox" class="dashlet-item-check" id="',
           uri,
@@ -254,7 +258,7 @@ CStudioAuthoringWidgets.ApprovedScheduledItemsDashboard = function (widgetId, pa
           ' />',
           '</div>',
           '</td>',
-          '<td style="padding-left:0px" class="itemNameCol">' + '<div class="',
+          '<td style="padding-left:0" class="itemNameCol">' + '<div class="',
           item.disabled == true ? ' disabled' : '',
           '" id="' + ttSpanId + '" title="' + itemTitle + '">',
           // '<span class="iconRow ', itemIconStatus, '"></span>',
@@ -264,7 +268,7 @@ CStudioAuthoringWidgets.ApprovedScheduledItemsDashboard = function (widgetId, pa
           item.previewable == true ? ' previewLink' : ' non-previewable-link',
           '" ',
           item.previewable == true
-            ? 'href="/studio/preview/#/?page=' + currentBrowserUri + '&site=' + CStudioAuthoringContext.site + '"'
+            ? 'href="/studio/preview#/?page=' + currentBrowserUri + '&site=' + CStudioAuthoringContext.site + '"'
             : '',
           '">',
           displayName,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -21,7 +21,6 @@
 
   if (typeof window.CStudioBrowse == 'undefined' || !window.CStudioBrowse) {
     var CStudioBrowse = {};
-    CStudioBrowse.treeDataLookup = {}; // Lookup for loaded data by path
     window.CStudioBrowse = CStudioBrowse;
   }
 
@@ -41,7 +40,7 @@
       $resultsActions = $('#cstudio-wcm-search-result .cstudio-results-actions'),
       searchContext = this.searchContext;
 
-    //tree related events
+    // tree related events
 
     $tree.on('ready.jstree', function (event, data) {
       var tree = data.instance;
@@ -75,11 +74,11 @@
     });
 
     $tree.on('open_node.jstree', function (event, node) {
-      // $tree.trigger('select_node.jstree', [node])  //TODO: find out how to show node as selected
+      // TODO: find out how to show node as selected
       $('#' + node.node.id + '_anchor').click();
     });
 
-    //results related events
+    // results related events
 
     $resultsContainer.on('change', 'input[name=result-select]', function () {
       var contentTO = $(this.parentElement.parentElement).data('item');
@@ -114,7 +113,7 @@
 
     $('#cstudio-command-controls').on('click', '#formCancelButton', function () {
       window.close();
-      $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); //TODO: find a better way
+      $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); // TODO: find a better way
     });
 
     $('#cstudio-command-controls').on('click', '#colExpButtonBtn', function () {
@@ -136,7 +135,7 @@
     });
   };
 
-  //Utilities
+  // Utilities
 
   CStudioBrowse.determineSearchContextFromUrl = function () {
     var searchContext = {};
@@ -151,10 +150,9 @@
     var path = pathURL.slice(-1) == '/' ? pathURL.substring(0, pathURL.length - 1) : pathURL;
     var site = CStudioAuthoring.Utils.getQueryVariable(queryString, 'site');
 
-    //TODO: check what are all of those for
-    /* configre search context */
+    // TODO: check what are all of those for config search context
     searchContext.contextName = paramContext ? paramContext : 'default';
-    searchContext.searchId = searchId ? searchId : null; //TODO: what is this ID for?
+    searchContext.searchId = searchId ? searchId : null; // TODO: what is this ID for?
     searchContext.interactMode = paramMode;
     searchContext.presearch = true;
     searchContext.path = path;
@@ -372,12 +370,12 @@
 
               openerChildSearchMgr.signalSearchClose(searchId, selectedContentTOs);
             } else {
-              //TODO PUT THIS BACK
-              //alert("no success callback provided for seach: " + searchId);
+              // TODO PUT THIS BACK
+              // alert("no success callback provided for seach: " + searchId);
             }
 
             window.close();
-            $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); //TODO: find a better way
+            $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); // TODO: find a better way
           } else {
             CStudioAuthoring.Operations.showSimpleDialog(
               'lookUpChildError-dialog',
@@ -390,7 +388,7 @@
                   handler: function () {
                     this.hide();
                     window.close();
-                    $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); //TODO: find a better way
+                    $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); // TODO: find a better way
                   },
                   isDefault: false
                 }
@@ -411,7 +409,7 @@
                 handler: function () {
                   this.hide();
                   window.close();
-                  $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); //TODO: find a better way
+                  $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); // TODO: find a better way
                 },
                 isDefault: false
               }
@@ -425,7 +423,7 @@
       // no window opening context or cross server call
       // the only thing we can do is close the window
       window.close();
-      $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); //TODO: find a better way
+      $(window.frameElement.parentElement).closest('.studio-ice-dialog').parent().remove(); // TODO: find a better way
     }
   };
 
@@ -447,21 +445,21 @@
             });
           },
           items: {
-            upload: { name: CMgs.format(browseLangBundle, 'uploadLabel') } //TODO: change to resources
+            upload: { name: CMgs.format(browseLangBundle, 'uploadLabel') } // TODO: change to resources
           }
         });
       }
     });
   };
 
-  //Services
+  // Services
 
   CStudioBrowse.renderSiteFolders = function (site, path) {
     var me = this;
 
-    //Removes jstree cached state from localStorage
+    // Removes jstree cached state from localStorage
     localStorage.removeItem('jstree');
-    //Tree - default closed
+    // Tree - default closed
     $.jstree.defaults.core.expand_selected_onload = false;
     $('#data').jstree({
       core: {
@@ -469,36 +467,16 @@
         data: function (node, cb) {
           var notRoot = typeof node.a_attr !== 'undefined' && typeof node.a_attr['data-path'] !== 'undefined';
           var currentPath = notRoot ? node.a_attr['data-path'] : path; // use node path or root path
-
-          function setItems(treeData) {
-            var items = [treeData.item];
+          var foldersPromise = me._lookupSiteFolders(site, currentPath);
+          foldersPromise.then(function (treeData) {
+            var items = new Array(treeData.item);
             items = me.parseObjForTree(items);
             if (notRoot) {
               // do this when it is not root level
               items = items[0].children;
             }
             cb(items);
-          }
-
-          if (CStudioBrowse.treeDataLookup[currentPath]) {
-            // If content already exists in treeDataLookup
-            setItems(CStudioBrowse.treeDataLookup[currentPath]);
-          } else {
-            // root node (there's already a loading state for root)
-            if (node.id !== '#') {
-              const $icon = $(`#${node.id} > .jstree-icon`);
-              // no removal of class is needed since in this case after loading folders it re-sets the icon state to
-              // open (overriding the load class)
-              $icon.addClass('load');
-              // This sets the right panel in a loading state. After fetching the content it already cleans the state.
-              CStudioBrowse.setContentLoading()
-            }
-
-            var foldersPromise = me._lookupSiteFolders(site, currentPath);
-            foldersPromise.then(function (treeData) {
-              setItems(treeData);
-            });
-          }
+          });
         }
       },
       types: {
@@ -510,25 +488,16 @@
     });
   };
 
-  CStudioBrowse.setContentLoading = function () {
-    const $resultsContainer = $('#cstudio-wcm-search-result .results'),
-      $resultsActions = $('#cstudio-wcm-search-result .cstudio-results-actions');
-
-    $resultsContainer.empty();
-    $resultsActions.empty();
-    $resultsContainer.html('<span class="cstudio-spinner"></span>' + CMgs.format(browseLangBundle, 'loading') + '...');
-  }
-
   CStudioBrowse._lookupSiteFolders = function (site, path) {
     var d = new $.Deferred();
 
-    CStudioAuthoring.Service.lookupSiteContent(site, path, 1, 'default', {
+    CStudioAuthoring.Service.lookupSiteFolders(site, path, 2, 'default', {
       success: function (treeData) {
-        CStudioBrowse.treeDataLookup[path] = treeData;
+        // done (?)
         d.resolve(treeData);
       },
       failure: function () {
-        //fail (?)
+        // fail (?)
       }
     });
 
@@ -538,11 +507,21 @@
   CStudioBrowse.renderSiteContent = function (site, path) {
     var me = this,
       $resultsContainer = $('#cstudio-wcm-search-result .results'),
-      $resultsActions = $('#cstudio-wcm-search-result .cstudio-results-actions');
+      $resultsActions = $('#cstudio-wcm-search-result .cstudio-results-actions'),
+      contentPromise = this._lookupSiteContent(site, path);
 
-    CStudioBrowse.setContentLoading();
+    activePromise = contentPromise;
 
-    function setResults(results) {
+    $resultsContainer.empty();
+    $resultsActions.empty();
+
+    $resultsContainer.html('<span class="cstudio-spinner"></span>' + CMgs.format(browseLangBundle, 'loading') + '...');
+
+    contentPromise.then(function (results) {
+      if (activePromise != contentPromise) {
+        return;
+      }
+
       $resultsContainer.empty();
       $resultsActions.empty();
 
@@ -575,22 +554,7 @@
 
         me.currentResultsPath = path;
       }
-    }
-
-    // If content already exists in treeDataLookup
-    if (CStudioBrowse.treeDataLookup[path]) {
-      setResults(CStudioBrowse.treeDataLookup[path]);
-      delete CStudioBrowse.treeDataLookup[path];
-    } else {
-      const contentPromise = this._lookupSiteContent(site, path);
-      activePromise = contentPromise;
-      contentPromise.then(function (results) {
-        if (activePromise != contentPromise) {
-          return;
-        }
-        setResults(results);
-      });
-    }
+    });
   };
 
   CStudioBrowse._lookupSiteContent = function (site, path) {

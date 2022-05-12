@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -68,6 +68,10 @@ var CStudioForms =
     var pluginError = {};
     pluginError.control = [];
     pluginError.datasource = [];
+    // lookup to check the controls with default values
+    const defaultValuesLookup = {};
+    // lookup to check the fields that have the `no-default` attribute set
+    const noDefaultLookup = {};
 
     // private methods
 
@@ -338,7 +342,7 @@ var CStudioForms =
           YAHOO.util.Dom.addClass(helpEl, 'hint');
           YAHOO.util.Dom.addClass(helpEl, 'cstudio-form-field-help');
           helpEl.innerHTML = '&nbsp;';
-          containerEl.appendChild(helpEl);
+          $(containerEl).prepend(helpEl);
 
           YAHOO.util.Event.on(
             helpEl,
@@ -446,10 +450,11 @@ var CStudioForms =
     /**
      * Section base class
      */
-    var CStudioFormSection = function (owner, containerEl) {
+    var CStudioFormSection = function (owner, containerEl, iceWindowCallback) {
       this.fields = [];
       this.owner = owner;
       this.containerEl = containerEl;
+      this.iceWindowCallback = iceWindowCallback;
       return this;
     };
 
@@ -490,7 +495,7 @@ var CStudioForms =
         for (var i = 0; i < this.fields.length; i++) {
           var field = this.fields[i];
 
-          if (field.id == 'file-name') {
+          if (['file-name', 'internal-name'].includes(field.id)) {
             requirements += field.getRequirementCount();
 
             var errors = field.getErrors();
@@ -567,18 +572,19 @@ var CStudioForms =
 
       // Retrieve additional fields set in controls.
       const _self = this;
-      const processSection = function(section) {
+      const processSection = function (section) {
         section.fields.forEach((field) => {
           if (field.type !== 'repeat') {
             if (field.additionalFields) {
-              const additionalFieldsArray = typeof field.additionalFields.id === 'string' ? [field.additionalFields.id] : field.additionalFields.id;
+              const additionalFieldsArray =
+                typeof field.additionalFields.id === 'string' ? [field.additionalFields.id] : field.additionalFields.id;
               _self.dynamicFields.push(...additionalFieldsArray);
             }
           } else {
             processSection(field);
           }
         });
-      }
+      };
       formDefinition.sections.forEach((section) => processSection(section));
 
       return this;
@@ -653,6 +659,24 @@ var CStudioForms =
       },
 
       updateModel: function (id, value, remote) {
+        let formField = null;
+
+        this.sections.forEach((section) => {
+          let field = section.fields.find((field) => field.id === id);
+          if (field) {
+            formField = field;
+          }
+        });
+
+        if (formField && formField.edited) {
+          var editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
+          var iceWindowCallback = CStudioAuthoring.InContextEdit.getIceCallback(editorId);
+          if (iceWindowCallback.pendingChanges) {
+            let callback = getCustomCallback(iceWindowCallback.pendingChanges);
+            callback();
+          }
+        }
+
         if (id.indexOf('|') != -1) {
           var parts = id.split('|');
           var repeatGroup = parts[0];
@@ -728,22 +752,43 @@ var CStudioForms =
       CHILD_FORM_DRAFT_COMPLETE = 'CHILD_FORM_DRAFT_COMPLETE',
       FORM_ENGINE_RENDER_COMPLETE = 'FORM_ENGINE_RENDER_COMPLETE',
       FORM_CANCEL_REQUEST = 'FORM_CANCEL_REQUEST',
-      FORM_CANCEL = 'FORM_CANCEL';
+      FORM_CANCEL = 'FORM_CANCEL',
+      LEGACY_FORM_DIALOG_CANCEL_REQUEST = 'LEGACY_FORM_DIALOG_CANCEL_REQUEST',
+      CHILD_FORM_SUCCESS = 'CHILD_FORM_SUCCESS';
 
-    const { fromEvent, operators } = CrafterCMSNext.rxjs;
-    const { map, filter, take } = operators;
+    const { fromEvent, map, filter, take } = CrafterCMSNext.rxjs;
     const FlattenerState = {};
-    const formatMessage = CrafterCMSNext.i18n.intl.formatMessage;
-    const formEngineMessages = CrafterCMSNext.i18n.messages.formEngineMessages;
-    const words = CrafterCMSNext.i18n.messages.words;
+    const i18n = CrafterCMSNext.i18n;
+    const formatMessage = i18n.intl.formatMessage;
+    const formEngineMessages = i18n.messages.formEngineMessages;
+    const words = i18n.messages.words;
 
     const messages$ = fromEvent(window, 'message').pipe(
       filter((event) => event.data && event.data.type),
       map((event) => event.data)
     );
 
+    const getCustomCallback = (callback) => {
+      if (typeof callback === 'string') {
+        let type = callback;
+        return function () {
+          getTopLegacyWindow().top.postMessage({ type }, '*');
+        };
+      } else {
+        return callback;
+      }
+    };
+
+    const getCustomsCallbacks = (callback) => {
+      let processedCallbacks = {};
+      Object.keys(callback).forEach((cb) => {
+        processedCallbacks[cb] = getCustomCallback(callback[cb]);
+      });
+      return processedCallbacks;
+    };
+
     const sendMessage = (message) => {
-      window.top.CStudioAuthoring.InContextEdit.messageDialogs(message);
+      getTopLegacyWindow().CStudioAuthoring.InContextEdit.messageDialogs(message);
     };
 
     function parseDOM(content) {
@@ -775,10 +820,6 @@ var CStudioForms =
         )
         .subscribe(observer);
       sendMessage({ type: FORM_REQUEST, key });
-    }
-
-    function saveDraftDialog() {
-      $.notify(formatMessage(formEngineMessages.saveDraftCompleted), 'success');
     }
 
     function setButtonsEnabled(enabled) {
@@ -890,18 +931,78 @@ var CStudioForms =
                 if (message.draft) {
                   if (message.edit) {
                     amplify.publish('UPDATE_NODE_SELECTOR', { objId: objectId, value: name });
-                    cfe.engine.saveForm(false, message.draft, false);
+                    cfe.engine.saveForm(false, message.draft, false, message.action);
                   } else {
                     CStudioAuthoring.InContextEdit.getIceCallback(message.editorId).success(
                       {},
                       message.editorId,
                       objectId,
                       name,
-                      message.draft
+                      message.draft,
+                      message.action
                     );
                     if (!CStudioAuthoring.InContextEdit.getIceCallback(message.editorId).type) {
-                      cfe.engine.saveForm(false, message.draft, false);
+                      cfe.engine.saveForm(false, message.draft, false, message.action);
                     }
+                  }
+                } else if (CStudioAuthoring.InContextEdit.unstackDialog(message.editorId)) {
+                  CStudioAuthoring.InContextEdit.getIceCallback(message.editorId).success(
+                    {},
+                    message.editorId,
+                    objectId,
+                    name,
+                    message.draft,
+                    message.action
+                  );
+                }
+                break;
+              }
+              case FORM_SAVE_REQUEST: {
+                if (message.new) {
+                  amplify.publish('UPDATE_NODE_SELECTOR_NEW', {
+                    key: message.key,
+                    value: message.value,
+                    selectorId: message.selectorId,
+                    ds: message.ds,
+                    order: message.order
+                  });
+                  cfe.engine.saveForm(false, message.draft, false, message.action);
+                } else {
+                  amplify.publish('UPDATE_NODE_SELECTOR', message);
+                  cfe.engine.saveForm(false, message.draft, true, message.action);
+                }
+                break;
+              }
+              case FORM_CANCEL_REQUEST: {
+                cfe.engine.cancelForm();
+                break;
+              }
+              case LEGACY_FORM_DIALOG_CANCEL_REQUEST: {
+                const dialog = CStudioAuthoring.InContextEdit.getDialog(cfe.engine.config.editorId);
+                const dialogs = CStudioAuthoring.InContextEdit.getDialogs();
+                if (dialog.stackNumber === dialogs.length) {
+                  cfe.engine.cancelForm();
+                }
+                break;
+              }
+              case CHILD_FORM_SUCCESS: {
+                const { editorId, action } = message.payload;
+                const isParent = CStudioAuthoring.InContextEdit.getIceCallback(_self.config.editorId).isParent;
+                switch (action) {
+                  case 'save': {
+                    break;
+                  }
+                  case 'saveAndMinimize': {
+                    if (isParent) {
+                      CStudioAuthoring.InContextEdit.getIceCallback(_self.config.editorId).minimize();
+                    }
+                    break;
+                  }
+                  case 'saveAndClose': {
+                    if (editorId === _self.config.editorId) {
+                      CStudioAuthoring.InContextEdit.unstackDialog(editorId);
+                    }
+                    break;
                   }
                 } else if (CStudioAuthoring.InContextEdit.unstackDialog(message.editorId)) {
                   CStudioAuthoring.InContextEdit.getIceCallback(message.editorId).success(
@@ -930,103 +1031,110 @@ var CStudioForms =
                 }
                 break;
               }
-              case FORM_CANCEL_REQUEST: {
-                cfe.engine.cancelForm();
-                break;
-              }
             }
           });
         } else {
           messages$.subscribe((message) => {
             if (message.type === CHILD_FORM_DRAFT_COMPLETE) {
-              saveDraftDialog();
               setButtonsEnabled(true);
+            } else if (message.type === LEGACY_FORM_DIALOG_CANCEL_REQUEST) {
+              const dialog = CStudioAuthoring.InContextEdit.getDialog(cfe.engine.config.editorId);
+              const dialogs = CStudioAuthoring.InContextEdit.getDialogs();
+              if (dialog.stackNumber === dialogs.length) {
+                cfe.engine.cancelForm();
+              }
             }
           });
         }
 
-        Promise.all([
-          new Promise((resolve) => {
-            CStudioForms.Util.loadFormDefinition(formId, { success: resolve });
-          }),
-          new Promise((resolve) => {
-            CStudioForms.Util.LoadFormConfig(formId, {
-              success: (ctrlCls, formConfig) =>
-                resolve({
-                  ctrlCls,
-                  formConfig
-                })
-            });
-          }),
-          new Promise((resolve) => {
-            path.includes('.xml')
-              ? CStudioAuthoring.Service.lookupContentItem(
-                  CStudioAuthoringContext.site,
-                  path,
-                  { success: resolve },
-                  false
-                )
-              : resolve(null);
-          }),
-          new Promise((resolve) => {
-            CStudioAuthoring.Service.lookupContentType(CStudioAuthoringContext.site, formId, {
-              success: resolve
-            });
-          }),
-          new Promise((resolve) => {
-            if (isEdit) {
-              if (isInclude) {
-                sendAndAwait(path, (message) => {
-                  resolve(message.payload);
-                });
+        const getInitialConfiguration = () => {
+          Promise.all([
+            new Promise((resolve) => {
+              CStudioForms.Util.loadFormDefinition(formId, { success: resolve });
+            }),
+            new Promise((resolve) => {
+              CStudioForms.Util.LoadFormConfig(formId, {
+                success: (ctrlCls, formConfig) =>
+                  resolve({
+                    ctrlCls,
+                    formConfig
+                  })
+              });
+            }),
+            new Promise((resolve) => {
+              path.includes('.xml')
+                ? CStudioAuthoring.Service.lookupContentItem(
+                    CStudioAuthoringContext.site,
+                    path,
+                    { success: resolve },
+                    false
+                  )
+                : resolve(null);
+            }),
+            new Promise((resolve) => {
+              CStudioAuthoring.Service.lookupContentType(CStudioAuthoringContext.site, formId, { success: resolve });
+            }),
+            new Promise((resolve) => {
+              if (isEdit) {
+                if (isInclude) {
+                  sendAndAwait(path, (message) => {
+                    resolve(message.payload);
+                  });
+                } else {
+                  CStudioAuthoring.Service.getContent(path, false, { success: resolve });
+                }
               } else {
-                CStudioAuthoring.Service.getContent(path, false, { success: resolve });
+                resolve(null);
               }
-            } else {
-              resolve(null);
-            }
-          })
-        ])
-          .then(([formDefinition, { ctrlCls, formConfig }, model, contentType, content]) => {
-            const formDef = {
-              ...formDefinition,
-              config: formConfig,
-              contentAsFolder: contentType.contentAsFolder
-            };
+            })
+          ])
+            .then(([formDefinition, { ctrlCls, formConfig }, model, contentType, content]) => {
+              const formDef = Object.assign({}, formDefinition, {
+                config: formConfig,
+                contentAsFolder: contentType.contentAsFolder
+              });
 
-            if (model && model.item.lockOwner !== '' && model.item.lockOwner !== CStudioAuthoringContext.user) {
-              readonly = true;
-            }
+              if (model && model.item.lockOwner !== '' && model.item.lockOwner !== CStudioAuthoringContext.user) {
+                readonly = true;
+              }
 
-            if (!readonly && !isInclude) {
-              // Lock file
-              CStudioAuthoring.Service.getContent(path, true, { success: () => void null });
-            }
+              if (!readonly && !isInclude && isEdit) {
+                // Lock file
+                CStudioAuthoring.Service.getContent(path, true, { success: () => void null });
+              }
 
-            let dom = content
-              ? parseDOM(content)
-              : {
-                  children: [],
-                  responseXML: { documentElement: { children: [] } }
-                };
+              let dom = content
+                ? parseDOM(content)
+                : {
+                    children: [],
+                    responseXML: { documentElement: { children: [] } }
+                  };
 
-            if (!isInclude && content) {
-              CStudioForms.Util.createFlattenerState(dom);
-            }
+              if (!isInclude && content) {
+                CStudioForms.Util.createFlattenerState(dom);
+              }
 
-            _self._renderFormWithContent(dom, formId, formDef, style, ctrlCls, readonly);
-          })
-          .catch((reason) => {
-            CStudioAuthoring.Operations.showSimpleDialog(
-              'loadContentError-dialog',
-              CStudioAuthoring.Operations.simpleDialogTypeINFO,
-              CMgs.format(formsLangBundle, 'notification'),
-              CMgs.format(formsLangBundle, 'errFailedToLoadContent'),
-              null,
-              YAHOO.widget.SimpleDialog.ICON_BLOCK,
-              'studioDialog'
-            );
-          });
+              _self._renderFormWithContent(dom, formId, formDef, style, ctrlCls, readonly);
+            })
+            .catch((reason) => {
+              console.error(reason);
+              CStudioAuthoring.InContextEdit.getIceCallback(cfe.engine.config.editorId).renderFailed &&
+                CStudioAuthoring.InContextEdit.getIceCallback(cfe.engine.config.editorId).renderFailed(reason);
+              CStudioAuthoring.Operations.showSimpleDialog(
+                'loadContentError-dialog',
+                CStudioAuthoring.Operations.simpleDialogTypeINFO,
+                CMgs.format(formsLangBundle, 'notification'),
+                CMgs.format(formsLangBundle, 'errFailedToLoadContent'),
+                null,
+                YAHOO.widget.SimpleDialog.ICON_BLOCK,
+                'studioDialog'
+              );
+            });
+        };
+
+        CrafterCMSNext.system.getStore().subscribe(() => {
+          getInitialConfiguration();
+        });
       },
 
       _getPageLocation: function (path) {
@@ -1095,6 +1203,8 @@ var CStudioForms =
         var contentType = CStudioAuthoring.Utils.getQueryVariable(location.search, 'form');
         var path = CStudioAuthoring.Utils.getQueryVariable(location.search, 'path');
         var edit = CStudioAuthoring.Utils.getQueryVariable(location.search, 'edit');
+        var editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
+        var iceWindowCallback = CStudioAuthoring.InContextEdit.getIceCallback(editorId);
         try {
           if (window.opener) {
             window.previewTargetWindowId = window.opener.previewTargetWindowId
@@ -1105,7 +1215,7 @@ var CStudioForms =
 
         //path in include items is the object id
         if (me.config.isInclude && me.config.isEdit) {
-          let filename = content.getElementsByTagName('file-name')[0].innerHTML;
+          let filename = content.querySelector(':scope > file-name').innerHTML;
           path = `/${filename}`;
         }
 
@@ -1131,7 +1241,7 @@ var CStudioForms =
         CStudioAuthoring.Service.lookupConfigurtion(CStudioAuthoringContext.site, '/site-config.xml', {
           failure: crafter.noop,
           success: function (config) {
-            timezone = config['default-timezone'];
+            timezone = config.locale?.dateTimeFormatOptions?.timeZone ?? 'EST5EDT';
           }
         });
 
@@ -1167,6 +1277,7 @@ var CStudioForms =
         this._loadDatasources(form, function (loaded, notLoaded) {
           var iceId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'iceId');
           var iceComponent = CStudioAuthoring.Utils.getQueryVariable(location.search, 'iceComponent');
+          const selectedFields = CStudioAuthoring.Utils.getQueryVariable(location.search, 'selectedFields');
 
           if (iceId && iceId != '') {
             var html = me._renderIceLayout(form);
@@ -1176,6 +1287,11 @@ var CStudioForms =
               YDom.removeClass(readOnlyBannerEl, 'hidden');
             }
             me._renderInContextEdit(form, iceId);
+          } else if (selectedFields) {
+            var html = me._renderIceLayout(form);
+            form.containerEl.innerHTML = html;
+            const fields = JSON.parse(decodeURIComponent(selectedFields));
+            me._renderFields(form, fields);
           } else {
             var html = me._renderFormLayout(form);
             form.containerEl.innerHTML = html;
@@ -1296,14 +1412,16 @@ var CStudioForms =
           var editorId = CStudioAuthoring.Utils.getQueryVariable(queryString, 'editorId');
           var iceWindowCallback = CStudioAuthoring.InContextEdit.getIceCallback(editorId);
 
-          var saveFn = function (preview, draft, embeddedIceDraft) {
+          var saveFn = function (preview, draft, embeddedIceDraft, action) {
             showWarnMsg = false;
             var saveDraft = draft == true ? true : false;
 
+            // TODO make Buttons Disabled/Progress
             setButtonsEnabled(false);
 
             var entityId = buildEntityIdFn(draft);
             var entityFile = entityId.substring(entityId.lastIndexOf('/') + 1);
+
             if ((form.isInError() && draft == false) || (form.isInErrorDraft() && draft == true)) {
               var dialogEl = document.getElementById('errMissingRequirements');
               if (!dialogEl) {
@@ -1340,17 +1458,7 @@ var CStudioForms =
             try {
               form.onBeforeSave({ preview: preview });
             } catch (e) {
-              setButtonsEnabled(true);
-              CStudioAuthoring.Operations.showSimpleDialog(
-                'saveFormError',
-                CStudioAuthoring.Operations.simpleDialogTypeINFO,
-                formatMessage(words.notification),
-                formatMessage(formEngineMessages.formNotReadyForSaving),
-                null,
-                YAHOO.widget.SimpleDialog.ICON_BLOCK,
-                'studioDialog'
-              );
-
+              CStudioAuthoring.Utils.showConfirmDialog(null, formatMessage(formEngineMessages.formNotReadyForSaving));
               return;
             }
 
@@ -1404,20 +1512,13 @@ var CStudioForms =
                 payload: xml,
                 preview,
                 draft,
-                edit
+                edit,
+                action
               });
             } else {
-              YAHOO.util.Connect.setDefaultPostHeader(false);
-              YAHOO.util.Connect.initHeader('Content-Type', 'application/xml; charset=utf-8');
-              YAHOO.util.Connect.initHeader(
-                CStudioAuthoringContext.xsrfHeaderName,
-                CrafterCMSNext.util.auth.getRequestForgeryToken()
-              );
-              YAHOO.util.Connect.asyncRequest(
-                'POST',
-                CStudioAuthoring.Service.createServiceUri(serviceUrl),
-                {
-                  success: function () {
+              const saveContent = () => {
+                CrafterCMSNext.util.ajax.post(CStudioAuthoring.Service.createServiceUri(serviceUrl), xml).subscribe(
+                  function () {
                     YAHOO.util.Event.removeListener(window, 'beforeunload', unloadFn, me);
 
                     var getContentItemCb = {
@@ -1427,6 +1528,7 @@ var CStudioForms =
                         var formId = CStudioAuthoring.Utils.getQueryVariable(location.search.substring(1), 'wid');
                         var editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
 
+                        //TODO: We need a method to set disable the .render Buttons;
                         setButtonsEnabled(true);
                         sendMessage({ type: CHILD_FORM_DRAFT_COMPLETE });
 
@@ -1444,10 +1546,20 @@ var CStudioForms =
                           contentTO.initialModel = CStudioForms.initialModel;
                           contentTO.updatedModel = CStudioForms.updatedModel;
 
-                          iceWindowCallback.success(contentTO, editorId, name, value, draft);
+                          iceWindowCallback.success(contentTO, editorId, name, value, draft, action);
+
+                          if (!iceWindowCallback.isParent) {
+                            CStudioForms.communication.sendMessage({
+                              type: 'CHILD_FORM_SUCCESS',
+                              payload: {
+                                action: action,
+                                editorId: editorId
+                              }
+                            });
+                          }
+
                           if (draft) {
                             CStudioAuthoring.Utils.Cookies.createCookie('cstudio-save-draft', 'true');
-                            saveDraftDialog();
                           } else {
                             CStudioAuthoring.Utils.Cookies.eraseCookie('cstudio-save-draft');
                             CStudioAuthoring.InContextEdit.unstackDialog(editorId);
@@ -1457,7 +1569,6 @@ var CStudioForms =
                           if (draft) {
                             CStudioAuthoring.Utils.Cookies.createCookie('cstudio-save-draft', 'true');
                             CStudioAuthoring.Operations.refreshPreview();
-                            saveDraftDialog();
                           } else {
                             CStudioAuthoring.Utils.Cookies.eraseCookie('cstudio-save-draft');
                             CStudioAuthoring.InContextEdit.unstackDialog(editorId);
@@ -1505,7 +1616,7 @@ var CStudioForms =
                       }
                     };
 
-                    if (entityId == path) {
+                    if (entityId === path) {
                       CStudioAuthoring.Service.lookupContentItem(
                         CStudioAuthoringContext.site,
                         entityId,
@@ -1523,7 +1634,7 @@ var CStudioForms =
                       );
                     }
                   },
-                  failure: function (err) {
+                  function (err) {
                     try {
                       CStudioAuthoring.Operations.showSimpleDialog(
                         'error-dialog',
@@ -1537,7 +1648,7 @@ var CStudioForms =
                         'studioDialog'
                       );
                     } catch (e) {
-                      var error = eval('(' + err.responseText + ')'),
+                      const error = err.response,
                         errorMessage = error.message ? error.message : CMgs.format(formsLangBundle, 'errSaveFailed');
 
                       CStudioAuthoring.Operations.showSimpleDialog(
@@ -1552,9 +1663,34 @@ var CStudioForms =
                     }
                     setButtonsEnabled(true);
                   }
-                },
-                xml
-              );
+                );
+              };
+              CrafterCMSNext.services.sites
+                .validateActionPolicy(CStudioAuthoringContext.site, {
+                  type: 'CREATE',
+                  target: entityId,
+                  contentMetadata: { contentType }
+                })
+                .subscribe(({ allowed, modifiedValue, target }) => {
+                  if (allowed) {
+                    if (modifiedValue) {
+                      CStudioAuthoring.Utils.showConfirmDialog(
+                        null,
+                        formatMessage(formEngineMessages.createPolicy, { originalPath: entityId, path: modifiedValue }),
+                        () => {
+                          saveContent();
+                        }
+                      );
+                    } else {
+                      saveContent();
+                    }
+                  } else {
+                    CStudioAuthoring.Utils.showConfirmDialog(
+                      null,
+                      formatMessage(formEngineMessages.policyError, { path: target })
+                    );
+                  }
+                });
             }
           };
 
@@ -1603,7 +1739,7 @@ var CStudioForms =
                       eventNS.data = itemTO.item;
                       eventNS.typeAction = '';
                       eventNS.oldPath = null;
-                      window.top.document.dispatchEvent(eventNS);
+                      getTopLegacyWindow().document.dispatchEvent(eventNS);
                       var editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
                       CStudioAuthoring.InContextEdit.unstackDialog(editorId);
                     },
@@ -1619,6 +1755,23 @@ var CStudioForms =
             });
           };
 
+          isModified = function () {
+            let flag = false;
+            if (form.sections.length) {
+              for (var j = 0; j < form.sections.length; j++) {
+                if (form.sections[j].fields.length) {
+                  for (var i = 0; i < form.sections[j].fields.length; i++) {
+                    if (form.sections[j].fields[i].edited == true) {
+                      flag = true;
+                    }
+                  }
+                }
+              }
+              window.parent.CStudioAuthoring.editDisabled = [];
+            }
+            return flag;
+          };
+
           var cancelFn = function () {
             if (iceWindowCallback && iceWindowCallback.refresh) {
               iceWindowCallback.refresh();
@@ -1631,18 +1784,8 @@ var CStudioForms =
               window.parent.CStudioAuthoring.editDisabled = [];
             }
 
-            var flag = false;
-            if (form.sections.length) {
-              for (var j = 0; j < form.sections.length; j++) {
-                if (form.sections[j].fields.length) {
-                  for (var i = 0; i < form.sections[j].fields.length; i++) {
-                    if (form.sections[j].fields[i].edited == true) {
-                      flag = true;
-                    }
-                  }
-                }
-              }
-            }
+            var flag = isModified();
+
             if (showWarnMsg && (flag || repeatEdited)) {
               if (CStudioAuthoring.InContextEdit.isDialogCollapsed()) {
                 collapseFn();
@@ -1689,9 +1832,6 @@ var CStudioForms =
                     {
                       text: CMgs.format(formsLangBundle, 'no'),
                       handler: function () {
-                        if (iceWindowCallback && iceWindowCallback.cancelled) {
-                          iceWindowCallback.cancelled();
-                        }
                         this.destroy();
                       },
                       isDefault: true
@@ -1711,11 +1851,12 @@ var CStudioForms =
               }
               //Message to unsubscribe FORM_ENGINE_MESSAGE_POSTED
               sendMessage({ type: FORM_CANCEL });
-              var acnDraftContent = YDom.getElementsByClassName('acnDraftContent', null, parent.document)[0];
+              var acnDraftContent = YDom.getElementsByClassName('acnDraftContent', null, parent.document)[0],
+                editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
               if (acnDraftContent) {
                 unlockBeforeCancel(path);
               } else {
-                if (!form.readOnly && path && path.indexOf('.xml') != -1) {
+                if (!form.readOnly && path && path.indexOf('.xml') != -1 && !me.config.isInclude) {
                   var entityId = buildEntityIdFn(null);
                   CrafterCMSNext.services.content
                     .unlock(CStudioAuthoringContext.site, entityId)
@@ -1723,7 +1864,6 @@ var CStudioForms =
                       YAHOO.util.Event.removeListener(window, 'beforeunload', unloadFn, me);
 
                       if ((iceId && iceId != '') || (iceComponent && iceComponent != '')) {
-                        var editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
                         CStudioAuthoring.InContextEdit.unstackDialog(editorId);
                         var componentsOn = !!sessionStorage.getItem('components-on');
                         if (componentsOn) {
@@ -1760,53 +1900,37 @@ var CStudioForms =
           });
 
           if (!form.readOnly) {
-            var saveButtonEl = document.createElement('input');
-            saveButtonEl.id = 'cstudioSaveAndClose';
-            saveButtonEl.type = 'button';
-            saveButtonEl.value = CMgs.format(formsLangBundle, 'saveAndClose');
-            saveButtonEl.onclick = () => saveFn(false, false);
-            YDom.addClass(saveButtonEl, 'btn btn-primary cstudio-button-first');
-            formButtonContainerEl.appendChild(saveButtonEl);
-
-            var saveButtonDraftEl = document.createElement('input');
-            saveButtonDraftEl.id = 'cstudioSaveAndCloseDraft';
-            saveButtonDraftEl.type = 'button';
-            saveButtonDraftEl.value = CMgs.format(formsLangBundle, 'saveAndCloseDraft');
-            saveButtonDraftEl.onclick = () => saveFn(false, true);
-            YDom.addClass(saveButtonDraftEl, 'btn btn-primary cstudio-button-first');
-            formButtonContainerEl.appendChild(saveButtonDraftEl);
-
-            var previewButtonEl = document.createElement('input');
-            previewButtonEl.id = 'cstudioSaveAndPreview';
-            previewButtonEl.style.display = 'none';
-            previewButtonEl.type = 'button';
-            previewButtonEl.value = CMgs.format(formsLangBundle, 'saveAndPreview');
-            YDom.addClass(previewButtonEl, 'btn btn-default cstudio-button-first');
-            formButtonContainerEl.appendChild(previewButtonEl);
-
-            //In Context Edit, the preview button must not be shown
-            var iceId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'iceId');
-
-            // This is really the right thing to do but previewable doesn't come through
-            CStudioAuthoring.Service.lookupContentType(CStudioAuthoringContext.site, contentType, {
-              success: function (type) {
-                if (type.previewable && type.previewable == 'true') {
-                  previewButtonEl.style.display = 'inline';
-                }
-              },
-              failure: function () {}
-            });
-
-            previewButtonEl.onclick = function () {
-              saveFn(true, false);
-            };
-
             var cancelButtonEl = document.createElement('input');
             cancelButtonEl.id = 'cancelBtn';
             YDom.addClass(cancelButtonEl, 'btn btn-default');
             cancelButtonEl.type = 'button';
             cancelButtonEl.value = CMgs.format(formsLangBundle, 'cancel');
             formButtonContainerEl.appendChild(cancelButtonEl);
+
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.id = 'splitButtonContainer';
+            formButtonContainerEl.appendChild(buttonsContainer);
+
+            //In Context Edit, the preview button must not be shown
+            var iceId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'iceId');
+            // This is really the right thing to do but previewable doesn't come through
+            CStudioAuthoring.Service.lookupContentType(CStudioAuthoringContext.site, contentType, {
+              success: function (type) {
+                const storedId = 'formEditor';
+                const defaultSelected = 'saveAndClose';
+
+                const onMultiChoiceSaveButtonClick = (e, type) => {
+                  saveFn(type === 'saveAndPreview', type !== 'saveAndClose', null, type);
+                };
+                CrafterCMSNext.render(buttonsContainer, 'MultiChoiceSaveButton', {
+                  defaultSelected,
+                  disablePortal: false,
+                  storageKey: storedId,
+                  onClick: onMultiChoiceSaveButtonClick
+                });
+              },
+              failure: function () {}
+            });
 
             YAHOO.util.Event.addListener(window, 'beforeunload', unloadFn, me);
             YAHOO.util.Event.addListener(cancelButtonEl, 'click', cancelFn, me);
@@ -1821,26 +1945,37 @@ var CStudioForms =
             YAHOO.util.Event.addListener(window, 'beforeunload', unloadFn, me);
             YAHOO.util.Event.addListener(closeButtonEl, 'click', cancelFn, me);
 
+            const canEdit = CStudioAuthoring.Utils.getQueryVariable(queryString, 'canEdit');
+
+            if (canEdit) {
+              var editButtonEl = document.createElement('input');
+              YDom.addClass(editButtonEl, 'btn btn-primary');
+              editButtonEl.type = 'button';
+              editButtonEl.style.marginLeft = '15px';
+              editButtonEl.value = formatMessage(formEngineMessages.edit);
+
+              formButtonContainerEl.appendChild(editButtonEl);
+              YDom.setStyle(formButtonContainerEl, 'text-align', 'center');
+
+              YAHOO.util.Event.addListener(
+                editButtonEl,
+                'click',
+                () => {
+                  const editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
+                  const iceWindowCallback = CStudioAuthoring.InContextEdit.getIceCallback(editorId);
+                  if (iceWindowCallback.changeToEditMode) {
+                    getCustomCallback(iceWindowCallback.changeToEditMode)();
+                  }
+                },
+                me
+              );
+            }
+
             var focusEl = window;
             setTimeout(function () {
               focusEl.focus();
             }, 500);
           }
-          var colExpButtonEl = document.createElement('input');
-          colExpButtonEl.id = 'colExpButtonBtn';
-          YDom.addClass(colExpButtonEl, 'btn');
-          YDom.addClass(colExpButtonEl, 'btn-default');
-          colExpButtonEl.type = 'button';
-          colExpButtonEl.value = 'Collapse';
-          formControlBarEl.appendChild(colExpButtonEl);
-          YAHOO.util.Event.addListener(
-            colExpButtonEl,
-            'click',
-            function () {
-              collapseFn();
-            },
-            me
-          );
 
           var overlayContainer = parent.document.getElementById(window.frameElement.id).parentElement;
           YDom.addClass(overlayContainer, 'overlay');
@@ -1871,14 +2006,17 @@ var CStudioForms =
                   const contentType =
                     message.contentType ||
                     parseDOM(FlattenerState[message.key]).querySelector('content-type').innerHTML;
+                  let callback = message.callback || {};
+                  callback = getCustomsCallbacks(callback);
                   if (edit) {
                     CStudioAuthoring.Operations.performSimpleIceEdit(
                       { contentType: contentType, uri: key },
                       iceId || null, // field
                       edit,
                       {
-                        success: function (contentTO, editorId, objId, value, draft) {
-                          sendMessage({ type: FORM_SAVE_REQUEST, objId, value, draft });
+                        ...callback,
+                        success: function (contentTO, editorId, objId, value, draft, action) {
+                          sendMessage({ type: FORM_SAVE_REQUEST, objId, value, draft, action });
                         },
                         cancelled: function () {
                           sendMessage({ type: FORM_CANCEL_REQUEST });
@@ -1896,7 +2034,8 @@ var CStudioForms =
                       false,
                       false,
                       {
-                        success: function (contentTO, editorId, objId, value, draft) {
+                        ...callback,
+                        success: function (contentTO, editorId, objId, value, draft, action) {
                           sendMessage({
                             type: FORM_SAVE_REQUEST,
                             key: objId,
@@ -1905,7 +2044,8 @@ var CStudioForms =
                             new: true,
                             selectorId: selectorId,
                             ds,
-                            order
+                            order,
+                            action
                           });
                         },
                         cancelled: function () {
@@ -1925,6 +2065,9 @@ var CStudioForms =
               }
             });
             sendMessage({ type: FORM_ENGINE_RENDER_COMPLETE });
+          }
+          if (CStudioAuthoring.InContextEdit.getIceCallback(editorId).renderComplete) {
+            CStudioAuthoring.InContextEdit.getIceCallback(editorId).renderComplete();
           }
         });
       },
@@ -1965,7 +2108,6 @@ var CStudioForms =
 
             if (pluginInfo.path != '') {
               script = CStudioAuthoringContext.baseUri + pluginInfo.path;
-              script = CStudioAuthoring.Utils.addURLParameter(script, 'version', CStudioAuthoring.UIBuildId);
 
               var onDone = (function (datasourceDef, pluginInfo) {
                 return function (script, textStatus) {
@@ -2021,6 +2163,8 @@ var CStudioForms =
       _renderFormSections: function (form) {
         var formDef = form.definition;
         form.sectionsMap = [];
+        var editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
+        var iceWindowCallback = CStudioAuthoring.InContextEdit.getIceCallback(editorId);
 
         for (var i = 0; i < formDef.sections.length; i++) {
           var section = formDef.sections[i];
@@ -2028,7 +2172,7 @@ var CStudioForms =
           var sectionContainerEl = document.getElementById(section.id + '-container');
           var sectionEl = document.getElementById(section.id + '-body-controls');
 
-          var formSection = new CStudioFormSection(form, sectionContainerEl);
+          var formSection = new CStudioFormSection(form, sectionContainerEl, iceWindowCallback);
           form.sectionsMap[section.title] = formSection;
           form.sections[form.sections.length] = formSection;
 
@@ -2038,6 +2182,7 @@ var CStudioForms =
             sectionContainerEl
           )[0];
           var sectionBodyEl = YDom.getElementsByClassName('panel-body', null, sectionContainerEl)[0];
+          var sectionHeadingEl = YDom.getElementsByClassName('panel-heading', null, sectionContainerEl)[0];
 
           if (section.defaultOpen == 'false' || section.defaultOpen == '' || section.defaultOpen == false) {
             sectionBodyEl.style.display = 'none';
@@ -2048,15 +2193,22 @@ var CStudioForms =
           formSection.sectionOpenCloseWidgetEl = sectionOpenCloseWidgetEl;
           formSection.sectionBodyEl = sectionBodyEl;
 
-          sectionOpenCloseWidgetEl.onclick = function () {
-            if (this.sectionBodyEl.style.display == 'none') {
-              this.sectionBodyEl.style.display = 'block';
-              YAHOO.util.Dom.removeClass(this, 'cstudio-form-section-widget-closed');
+          sectionHeadingEl.onclick = function () {
+            YDom.getElementsByClassName('panel-body', null, this)[0];
+            if (YDom.getElementsByClassName('panel-body', null, this)[0].style.display === 'none') {
+              YDom.getElementsByClassName('panel-body', null, this)[0].style.display = 'block';
+              YAHOO.util.Dom.removeClass(
+                YDom.getElementsByClassName('cstudio-form-section-widget', null, this)[0],
+                'cstudio-form-section-widget-closed'
+              );
             } else {
-              this.sectionBodyEl.style.display = 'none';
-              YAHOO.util.Dom.addClass(this, 'cstudio-form-section-widget-closed');
+              YDom.getElementsByClassName('panel-body', null, this)[0].style.display = 'none';
+              YAHOO.util.Dom.addClass(
+                YDom.getElementsByClassName('cstudio-form-section-widget', null, this)[0],
+                'cstudio-form-section-widget-closed'
+              );
             }
-          };
+          }.bind(sectionContainerEl);
 
           for (var j = 0; j < section.fields.length; j++) {
             var field = section.fields[j];
@@ -2168,7 +2320,7 @@ var CStudioForms =
 
           var addEl = document.createElement('a');
           repeatInstanceContainerEl.appendChild(addEl);
-          YAHOO.util.Dom.addClass(addEl, 'cstudio-form-repeat-control');
+          YAHOO.util.Dom.addClass(addEl, 'cstudio-form-repeat-control btn btn-default btn-sm');
           addEl.innerHTML = 'Add First Item';
           addEl.onclick = function () {
             repeatContainerEl.form.setFocusedField(repeatContainerEl);
@@ -2205,7 +2357,7 @@ var CStudioForms =
 
           var addEl = document.createElement('a');
           repeatInstanceContainerEl.appendChild(addEl);
-          YAHOO.util.Dom.addClass(addEl, 'cstudio-form-repeat-control');
+          YAHOO.util.Dom.addClass(addEl, 'cstudio-form-repeat-control btn btn-default btn-sm');
           addEl.innerHTML = CMgs.format(formsLangBundle, 'repeatAddAnother');
           if (form.readOnly || (maxOccurs != '*' && currentCount >= maxOccurs)) {
             YAHOO.util.Dom.addClass(addEl, 'cstudio-form-repeat-control-disabled');
@@ -2228,7 +2380,7 @@ var CStudioForms =
 
           var upEl = document.createElement('a');
           repeatInstanceContainerEl.appendChild(upEl);
-          YAHOO.util.Dom.addClass(upEl, 'cstudio-form-repeat-control');
+          YAHOO.util.Dom.addClass(upEl, 'cstudio-form-repeat-control btn btn-default btn-sm');
           upEl.innerHTML = CMgs.format(formsLangBundle, 'repeatMoveUp');
           if (form.readOnly || i == 0) {
             YAHOO.util.Dom.addClass(upEl, 'cstudio-form-repeat-control-disabled');
@@ -2254,7 +2406,7 @@ var CStudioForms =
 
           var downEl = document.createElement('a');
           repeatInstanceContainerEl.appendChild(downEl);
-          YAHOO.util.Dom.addClass(downEl, 'cstudio-form-repeat-control');
+          YAHOO.util.Dom.addClass(downEl, 'cstudio-form-repeat-control btn btn-default btn-sm');
           downEl.innerHTML = CMgs.format(formsLangBundle, 'repeatMoveDown');
           if (form.readOnly || i == repeatCount - 1) {
             YAHOO.util.Dom.addClass(downEl, 'cstudio-form-repeat-control-disabled');
@@ -2280,7 +2432,7 @@ var CStudioForms =
 
           var deleteEl = document.createElement('a');
           repeatInstanceContainerEl.appendChild(deleteEl);
-          YAHOO.util.Dom.addClass(deleteEl, 'cstudio-form-repeat-control');
+          YAHOO.util.Dom.addClass(deleteEl, 'cstudio-form-repeat-control btn btn-default btn-sm');
           deleteEl.innerHTML = CMgs.format(formsLangBundle, 'repeatDelete');
           if (form.readOnly || currentCount <= minOccurs) {
             YAHOO.util.Dom.addClass(deleteEl, 'cstudio-form-repeat-control-disabled');
@@ -2386,11 +2538,8 @@ var CStudioForms =
                 value = form.model[moduleConfig.config.field.id];
               }
 
-              if (
-                !value &&
-                moduleConfig.config.field.defaultValue &&
-                typeof moduleConfig.config.field.defaultValue === 'string'
-              ) {
+              const defaultValue = moduleConfig.config.field.defaultValue;
+              if (!value && defaultValue && typeof defaultValue === 'string' && !noDefaultLookup[formField.id]) {
                 value = moduleConfig.config.field.defaultValue;
               }
 
@@ -2398,6 +2547,11 @@ var CStudioForms =
                 formField.setValue(value, CStudioRemote[formField.id]);
               } else {
                 formField.setValue('');
+              }
+
+              // if the field has a default value set, set it to the defaultValuesLookup
+              if (defaultValue && typeof defaultValue === 'string') {
+                defaultValuesLookup[formField.id] = defaultValue;
               }
 
               formField.fieldDef = this.fieldDef;
@@ -2412,9 +2566,7 @@ var CStudioForms =
                             document.activeElement.tagName.toLowerCase()
                           )
                         ) {
-                          formField.form.sections[0].fields[k].inputEl.focus({
-                            preventScroll: true
-                          });
+                          formField.form.sections[0].fields[k].inputEl.focus({ preventScroll: true });
                         }
                         return;
                       }
@@ -2422,11 +2574,10 @@ var CStudioForms =
                   }, 1900);
                 }
               } catch (err) {
-                //console.log(err);
+                console.error(err);
               }
-              form.sectionsMap[section.title].notifyValidation();
             } catch (e) {
-              //alert(e);
+              console.error(e);
             }
           },
 
@@ -2487,6 +2638,29 @@ var CStudioForms =
         }
       },
 
+      /* Render a list of fields from the form */
+      /* fields: string[] - fields ids */
+      _renderFields: function (form, fields) {
+        const formDef = form.definition;
+        const sectionContainerEl = document.getElementById('ice-container');
+        const sectionBodyEl = YDom.getElementsByClassName('cstudio-form-section-body', null, sectionContainerEl)[0];
+        const formSection = new CStudioFormSection(form, sectionContainerEl);
+
+        formDef.sections.forEach((section) => {
+          section.fields
+            .filter((field) => fields.includes(field.id))
+            .forEach((field) => {
+              if (field.type !== 'repeat') {
+                this._renderField(formDef, field, form, formSection, sectionBodyEl, null, null, true);
+                CStudioAuthoring.InContextEdit.autoSizeIceDialog();
+              } else {
+                this._renderRepeat(formDef, field, form, formSection, sectionBodyEl);
+                CStudioAuthoring.InContextEdit.autoSizeIceDialog();
+              }
+            });
+        });
+      },
+
       /**
        * refresh the page name and page location
        */
@@ -2507,7 +2681,7 @@ var CStudioForms =
        * draw the html for the form
        */
       _renderFormLayout: function (form) {
-        // long term even the layout should be delgated to a pluggable module
+        // long term even the layout should be delegated to a pluggable module
         // for now we'll start with delegation of widgets
         var formDef = form.definition;
         var html = '';
@@ -2877,6 +3051,11 @@ var CStudioForms =
                 this.xmlModelToMapArray(node, child);
               } else {
                 node[child.nodeName] = this.getModelItemValue(child);
+
+                // while parsing the xml, if a `no-default` attribute is found, add it to the lookup
+                if (child.getAttribute('no-default')) {
+                  noDefaultLookup[child.nodeName] = true;
+                }
               }
             }
           } catch (err) {}
@@ -2919,6 +3098,11 @@ var CStudioForms =
                       value = this.getModelItemValue(repeatField);
                     } catch (noValue) {}
 
+                    // while parsing the xml (in repeating group), if a `no-default` attribute is found, add it to the lookup
+                    if (repeatField.getAttribute('no-default')) {
+                      noDefaultLookup[`${child.nodeName}|${repeatCount}|${repeatField.nodeName}`] = true;
+                    }
+
                     node[child.nodeName][repeatCount][repeatField.nodeName] = this.unEscapeXml(value);
                   }
                 }
@@ -2927,10 +3111,7 @@ var CStudioForms =
               //getting values from attributes
               Array.from(repeatChild.attributes).forEach((attr) => {
                 const { nodeName, nodeValue } = attr;
-                node[child.nodeName][repeatCount] = {
-                  ...node[child.nodeName][repeatCount],
-                  [nodeName]: nodeValue
-                };
+                node[child.nodeName][repeatCount] = { ...node[child.nodeName][repeatCount], [nodeName]: nodeValue };
               });
 
               repeatCount++;
@@ -3019,6 +3200,7 @@ var CStudioForms =
         }
 
         // Add valid fields from form sections
+
         function getValidFields(section, isRepeat) {
           section.fields.forEach((field) => {
             let fieldId = isRepeat ? `${section.id}.${field.id}` : field.id;
@@ -3091,6 +3273,11 @@ var CStudioForms =
             if (CStudioRemote[key] && !isModelItemArray) {
               attributes.push('remote="true"');
             }
+            // If item has a default value and current value is empty or doesn't exist, add the `no-default` attribute.
+            // model Item may be an array (repeating group item) so we're only considering string values.
+            if (defaultValuesLookup[key] && typeof modelItem === 'string' && modelItem?.replace(/\s+/g, '') === '') {
+              attributes.push('no-default="true"');
+            }
           } catch (err) {
             CStudioAuthoring.Operations.showSimpleDialog(
               'error-dialog',
@@ -3143,7 +3330,7 @@ var CStudioForms =
       },
 
       recursiveRetrieveItemValues: function (item, output, key, fieldInstructions) {
-        item.forEach((repeatItem) => {
+        item.forEach((repeatItem, index) => {
           let attributes;
           attributes = repeatItem.datasource ? `datasource=\"${repeatItem.datasource}\"` : '';
           if (repeatItem.inline) {
@@ -3161,7 +3348,18 @@ var CStudioForms =
                 repeatAttr = `${isRemote ? 'remote="true"' : ''} ${isArray ? 'item-list="true"' : ''} ${
                   isTokenized ? 'tokenized="true"' : ''
                 }`;
-              output += `\t<${fieldName} ${repeatAttr} >`;
+
+              // using `${parentFieldName}|${repeatItemIndex}|${fieldName}` as the fieldId. That's how the forms-engine
+              // handles the repeating groups ids.
+              const fieldId = `${key}|${index}|${fieldName}`;
+              const attributes = [];
+
+              // Validating to add `no-default` in repeating group items
+              if (defaultValuesLookup[fieldId] && repeatValue.replace(/\s+/g, '') === '') {
+                attributes.push('no-default="true"');
+              }
+
+              output += `\t<${fieldName} ${repeatAttr} ${attributes.join(' ')}>`;
               if (isArray) {
                 output = this.recursiveRetrieveItemValues(repeatValue, output, key, fieldInstructions);
               } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -46,7 +46,7 @@ YAHOO.extend(CStudioForms.Controls.PageNavOrder, CStudioForms.CStudioFormField, 
   },
 
   _onChange: function (evt, obj) {
-    obj.value = obj.dropdownEl.value; //value from the dropdown
+    obj.value = obj.dropdownEl.value; // value from the dropdown
 
     obj.owner.notifyValidation();
     obj.form.updateModel(obj.id, obj.getValue(), true);
@@ -84,7 +84,7 @@ YAHOO.extend(CStudioForms.Controls.PageNavOrder, CStudioForms.CStudioFormField, 
   showEditPositionDialog: function () {
     var CMgs = CStudioAuthoring.Messages;
     var langBundle = CMgs.getBundle('forms', CStudioAuthoringContext.lang);
-    //Disable Edit Position button to not allow double clicks
+    // Disable Edit Position button to not allow double clicks
     this.editPositionEl.disabled = true;
 
     var query = location.search.substring(1);
@@ -125,12 +125,12 @@ YAHOO.extend(CStudioForms.Controls.PageNavOrder, CStudioForms.CStudioFormField, 
           CStudioAuthoringContext.site,
           this.parentControl
         );
-        //Enable Edit Position button
+        // Enable Edit Position button
         this.parentControl.editPositionEl.disabled = false;
       },
 
       failure: function () {
-        //Enable Edit Position button
+        // Enable Edit Position button
         this.parentControl.editPositionEl.disabled = false;
       }
     };
@@ -164,7 +164,6 @@ YAHOO.extend(CStudioForms.Controls.PageNavOrder, CStudioForms.CStudioFormField, 
     var validEl = document.createElement('span');
     YAHOO.util.Dom.addClass(validEl, 'validation-hint');
     YAHOO.util.Dom.addClass(validEl, 'cstudio-form-control-validation fa fa-check');
-    controlWidgetContainerEl.appendChild(validEl);
 
     var dropdownEl = document.createElement('select');
     YAHOO.util.Dom.addClass(dropdownEl, 'datum');
@@ -185,13 +184,12 @@ YAHOO.extend(CStudioForms.Controls.PageNavOrder, CStudioForms.CStudioFormField, 
 
     var editPositionEl = document.createElement('input');
     this.editPositionEl = editPositionEl;
-    YAHOO.util.Dom.addClass(editPositionEl, 'btn btn-primary');
+    YAHOO.util.Dom.addClass(editPositionEl, 'btn btn-default btn-sm edit-position');
     editPositionEl.type = 'button';
     editPositionEl.value = 'Edit Position';
     editPositionEl.style.padding = '1px 5px';
     editPositionEl.style.marginLeft = '5px';
     editPositionEl.style.display = 'none';
-    controlWidgetContainerEl.appendChild(editPositionEl);
 
     this.renderHelp(config, controlWidgetContainerEl);
 
@@ -201,6 +199,8 @@ YAHOO.extend(CStudioForms.Controls.PageNavOrder, CStudioForms.CStudioFormField, 
     descriptionEl.textContent = config.description;
 
     containerEl.appendChild(titleEl);
+    containerEl.appendChild(validEl);
+    containerEl.appendChild(editPositionEl);
     containerEl.appendChild(controlWidgetContainerEl);
     containerEl.appendChild(descriptionEl);
 
@@ -265,7 +265,7 @@ YAHOO.extend(CStudioForms.Controls.PageNavOrder, CStudioForms.CStudioFormField, 
       this.dropdownEl.value = 'true';
       this.editPositionEl.style.display = 'inline';
 
-      //Takes the value of the orderDefault if exists
+      // Takes the value of the orderDefault if exists
       this.orderValue = this.form.getModelValue(this.orderDefault);
       if (!this.orderValue || this.orderValue === -1 || this.orderValue === 0) {
         this.setOrderValue();

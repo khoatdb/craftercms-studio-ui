@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -31,7 +31,7 @@ CStudioForms.Datasources.SiteComponent =
     for (var i = 0; i < properties.length; i++) {
       var property = properties[i];
       if (property.name === 'componentPath') {
-        CrafterCMSNext.services.content.getDOM(CStudioAuthoringContext.siteId, property.value).subscribe(
+        CrafterCMSNext.services.content.fetchContentDOM(CStudioAuthoringContext.siteId, property.value).subscribe(
           (dom) => {
             let items = Array.from(dom.querySelectorAll('items > item'));
             items = items.map((item) => {

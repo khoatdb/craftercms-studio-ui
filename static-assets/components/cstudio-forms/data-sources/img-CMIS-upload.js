@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -40,7 +40,7 @@ YAHOO.extend(CStudioForms.Datasources.ImgCMISUpload, CStudioForms.CStudioFormDat
   /**
    * action called when user clicks insert file
    */
-  insertImageAction: function (insertCb) {
+  insertImageAction: function (insertCb, file) {
     (this._self = this), (me = this);
 
     var site = CStudioAuthoringContext.site;
@@ -57,15 +57,18 @@ YAHOO.extend(CStudioForms.Datasources.ImgCMISUpload, CStudioForms.CStudioFormDat
 
     var callback = {
       success: function (fileData) {
-        var uri = fileData.url;
-        var fileExtension = fileData.fileExtension;
+        var uri = fileData.url ? fileData.url : fileData;
 
         var imageData = {
           previewUrl: uri,
           relativeUrl: uri,
-          fileExtension: fileExtension,
+          fileExtension: fileData.fileExtension,
           remote: true
         };
+
+        if (fileData.name) {
+          imageData.fileName = fileData.name;
+        }
 
         insertCb.success(imageData);
       },
@@ -77,7 +80,20 @@ YAHOO.extend(CStudioForms.Datasources.ImgCMISUpload, CStudioForms.CStudioFormDat
       context: this
     };
 
-    CStudioAuthoring.Operations.uploadCMISAsset(site, path, me.repositoryId, callback, ['image/*']);
+    if (!file) {
+      CStudioAuthoring.Operations.uploadCMISAsset(site, path, me.repositoryId, callback, ['image/*']);
+    } else {
+      CrafterCMSNext.services.content.uploadToCMIS(site, file, path, me.repositoryId, '_csrf').subscribe(
+        (response) => {
+          if (response.type === 'complete') {
+            callback.success(response.payload.body.item);
+          }
+        },
+        (error) => {
+          insertCb.failure(error);
+        }
+      );
+    }
   },
 
   getLabel: function () {

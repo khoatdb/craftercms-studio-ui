@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -15,7 +15,7 @@
  */
 
 if (!$.prototype.timezones) {
-  CStudioAuthoring.Utils.addJavascript('/static-assets/jquery/timezones/timezones-0.1.0.min.js');
+  CStudioAuthoring.Utils.addJavascript('/static-assets/jquery/timezones/timezones.full.js');
 }
 
 /**
@@ -93,7 +93,7 @@ CStudioAuthoring.ContextualNav.TargetingMod = {
           containerEl.appendChild(iconEl);
           el.appendChild(containerEl);
 
-          containerEl.onclick = function () {
+          el.onclick = function () {
             var targetingDialog = $('#cstudioPreviewTargetingOverlay')[0];
 
             if (targetingDialog) {
@@ -156,9 +156,9 @@ CStudioAuthoring.ContextualNav.TargetingMod = {
                 controlContainer;
 
               me.initModel(properties, {
-                //update model and properties with current profile
+                // update model and properties with current profile
                 success: function (properties) {
-                  //Create and append the options
+                  // Create and append the options
                   for (var i = 0; i < properties.length; i++) {
                     currentProp = properties[i];
 
@@ -297,15 +297,16 @@ CStudioAuthoring.ContextualNav.TargetingMod = {
           });
 
           var actionButtonsContainer = document.createElement('div');
-          actionButtonsContainer.style.cssText = 'position: absolute; bottom: 15px; right: 15px;';
+          actionButtonsContainer.style.cssText =
+            'position: absolute; bottom: 15px; right: 15px; left: 15px; display: flex; place-content: center space-between';
           YAHOO.util.Dom.addClass(actionButtonsContainer, 'action-buttons');
 
           const targetingMod = CStudioAuthoring.ContextualNav.TargetingMod;
 
           var clearBtn = document.createElement('a');
           YAHOO.util.Dom.addClass(clearBtn, 'btn btn-primary mr10');
+          clearBtn.style.marginRight = 'auto';
           clearBtn.innerHTML = targetingMod.formatMessage(targetingMod.messages.defaults);
-          actionButtonsContainer.appendChild(clearBtn);
           clearBtn.onclick = function () {
             CStudioAuthoring.Service.lookupConfigurtion(
               CStudioAuthoringContext.site,
@@ -367,28 +368,33 @@ CStudioAuthoring.ContextualNav.TargetingMod = {
           };
 
           var applyBtn = document.createElement('a');
-          YAHOO.util.Dom.addClass(applyBtn, 'btn btn-primary mr10');
+          YAHOO.util.Dom.addClass(applyBtn, 'btn btn-primary');
           applyBtn.innerHTML = CMgs.format(previewLangBundle, 'apply');
-          actionButtonsContainer.appendChild(applyBtn);
           applyBtn.onclick = function () {
             me.updateTargeting(reportContainerEl);
           };
 
+          var separatorDiv = document.createElement('div');
+
           this.bindEvents();
 
           var cancelBtn = document.createElement('a');
-          YAHOO.util.Dom.addClass(cancelBtn, 'btn btn-default');
+          YAHOO.util.Dom.addClass(cancelBtn, 'btn btn-default mr10');
           cancelBtn.innerHTML = CMgs.format(previewLangBundle, 'cancel');
-          actionButtonsContainer.appendChild(cancelBtn);
           cancelBtn.onclick = function () {
             me.closeDialog(reportContainerEl);
             $(document).off('keyup');
           };
 
+          actionButtonsContainer.appendChild(clearBtn);
+          separatorDiv.appendChild(cancelBtn);
+          separatorDiv.appendChild(applyBtn);
+          actionButtonsContainer.appendChild(separatorDiv);
+
           reportContainerEl.appendChild(actionButtonsContainer);
         },
 
-        //update model from current form and save on profile
+        // update model from current form and save on profile
         updateTargeting: function (reportContainerEl) {
           this.updateModel();
 
@@ -408,8 +414,6 @@ CStudioAuthoring.ContextualNav.TargetingMod = {
             }
           }
 
-          serviceUri += 'nocache=' + new Date();
-
           YConnect.asyncRequest('GET', CStudioAuthoring.Service.createEngineServiceUri(encodeURI(serviceUri)), {
             success: function () {
               document.body.removeChild(reportContainerEl);
@@ -425,22 +429,22 @@ CStudioAuthoring.ContextualNav.TargetingMod = {
           document.body.removeChild(reportContainerEl);
         },
 
-        //model created from xml config file and currentProfile
+        // model created from xml config file and currentProfile
         initModel: function (properties, callback) {
           var me = this,
             properties = properties;
 
           if (!properties.forEach) {
-            //if only 1 item - returns item, not in array
+            // if only 1 item - returns item, not in array
             properties = [properties];
           }
 
-          //properties from xml
+          // properties from xml
           properties.forEach(function (item) {
             me.model[item.name] = item.default_value ? item.default_value : '';
           });
 
-          //properties from profile
+          // properties from profile
           var serviceUri = '/api/1/profile/get?time=' + new Date();
           YConnect.asyncRequest('GET', CStudioAuthoring.Service.createEngineServiceUri(serviceUri), {
             success: function (oResponse) {
@@ -464,7 +468,7 @@ CStudioAuthoring.ContextualNav.TargetingMod = {
           });
         },
 
-        //get model from current form
+        // get model from current form
         updateModel: function () {
           var me = this,
             test = $('#targeting-container .control-container'),

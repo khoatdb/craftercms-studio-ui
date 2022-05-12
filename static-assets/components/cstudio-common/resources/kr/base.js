@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -111,9 +111,7 @@ CStudioAuthoring.Messages.registerBundle('siteDashboard', 'kr', {
   dashletIconGuideExcel: 'MS Excel',
   dashletIconGuideZip: 'Zip',
   dashletIconGuideGroovy: 'Groovy',
-  dashletIconGuideOtherFiles: '다른 파일들',
-
-  dependenciesLabel: '종속성'
+  dashletIconGuideOtherFiles: '다른 파일들'
 });
 
 CStudioAuthoring.Messages.registerBundle('contextnav', 'kr', {
@@ -215,7 +213,7 @@ CStudioAuthoring.Messages.registerBundle('previewTools', 'kr', {
   general: '일반',
   text: '본문',
 
-  //login
+  // login
   login: '로그인',
   emailUsername: '이메일 / 사용자 이름',
   password: '이메일 비밀번호',
@@ -253,7 +251,7 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'kr', {
   templates: '템플릿',
   scripts: '스크립트',
   adminConsole: '관리 콘솔',
-  siteconfig: '사이트 구성',
+  siteconfig: '프로젝트 구성',
   previewSync: '미리 동기화',
   syncrepo: '저장소에서 동기화',
   allSites: '모든 사이트',
@@ -318,8 +316,8 @@ CStudioAuthoring.Messages.registerBundle('siteDropdown', 'kr', {
 });
 
 CStudioAuthoring.Messages.registerBundle('forms', 'kr', {
-  rteConfigJSONParseError:
-    'RTE `{0}` 구성이 잘못되었습니다: {1}. RTE 구성 {0}를 확인하고 유효한 JSON인지 확인하십시오. 아래에 첨부된 구성 내용:',
+  styleFormatsParseError:
+    'RTE `styleFormats` 구성이 잘못되었습니다: {0}. RTE 구성 styleFormats를 확인하고 유효한 JSON인지 확인하십시오. 아래에 첨부된 구성 내용:',
   new: '새로운',
   expandAll: '모두 확장',
   collapseAll: '모두 축소',
@@ -351,6 +349,11 @@ CStudioAuthoring.Messages.registerBundle('forms', 'kr', {
   continueEditing: '편집을 계속',
   notification: '공고',
   previewLoaded: '미리로드 됨.',
+
+  chooseContentType: '콘텐츠 유형 선택',
+  chooseContentTypeBody: '이 섹션에서 사용할 수 있는 시작 템플릿은 다음과 같습니다.',
+  chooseContentTypeLabel: '컨텐츠 타입:',
+  chooseContentTypePreview: '시사:',
 
   cancelDialogHeader: '크래프터 스튜디오',
   cancelDialogBody: '변경 사항을 저장하지 않고이 양식을 닫습니다?',
@@ -537,7 +540,6 @@ CStudioAuthoring.Messages.registerBundle('search', 'kr', {
   videos: '비디오',
   width: '폭',
   height: '신장',
-  path: '통로',
   'content-type': '컨텐츠 타입',
   'mime-type': 'MIME 유형',
   'last-edit-date': '마지막 편집 날짜',
@@ -652,8 +654,7 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'kr', {
 
   /*Controls*/
   textArea: '텍스트 영역',
-  richTextEditor: '서식있는 텍스트 편집기s (TinyMCE 2)',
-  rteTinyMCE5: '서식있는 텍스트 편집기s (TinyMCE 5)',
+  rte: '서식있는 텍스트 편집기s',
   input: '입력',
   numericInput: '숫자 입력',
   uuid: 'UUID',
@@ -861,8 +862,8 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'kr', {
   confTabRoleMappingsDesc: '사이트에서 사용할 수있는 역할의 목록을 정의합니다',
   confTabSiteConfiguration: '사이트 구성',
   confTabSiteConfigurationDesc: '일반 사이트 구성을 정의',
-  confTabSiteConf: '사이트 구성 도구',
-  confTabSiteConfDesc: '관리 툴의리스트가 정의 가능한',
+  confTabSiteConf: '콘텐츠 유형 편집기 구성',
+  confTabSiteConfDesc: '콘텐츠 유형 편집에 사용할 수 있는 컨트롤 및 데이터 소스 정의',
   confTabWorkflowConf: '워크 플로우 구성',
   confTabWorkflowConfDesc: '시스템에서 사용할 수있는 워크 플로우를 정의',
   confCacheCleared: '구성 캐시가 지워졌습니다.',
@@ -874,6 +875,43 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'kr', {
   confTabCMISConfiguration: 'CMIS 구성',
   confTabCMISConfigurationDesc:
     '이 파일은 컨텐트 작성자가 선택할 수있는 0 이상의 CMIS 가능 리포지토리를 데이터 소스로 구성합니다',
+  confTabTranslationConf: '번역 구성',
+  confTabTranslationConfDesc: '지원되는 언어 및 해결 방법을 정의합니다',
+  confTabSitePolicyConf: '사이트 정책 구성',
+  confTabSitePolicyConfDesc: '콘텐츠 작업의 유효성을 검사하는 정책을 정의합니다.',
+  confTabUiConf: '사용자 인터페이스 구성',
+  confTabUiConfDesc: '사용자 인터페이스에 표시되는 위젯을 정의합니다.',
+  confTabMimeTypes: 'Mime 유형',
+  confTabMimeTypesDesc: '이 파일은이 사이트 / 청사진에 대한 MIME 유형 아이콘 재정의를 구성합니다.',
+  confTabEngineUrlRewriteConf: '엔진 URL 재 작성 구성 (XML 스타일)',
+  confTabEngineUrlRewriteConfDesc: '이 파일은 Crafter Engine에서 사용하는 사이트 속성을 구성합니다.',
+  confTabEngineUrlRewriteConfPreview: '엔진 URL 재 작성 구성 (XML 스타일) - 시사',
+  confTabEngineUrlRewriteConfStaging: '엔진 URL 재 작성 구성 (XML 스타일) - 각색',
+  confTabEngineUrlRewriteConfLive: '엔진 URL 재 작성 구성 (XML 스타일) - 라이브',
+  confTabDependencyResolverConf: '종속성 해결 프로그램 구성',
+  confTabDependencyResolverConfDesc: '이 파일은 Crafter가 종속성으로 간주하는 파일 경로와 추출 방법을 구성합니다.',
+  confTabAWSProfiles: 'AWS 프로필',
+  confTabAWSProfilesDesc: 'AWS 프로필 구성 파일.',
+  confTabBoxProfiles: '박스 프로파일',
+  confTabBoxProfilesDesc: '박스 프로파일 구성 파일.',
+  confTabWebDAVProfiles: 'WebDAV 프로필',
+  confTabWebDAVProfilesDesc: 'WebDAV 프로필 구성 파일.',
+  confTabAssetProcessing: '자산 처리',
+  confTabAssetProcessingDesc: '자산 처리 구성 파일.',
+  confTabBlobStores: 'Blob 저장소',
+  confTabBlobStoresDesc: 'Blob은 구성 파일을 저장합니다.',
+  confTabProxyConfig: '프록시 구성',
+  confTabProxyConfigDesc: '이 파일은 미리보기를 위해 프록시 서버를 구성합니다.',
+  confTabEngineSiteConfiguration: '엔진 사이트 구성',
+  confTabEngineSiteConfigurationDesc: 'Crafter Engine에서 사용하는 사이트 구성',
+  confTabEngineSiteConfigurationPreview: '엔진 사이트 구성 - 시사',
+  confTabEngineSiteConfigurationStaging: '엔진 사이트 구성 - 각색',
+  confTabEngineSiteConfigurationLive: '엔진 사이트 구성 - 라이브',
+  confTabEngineSiteAppContextConfiguration: '엔진 사이트 애플리케이션 컨텍스트',
+  confTabEngineSiteAppContextConfigurationDesc: 'Crafter Engine에서 사용하는 사이트 애플리케이션 컨텍스트',
+  confTabEngineSiteAppContextConfigurationPreview: '엔진 사이트 애플리케이션 컨텍스트 - 시사',
+  confTabEngineSiteAppContextConfigurationStaging: '엔진 사이트 애플리케이션 컨텍스트 - 라이브',
+  confTabEngineSiteAppContextConfigurationLive: '엔진 사이트 애플리케이션 컨텍스트 - 라이브',
 
   /*Postfixes*/
   iDescription: '정수의 경우',
@@ -901,7 +939,6 @@ CStudioAuthoring.Messages.registerBundle('contentTypes', 'kr', {
   contentTypeNotFound: '구성 요소의 콘텐츠 형식을 찾을 수 없습니다.',
   failConfig: '구성을로드하지 못했습니다.',
   noConfPathError: '구성 경로가 정의되지 않았습니다.',
-  clearCacheError: '구성 캐시를 지우지 못했습니다.',
   endpointsError: '엔드 포인트로드 실패.',
   jobsError: '작업을로드하지 못했습니다.',
   cancelDeploymentError: '배포를 취소하지 못했습니다.',

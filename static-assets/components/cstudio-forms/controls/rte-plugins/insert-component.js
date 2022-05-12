@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -101,7 +101,6 @@ CStudioForms.Controls.RTE.InsertComponent =
           if (rteWidgets.length > 0) {
             var c = cm.createMenuButton('insertComponent', {
               title: 'Insert Component',
-              //image : 'img/example.gif',
               style: 'mce_insertComponent'
               //	                    icons : false
             });
@@ -248,7 +247,7 @@ CStudioForms.Controls.RTE.InsertComponent =
 
                 onClickBrowse.widget = widget;
 
-                //TODO: add with string utils
+                // TODO: add with string utils
 
                 m.add({ title: 'Create - ' + widget.name, onclick: onclickFn });
                 m.add({ title: 'Browse - ' + widget.name, onclick: onClickBrowse });

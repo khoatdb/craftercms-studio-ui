@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -53,7 +53,10 @@ CStudioAuthoring.ContextualNav = CStudioAuthoring.ContextualNav || {
           function () {
             document.domain = CStudioAuthoringContext.cookieDomain;
             CStudioAuthoring.Events.contextNavReady.fire();
-            me.getNavBarContent();
+            CrafterCMSNext.render('#appsIconLauncher', 'LauncherOpenerButton', {
+              sitesRailPosition: 'left',
+              icon: 'apps'
+            });
             me.addResizeEventToNavbar();
           },
           this
@@ -75,58 +78,40 @@ CStudioAuthoring.ContextualNav = CStudioAuthoring.ContextualNav || {
     bar.id = 'controls-overlay';
     bar.innerHTML = navHtmlContent;
 
-    CStudioAuthoring.Service.retrieveContextNavConfiguration('default', {
-      success: function (config) {
-        var me = this;
-        var $ =
-          jQuery ||
-          function (fn) {
-            fn();
-          };
-        $(function () {
-          document.body.appendChild(bar);
+    CrafterCMSNext.system.getStore().subscribe(() => {
+      CStudioAuthoring.Service.retrieveContextNavConfiguration('default', {
+        success: function (config) {
+          var me = this;
+          var $ =
+            jQuery ||
+            function (fn) {
+              fn();
+            };
+          $(function () {
+            document.body.appendChild(bar);
 
-          CStudioAuthoring.Service.getUserPermissions(CStudioAuthoringContext.site, '/', {
-            success: function (data) {
-              var globalAdmin = false;
-              for (var i = 0; i < data.permissions.length; i++) {
-                if (data.permissions[i] === 'create-site') {
-                  globalAdmin = true;
+            CStudioAuthoring.Service.getUserPermissions(CStudioAuthoringContext.site, '/', {
+              success: function (data) {
+                var globalAdmin = false;
+                for (var i = 0; i < data.permissions.length; i++) {
+                  if (data.permissions[i] === 'create-site') {
+                    globalAdmin = true;
+                  }
+                }
+                if (globalAdmin) {
+                  $('#studioBar .navbar-right .users-link').removeClass('hidden');
                 }
               }
-              if (globalAdmin) {
-                $('#studioBar .navbar-right .users-link').removeClass('hidden');
-              }
-            }
+            });
+
+            me.context.buildModules(config, bar);
           });
-
-          me.context.buildModules(config, bar);
-
-          CStudioAuthoring.Operations.createNavBarDropDown('help');
-          CStudioAuthoring.Operations.createNavBarDropDown('quick-create');
-        });
-      },
-      failure: function () {},
-      context: this
+        },
+        failure: function () {},
+        context: this
+      });
     });
   },
-
-  getNavBarContent: function () {
-    var callback = {
-      success: function (results) {
-        document.getElementById('nav-user-name').textContent = results.firstName + ' ' + results.lastName;
-        document.getElementById('nav-user-email').textContent = results.email;
-        $('#account-dropdown .username').replaceWith(
-          `<span class="username trim inline-block">${results.username}</span>`
-        );
-      },
-      failure: function (response) {}
-    };
-
-    CStudioAuthoring.Service.getUserInfo(callback);
-    $('#account-dropdown').prepend(`<span class="username trim inline-block">${CStudioAuthoringContext.user}</span>`);
-  },
-
   /**
    * given a dropdown configuration, build the nav
    */
@@ -157,9 +142,9 @@ CStudioAuthoring.ContextualNav = CStudioAuthoring.ContextualNav || {
         CStudioAuthoring.Module.requireModule(
           module.plugin ? module.plugin.name : module.moduleName,
           module.plugin
-            ? `/api/2/plugin/file?siteId=${CStudioAuthoringContext.site}&type=${module.plugin.type}&name=${
-              module.plugin.name
-            }&filename=${module.plugin.file}${module.plugin.pluginId ? `&pluginId=${module.plugin.pluginId}` : ''}`
+            ? `/1/plugin/file?siteId=${CStudioAuthoringContext.site}&type=${module.plugin.type}&name=${
+                module.plugin.name
+              }&filename=${module.plugin.file}${module.plugin.pluginId ? `&pluginId=${module.plugin.pluginId}` : ''}`
             : `/static-assets/components/cstudio-contextual-nav/${module.moduleName}.js`,
           module,
           cb
@@ -247,8 +232,9 @@ CStudioAuthoring.ContextualNav = CStudioAuthoring.ContextualNav || {
   addResizeEventToNavbar: function () {
     new ResizeSensor($('.navbar-default'), function () {
       var studioBarHeight = $('#studioBar .navbar').height(),
-        // There will be only .studio-preview, .site-dashboard or #admin-console, not more than 1, so this selector won't fail
-        $content = $('.studio-preview, .site-dashboard, #admin-console'),
+        // There will be only .studio-preview, .site-dashboard or #admin-console,
+        // not more than 1, so this selector won't fail
+        $content = $('.studio-preview, .site-dashboard, #admin-console, .cstudio-search'),
         contentTop = $content.css('top').replace('px', '');
 
       // sync position of bar and preview/dashboard/site-config

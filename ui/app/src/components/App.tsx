@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Crafter Software Corporation. All Rights Reserved.
+ * Copyright (C) 2007-2022 Crafter Software Corporation. All Rights Reserved.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as published by
@@ -14,26 +14,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { lazy } from 'react';
-import CrafterCMSNextBridge from './CrafterCMSNextBridge';
+import React, { lazy, Suspense } from 'react';
+import CrafterCMSNextBridge from './CrafterCMSNextBridge/CrafterCMSNextBridge';
 import crafterIconUrl from '../assets/crafter-icon.svg';
-import { createStyles, makeStyles } from '@material-ui/core/styles';
-import { palette } from '../styles/theme';
+import createStyles from '@mui/styles/createStyles';
+import makeStyles from '@mui/styles/makeStyles';
+import palette from '../styles/palette';
+import AuthBoundary from './AuthBoundary';
 
 const DevServerRoot = process.env.REACT_APP_COMPONENT ? lazy(() => import(process.env.REACT_APP_COMPONENT)) : Intro;
 
 export default function App() {
-  return (
-    <CrafterCMSNextBridge>
+  return Boolean(process.env.REACT_APP_OMIT_BRIDGE) ? (
+    <Suspense fallback="">
       <DevServerRoot />
-    </CrafterCMSNextBridge>
+    </Suspense>
+  ) : (
+    <AuthBoundary>
+      <CrafterCMSNextBridge>
+        <DevServerRoot />
+      </CrafterCMSNextBridge>
+    </AuthBoundary>
   );
 }
 
 const useStyles = makeStyles((theme) =>
   createStyles({
     '@global': {
-      'body, html, #studioSPARoot': {
+      'body, html, #root': {
         display: 'flex',
         height: '100%',
         textAlign: 'center',
@@ -76,14 +84,12 @@ function Intro() {
   return (
     <section className={classes.container}>
       <img className={classes.logo} src={crafterIconUrl} alt="" />
-      <h1>Crafter CMS Codebase Next</h1>
+      <h1>CrafterCMS Codebase Next</h1>
       <p className={classes.hint}>
         Create a <em>.env.local</em> file and add the content below. Point the <em>REACT_APP_COMPONENT</em> variable to
         the component you'd like to see in your local dev server.
       </p>
       <code className={classes.code}>
-        HOST=authoring.sample.com
-        <br />
         INLINE_RUNTIME_CHUNK=false
         <br />
         PUBLIC_URL=/studio/static-assets/next/
