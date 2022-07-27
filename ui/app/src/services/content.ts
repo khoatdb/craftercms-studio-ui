@@ -15,11 +15,11 @@
  */
 
 import { errorSelectorApi1, get, getBinary, getGlobalHeaders, getText, post, postJSON } from '../utils/ajax';
-import { catchError, map, mapTo, pluck, switchMap, tap } from 'rxjs/operators';
+import { catchError, map, pluck, switchMap, tap } from 'rxjs/operators';
 import { forkJoin, Observable, of, zip } from 'rxjs';
 import { cdataWrap, createElement, createElements, fromString, getInnerHtml, serialize } from '../utils/xml';
 import { ContentType } from '../models/ContentType';
-import { createLookupTable, nnou, nou, reversePluckProps, toQueryString } from '../utils/object';
+import { createLookupTable, nnou, nou, toQueryString } from '../utils/object';
 import { LookupTable } from '../models/LookupTable';
 import $ from 'jquery/dist/jquery.slim';
 import { dataUriToBlob, isBlank, popPiece, removeLastPiece } from '../utils/string';
@@ -44,9 +44,10 @@ import { GetItemWithChildrenResponse } from '../models/GetItemWithChildrenRespon
 import { FetchItemsByPathOptions } from '../models/FetchItemsByPath';
 import { v4 as uuid } from 'uuid';
 import FetchItemsByPathArray from '../models/FetchItemsByPathArray';
+import { isMediaContent, isTextContent } from '../components/PathNavigator/utils';
 
 export function fetchComponentInstanceHTML(path: string): Observable<string> {
-  return getText(`/crafter-controller/component.html?path=${path}`).pipe(pluck('response'));
+  return getText(`/crafter-controller/component.html${toQueryString({ path })}`).pipe(pluck('response'));
 }
 
 interface GetContentOptions {
@@ -242,7 +243,7 @@ function performMutation(
   path: string,
   mutation: (doc: Element) => void,
   modelId: string = null
-): Observable<any> {
+): Observable<{ updatedDocument: XMLDocument }> {
   return fetchContentDOM(site, path).pipe(
     switchMap((doc) => {
       const documentModelId = doc.querySelector(':scope > objectId').innerHTML.trim();
@@ -264,7 +265,7 @@ function performMutation(
           fileName: getInnerHtml(doc.querySelector(':scope > file-name'))
         }),
         serialize(doc)
-      ).pipe(mapTo({ updatedDocument: doc }));
+      ).pipe(map(() => ({ updatedDocument: doc })));
     })
   );
 }
@@ -280,7 +281,8 @@ export function insertComponent(
   contentType: ContentType,
   instance: ContentInstance,
   path: string,
-  shared = false
+  shared = false,
+  serializeValue?: (instanceFieldId: string) => boolean
 ): Observable<any> {
   return performMutation(
     site,
@@ -295,6 +297,13 @@ export function insertComponent(
       delete instance.fileName;
       delete instance.internalName;
 
+      const serializedInstance = {};
+      for (let key in instance) {
+        if (key !== 'craftercms') {
+          serializedInstance[key] = serializeValue?.(key) ? cdataWrap(`${instance[key]}`) : instance[key];
+        }
+      }
+
       // Create the new component that will be either embedded into the parent's XML or
       // shared stored on it's own.
       const component = mergeContentDocumentProps('component', {
@@ -305,18 +314,18 @@ export function insertComponent(
         'internal-name': cdataWrap(instance.craftercms.label),
         'file-name': `${id}.xml`,
         objectId: id,
-        ...reversePluckProps(instance, 'craftercms')
+        ...serializedInstance
       });
 
       // Add the child elements into the `item` node
       createElements(newItem, {
         '@attributes': {
           // TODO: Hardcoded value. Fix.
-          datasource: 'TODO',
+          datasource: '',
           ...(shared ? {} : { inline: true })
         },
         key: shared ? path : id,
-        value: instance.craftercms.label,
+        value: cdataWrap(instance.craftercms.label),
         ...(shared
           ? {
               include: path,
@@ -355,11 +364,11 @@ export function insertInstance(
 
       createElements(newItem, {
         '@attributes': {
-          // TODO: Hardcoded value. Fix.
-          datasource: datasource ?? 'TODO'
+          // TODO: Review datasource persistence.
+          datasource: datasource ?? ''
         },
         key: path,
-        value: instance.craftercms.label,
+        value: cdataWrap(instance.craftercms.label),
         include: path,
         disableFlattening: 'false'
       });
@@ -376,7 +385,8 @@ export function insertItem(
   fieldId: string,
   index: string | number,
   instance: InstanceRecord,
-  path: string
+  path: string,
+  serializeValue?: (instanceFieldId: string) => boolean
 ): Observable<any> {
   return performMutation(
     site,
@@ -384,7 +394,13 @@ export function insertItem(
     (element) => {
       let node = extractNode(element, removeLastPiece(fieldId) || fieldId, index);
       const newItem = createElement('item');
-      createElements(newItem, instance);
+      const serializedInstance = {};
+      for (let key in instance) {
+        if (key !== 'craftercms') {
+          serializedInstance[key] = serializeValue?.(key) ? cdataWrap(`${instance[key]}`) : instance[key];
+        }
+      }
+      createElements(newItem, serializedInstance);
       node.appendChild(newItem);
     },
     modelId
@@ -413,7 +429,7 @@ export function duplicateItem(
       }
 
       const item: Element = extractNode(parentElement, fieldId, targetIndex).cloneNode(true) as Element;
-      const itemPath = item.querySelector(':scope > key').textContent;
+      const itemPath = item.querySelector(':scope > key').textContent.trim();
       const isEmbedded = Boolean(item.querySelector(':scope > component'));
       // removing last piece to get the parent of the item
       const field: Element = extractNode(parentElement, fieldId, removeLastPiece(`${targetIndex}`));
@@ -437,7 +453,7 @@ export function duplicateItem(
             fileName: getInnerHtml(doc.querySelector(':scope > file-name'))
           }),
           serialize(doc)
-        ).pipe(mapTo(returnValue));
+        ).pipe(map(() => returnValue));
       } else {
         return fetchContentDOM(site, itemPath).pipe(
           switchMap((componentDoc) => {
@@ -464,7 +480,12 @@ export function duplicateItem(
                 }),
                 serialize(componentDoc)
               )
-            ]).pipe(mapTo(returnValue));
+            ]).pipe(
+              map(() => {
+                returnValue.newItem.path += `/${returnValue.newItem.modelId}.xml`;
+                return returnValue;
+              })
+            );
           })
         );
       }
@@ -704,7 +725,7 @@ export function formatXML(site: string, path: string): Observable<boolean> {
         serialize(doc)
       )
     ),
-    mapTo(true)
+    map(() => true)
   );
 }
 
@@ -1027,20 +1048,21 @@ export function getBulkUploadUrl(site: string, path: string): string {
 }
 
 export function fetchQuickCreateList(site: string): Observable<QuickCreateItem[]> {
-  return get(`/studio/api/2/content/list_quick_create_content.json?siteId=${site}`).pipe(pluck('response', 'items'));
+  return get(`/studio/api/2/content/list_quick_create_content.json${toQueryString({ siteId: site })}`).pipe(
+    pluck('response', 'items')
+  );
 }
 
 export function fetchItemHistory(site: string, path: string): Observable<VersionsResponse> {
-  return get(
-    `/studio/api/1/services/api/1/content/get-item-versions.json?site=${site}&path=${encodeURIComponent(path)}`
-  ).pipe(pluck('response'), catchError(errorSelectorApi1));
+  return get(`/studio/api/1/services/api/1/content/get-item-versions.json${toQueryString({ site, path })}`).pipe(
+    pluck('response'),
+    catchError(errorSelectorApi1)
+  );
 }
 
 export function revertTo(site: string, path: string, versionNumber: string): Observable<Boolean> {
   return get(
-    `/studio/api/1/services/api/1/content/revert-content.json?site=${site}&path=${encodeURIComponent(
-      path
-    )}&version=${versionNumber}`
+    `/studio/api/1/services/api/1/content/revert-content.json${toQueryString({ site, path, version: versionNumber })}`
   ).pipe(
     pluck('response'),
     catchError((ajaxError) => {
@@ -1118,11 +1140,15 @@ export function fetchChildrenByPath(
 
 export function fetchChildrenByPaths(
   siteId: string,
-  paths: LookupTable<Partial<GetChildrenOptions>>,
+  fetchOptionsByPath: LookupTable<Partial<GetChildrenOptions>>,
   options?: Partial<GetChildrenOptions>
 ): Observable<LookupTable<GetChildrenResponse>> {
-  const requests = Object.keys(paths).map((path) =>
-    fetchChildrenByPath(siteId, path, { ...options, ...paths[path] }).pipe(
+  const paths = Object.keys(fetchOptionsByPath);
+  if (paths.length === 0) {
+    return of({});
+  }
+  const requests = paths.map((path) =>
+    fetchChildrenByPath(siteId, path, { ...options, ...fetchOptionsByPath[path] }).pipe(
       catchError((error: AjaxError) => {
         if (error.status === 404) {
           return of([]);
@@ -1135,7 +1161,7 @@ export function fetchChildrenByPaths(
   return forkJoin(requests).pipe(
     map((responses) => {
       const data = {};
-      Object.keys(paths).forEach((path, i) => (data[path] = responses[i]));
+      Object.keys(fetchOptionsByPath).forEach((path, i) => (data[path] = responses[i]));
       return data;
     })
   );
@@ -1261,16 +1287,16 @@ export function deleteItems(
     items,
     optionalDependencies,
     comment
-  }).pipe(mapTo(true));
+  }).pipe(map(() => true));
 }
 
 export function lock(siteId: string, path: string): Observable<boolean> {
-  return postJSON('/studio/api/2/content/item_lock_by_path', { siteId, path }).pipe(mapTo(true));
+  return postJSON('/studio/api/2/content/item_lock_by_path', { siteId, path }).pipe(map(() => true));
 }
 
 export function unlock(siteId: string, path: string): Observable<boolean> {
   return postJSON('/studio/api/2/content/item_unlock_by_path', { siteId, path }).pipe(
-    mapTo(true),
+    map(() => true),
     // Do not throw/report 409 (item is already unlocked) as an error.
     catchError((error) => {
       if (error.status === 409) {
@@ -1283,50 +1309,62 @@ export function unlock(siteId: string, path: string): Observable<boolean> {
 }
 
 export function fetchWorkflowAffectedItems(site: string, path: string): Observable<SandboxItem[]> {
-  return get(`/studio/api/2/workflow/affected_paths?siteId=${site}&path=${path}`).pipe(pluck('response', 'items'));
+  return get(
+    `/studio/api/2/workflow/affected_paths${toQueryString({
+      siteId: site,
+      path
+    })}`
+  ).pipe(pluck('response', 'items'));
 }
 
 export function createFolder(site: string, path: string, name: string): Observable<unknown> {
-  return post(
-    `/studio/api/1/services/api/1/content/create-folder.json?site=${site}&path=${encodeURIComponent(
-      path
-    )}&name=${encodeURIComponent(name)}`
-  ).pipe(pluck('response'), catchError(errorSelectorApi1));
+  return post(`/studio/api/1/services/api/1/content/create-folder.json${toQueryString({ site, path, name })}`).pipe(
+    pluck('response'),
+    catchError(errorSelectorApi1)
+  );
 }
 
 export function createFile(site: string, path: string, fileName: string): Observable<unknown> {
   return post(
-    `/studio/api/1/services/api/1/content/write-content.json?site=${site}&phase=onSave&path=${encodeURIComponent(
-      path
-    )}&fileName=${fileName}&unlock=true`
+    `/studio/api/1/services/api/1/content/write-content.json${toQueryString({
+      site,
+      path,
+      phase: 'onSave',
+      fileName,
+      unlock: true
+    })}`
   ).pipe(pluck('response'), catchError(errorSelectorApi1));
 }
 
 export function renameFolder(site: string, path: string, name: string) {
-  return post(
-    `/studio/api/1/services/api/1/content/rename-folder.json?site=${site}&path=${encodeURIComponent(
-      path
-    )}&name=${encodeURIComponent(name)}`
-  ).pipe(pluck('response'), catchError(errorSelectorApi1));
+  return post(`/studio/api/1/services/api/1/content/rename-folder.json${toQueryString({ site, path, name })}`).pipe(
+    pluck('response'),
+    catchError(errorSelectorApi1)
+  );
 }
 
 export function changeContentType(site: string, path: string, contentType: string): Observable<boolean> {
   return post(
-    `/studio/api/1/services/api/1/content/change-content-type.json?site=${site}&path=${path}&contentType=${contentType}`
+    `/studio/api/1/services/api/1/content/change-content-type.json${toQueryString({
+      site,
+      path,
+      contentType: contentType
+    })}`
   ).pipe(pluck('response'), catchError(errorSelectorApi1));
 }
 
 export function checkPathExistence(site: string, path: string): Observable<boolean> {
-  return get(`/studio/api/1/services/api/1/content/content-exists.json?site_id=${site}&path=${path}`).pipe(
+  return get(`/studio/api/1/services/api/1/content/content-exists.json${toQueryString({ site_id: site, path })}`).pipe(
     pluck('response', 'content'),
     catchError(errorSelectorApi1)
   );
 }
 
 export function fetchLegacyItem(site: string, path: string): Observable<LegacyItem> {
-  return get(
-    `/studio/api/1/services/api/1/content/get-item.json?site_id=${site}&path=${encodeURIComponent(path)}`
-  ).pipe(pluck('response', 'item'), catchError(errorSelectorApi1));
+  return get(`/studio/api/1/services/api/1/content/get-item.json${toQueryString({ site_id: site, path })}`).pipe(
+    pluck('response', 'item'),
+    catchError(errorSelectorApi1)
+  );
 }
 
 export function fetchLegacyItemsTree(
@@ -1335,30 +1373,23 @@ export function fetchLegacyItemsTree(
   options?: Partial<{ depth: number; order: string }>
 ): Observable<LegacyItem> {
   return get(
-    `/studio/api/1/services/api/1/content/get-items-tree.json${toQueryString({
-      site_id: site,
-      path,
-      ...options
-    })}`
+    `/studio/api/1/services/api/1/content/get-items-tree.json${toQueryString({ site_id: site, path, ...options })}`
   ).pipe(pluck('response', 'item'), catchError(errorSelectorApi1));
 }
 
 export function fetchContentByCommitId(site: string, path: string, commitId: string): Observable<string | Blob> {
   return getBinary(
-    `/studio/api/2/content/get_content_by_commit_id?siteId=${site}&path=${path}&commitId=${commitId}`,
+    `/studio/api/2/content/get_content_by_commit_id${toQueryString({ siteId: site, path, commitId })}`,
     void 0,
     'blob'
   ).pipe(
     switchMap((ajax) => {
       const blob = ajax.response;
       const type = ajax.xhr.getResponseHeader('content-type');
-      if (
-        /^text\//.test(type) ||
-        /^application\/(x-httpd-php|rtf|xhtml\+xml|xml|json|ld\+json|javascript|x-groovy|x-sh)$/.test(type)
-      ) {
-        return blob.text() as Promise<string>;
-      } else if (/^image\//.test(type)) {
+      if (isMediaContent(type)) {
         return of(URL.createObjectURL(blob));
+      } else if (isTextContent(type)) {
+        return blob.text() as Promise<string>;
       } else {
         return of(blob);
       }

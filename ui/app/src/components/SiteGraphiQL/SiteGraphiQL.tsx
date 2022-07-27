@@ -14,27 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
-import Graphi from '../GraphiQL';
-import { useActiveSiteId } from '../../hooks/useActiveSiteId';
-import { useEnv } from '../../hooks/useEnv';
+import GraphiQL from '../GraphiQL/GraphiQL';
 
-interface SiteGraphiQLProps {
-  embedded?: boolean;
-  showAppsButton?: boolean;
-}
+/**
+ * @deprecated Use GraphiQL component instead
+ **/
+const SiteGraphiQL = GraphiQL;
 
-export function SiteGraphiQL(props: SiteGraphiQLProps) {
-  const site = useActiveSiteId();
-  const { guestBase } = useEnv();
-  return (
-    <Graphi
-      storageKey={site}
-      url={`${guestBase}/api/1/site/graphql`}
-      embedded={props.embedded}
-      showAppsButton={props.showAppsButton}
-    />
-  );
-}
+export { SiteGraphiQL };
 
 export default SiteGraphiQL;

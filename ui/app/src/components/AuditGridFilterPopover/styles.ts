@@ -14,36 +14,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import createStyles from '@mui/styles/createStyles';
-import makeStyles from '@mui/styles/makeStyles';
+import { makeStyles } from 'tss-react/mui';
+import { textFieldClasses } from '@mui/material/TextField';
 
-const useStyles = makeStyles((theme) =>
-  createStyles({
-    popover: {
-      padding: '20px',
-      minWidth: '300px',
-      overflow: 'initial'
-    },
-    popoverForm: {},
-    popoverCloseIcon: {
-      background: theme.palette.divider,
-      color: theme.palette.text.secondary,
-      position: 'absolute',
-      top: '-20px',
-      right: '-20px',
-      cursor: 'pointer',
-      '&:hover': {
-        opacity: '0.9'
-      }
-    },
-    fromDatePicker: {
-      marginRight: '20px'
-    },
-    toDatePicker: {},
-    clearButton: {
-      marginLeft: '20px'
+const useStyles = makeStyles()((theme) => ({
+  popover: {
+    padding: theme.spacing(1),
+    minWidth: '300px',
+    overflow: 'initial'
+  },
+  timestampFiltersContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+    [`& .${textFieldClasses.root}:first-child`]: {
+      marginRight: theme.spacing(1)
     }
-  })
-);
+  },
+  clearButton: {
+    marginLeft: '20px'
+  }
+}));
 
 export default useStyles;

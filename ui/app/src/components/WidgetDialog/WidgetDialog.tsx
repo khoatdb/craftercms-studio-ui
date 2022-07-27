@@ -36,7 +36,7 @@ export function useWidgetDialogContext(): WidgetDialogContextType {
 
 export function WidgetDialog(props: WidgetDialogProps) {
   const { title, widget, onSubmittingAndOrPendingChange, isSubmitting, extraProps, ...rest } = props;
-  const classes = useStyles();
+  const { classes } = useStyles();
   const fnRefs = useRef({ onClose: rest.onClose });
   const context = useMemo<WidgetDialogContextType>(
     () => ({
@@ -50,12 +50,12 @@ export function WidgetDialog(props: WidgetDialogProps) {
     <EnhancedDialog
       title={title}
       maxWidth="xl"
-      classes={{ paper: classes.dialog }}
+      classes={{ paper: classes.widgetDialogPaper }}
       isSubmitting={isSubmitting}
       {...rest}
     >
       <WidgetDialogContext.Provider value={context}>
-        <section className={classes.toolPanelBody}>
+        <section className={classes.widgetDialogBody}>
           <Suspencified>
             <Widget
               {...widget}

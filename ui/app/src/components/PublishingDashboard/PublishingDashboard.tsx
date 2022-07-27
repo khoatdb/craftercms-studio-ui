@@ -16,65 +16,61 @@
 
 import * as React from 'react';
 import PublishingStatusWidget from '../PublishingStatusWidget';
-import createStyles from '@mui/styles/createStyles';
-import makeStyles from '@mui/styles/makeStyles';
 import Grid from '@mui/material/Grid';
 import { PublishingQueueWidget } from '../PublishingQueue';
 import PublishOnDemandWidget from '../PublishOnDemandWidget';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import { FormattedMessage } from 'react-intl';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
-import clsx from 'clsx';
-
-const useStyles = makeStyles((theme) =>
-  createStyles({
-    root: {},
-    grid: {
-      padding: '20px'
-    },
-    gridNoEmbedded: {
-      height: 'calc(100vh - 65px)', // full viewport height - toolbar height
-      overflowY: 'auto'
-    },
-    warningText: {
-      display: 'block'
-    },
-    rowSpacing: {
-      marginBottom: theme.spacing(3)
-    }
-  })
-);
+import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
+import Box from '@mui/material/Box';
+import { useTheme } from '@mui/material/styles';
 
 interface PublishingDashboardProps {
   embedded?: boolean;
   showAppsButton?: boolean;
+  onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
 }
 
 export function PublishingDashboard(props: PublishingDashboardProps) {
-  const { embedded, showAppsButton } = props;
-  const classes = useStyles();
+  const { embedded, showAppsButton, onSubmittingAndOrPendingChange } = props;
   const site = useActiveSiteId();
-
+  const {
+    spacing,
+    palette: { mode }
+  } = useTheme();
   return (
-    <section className={classes.root}>
+    <Box component="section" sx={{ bgcolor: `grey.${mode === 'light' ? 100 : 800}`, height: '100%' }}>
       {!embedded && (
         <GlobalAppToolbar
           title={<FormattedMessage id="publishingDashboard.title" defaultMessage="Publishing Dashboard" />}
           showAppsButton={showAppsButton}
         />
       )}
-      <Grid container className={clsx(classes.grid, !embedded && classes.gridNoEmbedded)}>
-        <Grid className={classes.rowSpacing} item xs={12}>
+      <Grid
+        gap={2}
+        container
+        sx={{
+          padding: spacing(2),
+          ...(embedded
+            ? {}
+            : {
+                height: 'calc(100% - 65px)', // full viewport height - toolbar height
+                overflowY: 'auto'
+              })
+        }}
+      >
+        <Grid item xs={12}>
           <PublishingStatusWidget siteId={site} />
         </Grid>
-        <Grid className={classes.rowSpacing} item xs={12}>
-          <PublishOnDemandWidget siteId={site} />
+        <Grid item xs={12}>
+          <PublishOnDemandWidget siteId={site} onSubmittingAndOrPendingChange={onSubmittingAndOrPendingChange} />
         </Grid>
         <Grid item xs={12}>
           <PublishingQueueWidget siteId={site} />
         </Grid>
       </Grid>
-    </section>
+    </Box>
   );
 }
 

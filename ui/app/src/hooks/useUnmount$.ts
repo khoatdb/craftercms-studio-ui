@@ -14,30 +14,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import makeStyles from '@mui/styles/makeStyles';
-import createStyles from '@mui/styles/createStyles';
+import useObservable from './useObservable';
+import { Observable } from 'rxjs';
+import { useEffect } from 'react';
 
-export const useStyles = makeStyles(() =>
-  createStyles({
-    iframe: {
-      height: '0',
-      border: 0,
-      '&.complete': {
-        height: '100%',
-        flexGrow: 1
-      }
-    },
-    dialog: {
-      minHeight: '90vh'
-    },
-    loadingRoot: {
-      flexGrow: 1,
-      justifyContent: 'center'
-    },
-    edited: {
-      width: '12px',
-      height: '12px',
-      marginLeft: '5px'
-    }
-  })
-);
+export function useUnmount$(): Observable<void> {
+  const { subject, observable } = useObservable<void>();
+  useEffect(() => {
+    return () => {
+      subject.next();
+      subject.complete();
+    };
+  }, [subject]);
+  return observable;
+}
+
+export default useUnmount$;

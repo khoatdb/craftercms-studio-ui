@@ -50,10 +50,23 @@ import { useDebouncedInput } from '../../hooks/useDebouncedInput';
 import { useSpreadState } from '../../hooks/useSpreadState';
 import ItemActionsSnackbar from '../ItemActionsSnackbar';
 import SecondaryButton from '../SecondaryButton';
+import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
+import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { useDispatch } from 'react-redux';
+import { showSystemNotification } from '../../state/actions/system';
+import { defineMessages } from 'react-intl';
+
+const workflowStateManagementMessages = defineMessages({
+  statesUpdatedMessage: {
+    id: 'workflowStateManagementMessages.statesUpdatedMessage',
+    defaultMessage: 'State for {count} {count, plural, one {item} other {items}} updated successfully'
+  }
+});
 
 export interface WorkflowStateManagementProps {
   embedded?: boolean;
   showAppsButton?: boolean;
+  onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
 }
 
 const drawerWidth = 260;
@@ -71,7 +84,7 @@ const states: ItemStates[] = [
 ];
 
 export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
-  const { embedded, showAppsButton = !embedded } = props;
+  const { embedded, showAppsButton = !embedded, onSubmittingAndOrPendingChange } = props;
   const [fetching, setFetching] = useState(false);
   const [items, setItems] = useState<PagedArray<SandboxItem>>(null);
   const [error, setError] = useState<ApiResponse>();
@@ -87,8 +100,10 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
   const [selectedItems, setSelectedItems] = useState<LookupTable<SandboxItem>>({});
   const [selectedItem, setSelectedItem] = useState<SandboxItem>(null);
   const [isSelectedItemsOnAllPages, setIsSelectedItemsOnAllPages] = useState(false);
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { formatMessage } = useIntl();
+  const fnRefs = useUpdateRefs({ onSubmittingAndOrPendingChange });
+  const dispatch = useDispatch();
 
   const hasSelectedItems = useMemo(() => Object.values(selectedItems).some(Boolean), [selectedItems]);
   const selectedItemsLength = useMemo(() => Object.values(selectedItems).filter(Boolean).length, [selectedItems]);
@@ -122,6 +137,12 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
   useEffect(() => {
     fetchStates();
   }, [fetchStates]);
+
+  useEffect(() => {
+    fnRefs.current.onSubmittingAndOrPendingChange?.({
+      hasPendingChanges: hasSelectedItems
+    });
+  }, [hasSelectedItems, fnRefs]);
 
   const resource = useLogicResource<
     PagedArray<SandboxItem>,
@@ -235,15 +256,26 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
     }
   };
 
+  const showStatesUpdatedNotification = () => {
+    const count = selectedItem ? 1 : isSelectedItemsOnAllPages ? items?.total : selectedItemsLength;
+    dispatch(
+      showSystemNotification({
+        message: formatMessage(workflowStateManagementMessages.statesUpdatedMessage, { count })
+      })
+    );
+  };
+
   const onSetItemStateDialogConfirm = (update: StatesToUpdate) => {
     if (selectedItem) {
       setItemStates(siteId, [selectedItem.path], update).subscribe(() => {
         fetchStates();
+        showStatesUpdatedNotification();
       });
     } else if (isSelectedItemsOnAllPages) {
       let stateBitmap = getStateBitmap(filtersLookup as ItemStateMap);
       setItemStatesByQuery(siteId, stateBitmap ? stateBitmap : null, update, debouncePathRegex).subscribe(() => {
         fetchStates();
+        showStatesUpdatedNotification();
       });
     } else {
       setItemStates(
@@ -254,6 +286,7 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
         update
       ).subscribe(() => {
         fetchStates();
+        showStatesUpdatedNotification();
       });
     }
 
@@ -335,7 +368,6 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
         >
           <ItemStatesGridUI
             resource={resource}
-            rowsPerPageOptions={[5, 10, 15]}
             selectedItems={selectedItems}
             allItemsSelected={isSelectedItemsOnAllPages}
             hasThisPageItemsChecked={hasThisPageItemsChecked}

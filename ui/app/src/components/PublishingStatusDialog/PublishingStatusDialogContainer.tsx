@@ -14,24 +14,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import createStyles from '@mui/styles/createStyles';
-
-import makeStyles from '@mui/styles/makeStyles';
+import { makeStyles } from 'tss-react/mui';
 import { useIntl } from 'react-intl';
 import DialogHeader from '../DialogHeader';
 import DialogBody from '../DialogBody/DialogBody';
 import * as React from 'react';
 import PublishingStatusDisplay, { publishingStatusMessages } from '../PublishingStatusDisplay';
 import { PublishingStatusDialogContainerProps } from './utils';
+import { useState } from 'react';
+import Menu from '@mui/material/Menu';
+import Typography from '@mui/material/Typography';
+import MenuItem from '@mui/material/MenuItem';
 
-const useStyles = makeStyles(() =>
-  createStyles({
-    body: {
-      minHeight: 145,
-      placeContent: 'center'
-    }
-  })
-);
+const useStyles = makeStyles()(() => ({
+  body: {
+    minHeight: 145,
+    placeContent: 'center'
+  }
+}));
 
 export function PublishingStatusDialogContainer(props: PublishingStatusDialogContainerProps) {
   const {
@@ -50,8 +50,19 @@ export function PublishingStatusDialogContainer(props: PublishingStatusDialogCon
     onStartStop,
     isFetching
   } = props;
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { formatMessage } = useIntl();
+  const [unlockAnchorEl, setUnlockAnchorEl] = useState(null);
+
+  const handleClose = () => {
+    setUnlockAnchorEl(null);
+  };
+
+  const handleConfirm = () => {
+    handleClose();
+    onUnlock();
+  };
+
   return (
     <>
       <DialogHeader
@@ -60,7 +71,9 @@ export function PublishingStatusDialogContainer(props: PublishingStatusDialogCon
         rightActions={[
           onUnlock && {
             icon: { id: '@mui/icons-material/LockOpenRounded' },
-            onClick: onUnlock,
+            onClick: (e) => {
+              setUnlockAnchorEl(e.currentTarget);
+            },
             tooltip: formatMessage(publishingStatusMessages.unlock)
           },
           onStartStop && {
@@ -91,6 +104,30 @@ export function PublishingStatusDialogContainer(props: PublishingStatusDialogCon
           submissionId={submissionId}
         />
       </DialogBody>
+      <Menu
+        anchorEl={unlockAnchorEl}
+        open={Boolean(unlockAnchorEl)}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right'
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right'
+        }}
+      >
+        <Typography
+          variant="body1"
+          sx={{
+            padding: '10px 16px 10px 16px'
+          }}
+        >
+          {formatMessage(publishingStatusMessages.confirmUnlockPublisher)}
+        </Typography>
+        <MenuItem onClick={handleClose}>{formatMessage(publishingStatusMessages.no)}</MenuItem>
+        <MenuItem onClick={handleConfirm}>{formatMessage(publishingStatusMessages.yes)}</MenuItem>
+      </Menu>
     </>
   );
 }

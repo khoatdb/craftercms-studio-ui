@@ -22,23 +22,18 @@ import {
   pathSelectionDialogClosed,
   showPathSelectionDialog
 } from '../../state/actions/dialogs';
-import { dispatchDOMEvent } from '../../state/actions/misc';
-import clsx from 'clsx';
+import { batchActions, dispatchDOMEvent } from '../../state/actions/misc';
 import InputBase from '@mui/material/InputBase';
-import SearchIcon from '@mui/icons-material/SearchRounded';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
-import makeStyles from '@mui/styles/makeStyles';
+import { makeStyles } from 'tss-react/mui';
 import Paper from '@mui/material/Paper';
-import palette from '../../styles/palette';
+import SiteExplorer from '../../icons/SiteExplorer';
+import { createCustomDocumentEventListener } from '../../utils/dom';
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles()((theme) => ({
   pathSelectorInputRoot: {
     flexGrow: 1
-  },
-  pathSelectorSearchIcon: {
-    marginRight: '3px 5px 3px 3px',
-    color: palette.gray.medium4
   },
   pathSelectorWrapper: {
     flex: 1,
@@ -46,51 +41,50 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     cursor: 'pointer',
     padding: '0 0 0 10px',
-    backgroundColor: theme.palette.background.default,
-    '&:hover': {
-      backgroundColor: theme.palette.action.hover
+    '&:hover:not(.disabled)': {
+      borderColor: theme.palette.action.active
     },
     '&.disabled': {
       opacity: 0.7,
-      cursor: 'default',
-      backgroundColor: theme.palette.action.disabled
-    },
-    '&:not(.disabled):hover': {}
+      cursor: 'default'
+    }
   },
   invisibleInput: {
     border: 0,
-    padding: 0,
+    padding: '0 0 0 5px',
     height: '100%',
     cursor: 'pointer',
     background: 'none',
     '&:focus': {
       borderColor: 'none',
       boxShadow: 'inherit'
+    },
+    '&:disabled': {
+      cursor: 'default'
     }
   }
 }));
 
 const messages = defineMessages({
   searchIn: {
-    id: 'searchFilter.searchIn',
-    defaultMessage: 'Search in:'
+    id: 'pathSelector.inputPlaceholderText',
+    defaultMessage: 'Select path'
   }
 });
 
 export interface PathSelectorProps {
   value: string;
-  disabled: boolean;
+  disabled?: boolean;
+  stripXmlIndex?: boolean;
   onPathSelected(path: string): void;
 }
 
 export function PathSelector(props: PathSelectorProps) {
-  const { onPathSelected, value, disabled } = props;
+  const { onPathSelected, value, disabled = false, stripXmlIndex = true } = props;
   const { formatMessage } = useIntl();
   const dispatch = useDispatch();
-  const classes = useStyles();
+  const { classes, cx } = useStyles();
   const [path, setPath] = useState<string>(value ?? '');
-  const idSuccess = 'pathSelectionSuccess';
-  const idCancel = 'pathSelectionCancel';
 
   useEffect(() => {
     setPath(value ?? '');
@@ -100,50 +94,36 @@ export function PathSelector(props: PathSelectorProps) {
     e.stopPropagation();
     e.preventDefault();
     setPath('');
-    onPathSelected(undefined);
+    onPathSelected('');
   };
 
   const onOpenPathSelectionDialog = () => {
-    const rootPath = path.split('/')[1] ? `/${path.split('/')[1]}` : '/site';
+    const callbackId = 'pathSelectionDialogCallback';
+    const callbackAccept = 'accept';
     dispatch(
       showPathSelectionDialog({
-        rootPath,
-        initialPath: path || rootPath,
+        rootPath: `/${path.split('/')[1] ?? ''}`,
+        initialPath: path,
         showCreateFolderOption: false,
-        onClosed: {
-          type: 'BATCH_ACTIONS',
-          payload: [dispatchDOMEvent({ id: idCancel }), pathSelectionDialogClosed()]
-        },
-        onOk: {
-          type: 'BATCH_ACTIONS',
-          payload: [dispatchDOMEvent({ id: idSuccess }), closePathSelectionDialog()]
-        }
+        stripXmlIndex,
+        onClosed: batchActions([dispatchDOMEvent({ id: callbackId, action: 'close' }), pathSelectionDialogClosed()]),
+        onOk: batchActions([dispatchDOMEvent({ id: callbackId, action: callbackAccept }), closePathSelectionDialog()])
       })
     );
-
-    const successCallback = (e) => {
-      const path = e.detail.path;
-      setPath(path);
-      onPathSelected(path);
-
-      document.removeEventListener(idSuccess, successCallback, false);
-      document.removeEventListener(idCancel, cancelCallback, false);
-    };
-
-    const cancelCallback = () => {
-      document.removeEventListener(idCancel, cancelCallback, false);
-      document.removeEventListener(idSuccess, successCallback, false);
-    };
-
-    document.addEventListener(idSuccess, successCallback, false);
-    document.addEventListener(idCancel, cancelCallback, false);
+    createCustomDocumentEventListener(callbackId, (detail) => {
+      if (detail.action === callbackAccept) {
+        const path = detail.path;
+        setPath(path);
+        onPathSelected(path);
+      }
+    });
   };
 
   return (
     <Paper
       variant="outlined"
       onClick={disabled ? null : onOpenPathSelectionDialog}
-      className={clsx(classes.pathSelectorWrapper, disabled && 'disabled')}
+      className={cx(classes.pathSelectorWrapper, disabled && 'disabled')}
     >
       <InputBase
         classes={{ root: classes.pathSelectorInputRoot, input: classes.invisibleInput }}
@@ -151,7 +131,7 @@ export function PathSelector(props: PathSelectorProps) {
         readOnly
         value={path}
         placeholder={formatMessage(messages.searchIn)}
-        startAdornment={<SearchIcon className={classes.pathSelectorSearchIcon} />}
+        startAdornment={disabled ? null : <SiteExplorer sx={{ color: 'text.secondary' }} />}
         endAdornment={
           !disabled && value ? (
             <IconButton onClick={onClean} size="small">

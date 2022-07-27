@@ -145,6 +145,9 @@ export interface GlobalState {
     packageBuild: string;
     packageVersion: string;
     packageBuildDate: string;
+    useBaseDomain: boolean;
+    activeEnvironment: string;
+    socketConnected: boolean;
   };
   preview: {
     editMode: boolean;
@@ -260,26 +263,8 @@ export interface GlobalState {
     references: LookupTable;
     xml: string;
   };
-  pathNavigator: {
-    [id: string]: PathNavigatorStateProps;
-  };
-  pathNavigatorTree: {
-    [id: string]: PathNavigatorTreeStateProps;
-  };
-  launcher: {
-    widgets: WidgetDescriptor[];
-    /**
-     * Whether to render the global nav before or after
-     * the additional widgets coming from configuration
-     **/
-    globalNavigationPosition?: 'before' | 'after';
-    siteCardMenuLinks: Array<{
-      title: TranslationOrText;
-      systemLinkId: SystemLinkId;
-      icon?: SystemIconDescriptor;
-      permittedRoles?: string[];
-    }>;
-  };
+  pathNavigator: LookupTable<PathNavigatorStateProps>;
+  pathNavigatorTree: LookupTable<PathNavigatorTreeStateProps>;
   dashboard: {
     widgets: WidgetDescriptor[];
   };

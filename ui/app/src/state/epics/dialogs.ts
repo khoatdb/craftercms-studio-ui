@@ -14,12 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Epic, ofType } from 'redux-observable';
+import { ofType } from 'redux-observable';
 import { filter, ignoreElements, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
 import { NEVER, of } from 'rxjs';
 import GlobalState from '../../models/GlobalState';
 import { camelize, dasherize } from '../../utils/string';
 import {
+  closeCodeEditorDialog,
   closeCompareVersionsDialog,
   closeConfirmDialog,
   closeDeleteDialog,
@@ -57,7 +58,7 @@ import { formEngineMessages } from '../../env/i18n-legacy';
 import infoGraphic from '../../assets/information.svg';
 import { nnou, nou } from '../../utils/object';
 import { getHostToGuestBus } from '../../utils/subjects';
-import { fetchDetailedItems } from '../actions/content';
+import { fetchDetailedItems, unlockItem } from '../actions/content';
 
 function getDialogNameFromType(type: string): string {
   let name = getDialogActionNameFromType(type);
@@ -227,8 +228,23 @@ const dialogEpics: CrafterCMSEpic[] = [
       ofType(showPublishDialog.type),
       filter(({ payload }) => Boolean(payload.items?.length)),
       map(({ payload }) => fetchDetailedItems({ paths: payload.items.map((item) => item.path) }))
+    ),
+  // endregion
+  // region closeCodeEditorDialog
+  // Moved unlock from dialog to epics since the container has no visibility of the backdrop click close and
+  // was hence unable to unlock the item in all cases.
+  (action$, state$) =>
+    action$.pipe(
+      ofType(closeCodeEditorDialog.type),
+      withLatestFrom(state$),
+      filter(([, state]) => {
+        const username = state.user.username;
+        const item = state.content.itemsByPath[state.dialogs.codeEditor.path];
+        return item.stateMap.locked && item.lockOwner === username;
+      }),
+      map(([, state]) => unlockItem({ path: state.dialogs.codeEditor.path }))
     )
   // endregion
-] as Epic[];
+] as CrafterCMSEpic[];
 
 export default dialogEpics;

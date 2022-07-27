@@ -20,8 +20,7 @@ import Paper from '@mui/material/Paper';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import DialogHeader from '../DialogHeader/DialogHeader';
 import DialogFooter from '../DialogFooter/DialogFooter';
-import createStyles from '@mui/styles/createStyles';
-import makeStyles from '@mui/styles/makeStyles';
+import { makeStyles } from 'tss-react/mui';
 import palette from '../../styles/palette';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Radio from '@mui/material/Radio';
@@ -44,39 +43,39 @@ import { isBlank } from '../../utils/string';
 import PrimaryButton from '../PrimaryButton';
 import SecondaryButton from '../SecondaryButton';
 import { createCustomDocumentEventListener } from '../../utils/dom';
+import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
+import useUpdateRefs from '../../hooks/useUpdateRefs';
 
-const useStyles = makeStyles((theme) =>
-  createStyles({
-    content: {
-      backgroundColor: theme.palette.background.default,
-      padding: '16px'
-    },
-    modeSelector: {
-      padding: '10px 25px',
-      border: `1px solid ${palette.gray.light7}`,
-      borderRadius: '10px'
-    },
-    byPathModeSelector: {
-      marginBottom: '10px'
-    },
-    formContainer: {
-      marginTop: '20px'
-    },
-    noteContainer: {
-      textAlign: 'center',
-      marginTop: '20px'
-    },
-    note: {
-      color: theme.palette.action.active,
-      display: 'inline-block',
-      maxWidth: '700px'
-    },
-    noteLink: {
-      color: 'inherit',
-      textDecoration: 'underline'
-    }
-  })
-);
+const useStyles = makeStyles()((theme) => ({
+  content: {
+    backgroundColor: theme.palette.background.default,
+    padding: '16px'
+  },
+  modeSelector: {
+    padding: '10px 25px',
+    border: `1px solid ${palette.gray.light7}`,
+    borderRadius: '10px'
+  },
+  byPathModeSelector: {
+    marginBottom: '10px'
+  },
+  formContainer: {
+    marginTop: '20px'
+  },
+  noteContainer: {
+    textAlign: 'center',
+    marginTop: '20px'
+  },
+  note: {
+    color: theme.palette.action.active,
+    display: 'inline-block',
+    maxWidth: '700px'
+  },
+  noteLink: {
+    color: 'inherit',
+    textDecoration: 'underline'
+  }
+}));
 
 const messages = defineMessages({
   publishStudioWarning: {
@@ -110,26 +109,28 @@ const messages = defineMessages({
 
 const initialPublishStudioFormData = {
   path: '',
-  environment: '',
+  publishingTarget: '',
   comment: ''
 };
 const initialPublishGitFormData = {
   commitIds: '',
-  environment: '',
+  publishingTarget: '',
   comment: ''
 };
 
 interface PublishOnDemandWidgetProps {
   siteId: string;
+  onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
 }
 
 export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
-  const { siteId } = props;
-  const classes = useStyles();
+  const { siteId, onSubmittingAndOrPendingChange } = props;
+  const { classes } = useStyles();
   const dispatch = useDispatch();
   const { formatMessage } = useIntl();
   const [mode, setMode] = useState<PublishOnDemandMode>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initialPublishingTarget, setInitialPublishingTarget] = useState(null);
   const [publishingTargets, setPublishingTargets] = useState(null);
   const [publishingTargetsError, setPublishingTargetsError] = useState(null);
   const [publishGitFormData, setPublishGitFormData] = useSpreadState<PublishFormData>(initialPublishGitFormData);
@@ -140,21 +141,38 @@ export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
   const { bulkPublishCommentRequired, publishByCommitCommentRequired } = useSelection(
     (state) => state.uiConfig.publishing
   );
+  const fnRefs = useUpdateRefs({ onSubmittingAndOrPendingChange });
+  const hasChanges =
+    mode === 'studio'
+      ? publishStudioFormData.path !== initialPublishStudioFormData.path ||
+        publishStudioFormData.comment !== initialPublishStudioFormData.comment ||
+        publishStudioFormData.publishingTarget !== initialPublishingTarget
+      : publishGitFormData.commitIds !== initialPublishGitFormData.commitIds ||
+        publishGitFormData.comment !== initialPublishGitFormData.comment ||
+        publishGitFormData.publishingTarget !== initialPublishingTarget;
 
   const setDefaultPublishingTarget = (targets, clearData?) => {
     if (targets.length) {
       const stagingEnv = targets.find((target) => target.name === 'staging');
-      const environment = stagingEnv?.name ?? targets[0].name;
+      const publishingTarget = stagingEnv?.name ?? targets[0].name;
+      setInitialPublishingTarget(publishingTarget);
       setPublishGitFormData({
         ...(clearData && initialPublishGitFormData),
-        environment
+        publishingTarget
       });
       setPublishStudioFormData({
         ...(clearData && initialPublishStudioFormData),
-        environment
+        publishingTarget
       });
     }
   };
+
+  useEffect(() => {
+    fnRefs.current.onSubmittingAndOrPendingChange?.({
+      hasPendingChanges: hasChanges,
+      isSubmitting
+    });
+  }, [isSubmitting, hasChanges, fnRefs]);
 
   useEffect(() => {
     fetchPublishingTargets(siteId).subscribe({
@@ -173,9 +191,9 @@ export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
 
   const onSubmitPublishBy = () => {
     setIsSubmitting(true);
-    const { commitIds, environment, comment } = publishGitFormData;
+    const { commitIds, publishingTarget, comment } = publishGitFormData;
     const ids = commitIds.replace(/\s/g, '').split(',');
-    publishByCommits(siteId, ids, environment, comment).subscribe({
+    publishByCommits(siteId, ids, publishingTarget, comment).subscribe({
       next() {
         setIsSubmitting(false);
         dispatch(
@@ -183,7 +201,7 @@ export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
             message: formatMessage(messages.publishSuccess)
           })
         );
-        setPublishGitFormData(initialPublishGitFormData);
+        setPublishGitFormData({ ...initialPublishGitFormData, publishingTarget });
         setMode(null);
       },
       error({ response }) {
@@ -211,11 +229,11 @@ export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
     createCustomDocumentEventListener<{ button: 'ok' | 'cancel' }>(eventId, ({ button }) => {
       if (button === 'ok') {
         setIsSubmitting(true);
-        const { path, environment, comment } = publishStudioFormData;
-        bulkGoLive(siteId, path, environment, comment).subscribe({
+        const { path, publishingTarget, comment } = publishStudioFormData;
+        bulkGoLive(siteId, path, publishingTarget, comment).subscribe({
           next() {
             setIsSubmitting(false);
-            setPublishStudioFormData(initialPublishStudioFormData);
+            setPublishStudioFormData({ ...initialPublishStudioFormData, publishingTarget });
             setMode(null);
             dispatch(
               showSystemNotification({
@@ -244,13 +262,13 @@ export function PublishOnDemandWidget(props: PublishOnDemandWidgetProps) {
     if (mode === 'studio') {
       setPublishStudioFormValid(
         publishStudioFormData.path.replace(/\s/g, '') !== '' &&
-          publishStudioFormData.environment !== '' &&
+          publishStudioFormData.publishingTarget !== '' &&
           (!bulkPublishCommentRequired || !isBlank(publishStudioFormData.comment))
       );
     } else {
       setPublishGitFormValid(
         publishGitFormData.commitIds.replace(/\s/g, '') !== '' &&
-          publishGitFormData.environment !== '' &&
+          publishGitFormData.publishingTarget !== '' &&
           (!publishByCommitCommentRequired || !isBlank(publishGitFormData.comment))
       );
     }

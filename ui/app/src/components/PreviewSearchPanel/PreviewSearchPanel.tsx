@@ -16,7 +16,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
-import makeStyles from '@mui/styles/makeStyles';
 import List from '@mui/material/List';
 import SearchBar from '../SearchBar/SearchBar';
 import { ComponentsContentTypeParams, ElasticParams, SearchItem } from '../../models/Search';
@@ -49,6 +48,7 @@ import { useSpreadState } from '../../hooks/useSpreadState';
 import { useSubject } from '../../hooks/useSubject';
 import Pagination from '../Pagination';
 import { getFileNameFromPath } from '../../utils/path';
+import { makeStyles } from 'tss-react/mui';
 
 const translations = defineMessages({
   previewSearchPanelTitle: {
@@ -65,18 +65,9 @@ const translations = defineMessages({
   }
 });
 
-const useStyles = makeStyles(() => ({
+const useStyles = makeStyles()((theme) => ({
   searchContainer: {
-    padding: '16px'
-  },
-  paginationContainer: {
-    padding: '0 16px'
-  },
-  searchResultsList: {
-    padding: '0',
-    '& li:first-child': {
-      paddingTop: 0
-    }
+    padding: `${theme.spacing(1)} ${theme.spacing(1)} 0`
   }
 }));
 
@@ -89,10 +80,8 @@ interface SearchResultsProps {
 function SearchResults(props: SearchResultsProps) {
   const { resource, onDragStart, onDragEnd } = props;
   const items = resource.read();
-  const classes = useStyles({});
-
   return (
-    <List className={classes.searchResultsList}>
+    <List>
       {items.map((item: SearchItem) => (
         <DraggablePanelListItem
           key={item.path}
@@ -116,7 +105,7 @@ const initialSearchParameters: Partial<ElasticParams> = {
 const mimeTypes = ['image/png', 'image/jpeg', 'image/gif', 'video/mp4', 'image/svg+xml'];
 
 export function PreviewSearchPanel() {
-  const classes = useStyles({});
+  const { classes } = useStyles();
   const { formatMessage } = useIntl();
   const [keyword, setKeyword] = useState('');
   const [error, setError] = useState<ApiResponse>(null);
@@ -271,17 +260,13 @@ export function PreviewSearchPanel() {
         />
       </div>
       {state.items && (
-        <div className={classes.paginationContainer}>
-          <Pagination
-            rowsPerPageOptions={[5, 10, 15]}
-            sx={{ root: { marginRight: 'auto' }, toolbar: { paddingLeft: 0 } }}
-            count={state.count}
-            rowsPerPage={state.limit}
-            page={pageNumber}
-            onPageChange={(page: number) => onPageChanged(page)}
-            onRowsPerPageChange={onRowsPerPageChange}
-          />
-        </div>
+        <Pagination
+          count={state.count}
+          rowsPerPage={state.limit}
+          page={pageNumber}
+          onPageChange={(e, page: number) => onPageChanged(page)}
+          onRowsPerPageChange={onRowsPerPageChange}
+        />
       )}
       <SuspenseWithEmptyState resource={resource}>
         <SearchResults resource={resource} onDragStart={onDragStart} onDragEnd={onDragEnd} />

@@ -15,7 +15,7 @@
  */
 
 import { errorSelectorApi1, get, postJSON } from '../utils/ajax';
-import { catchError, map, mapTo, pluck } from 'rxjs/operators';
+import { catchError, map, pluck } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 import { deserialize, fromString, getInnerHtml } from '../utils/xml';
 import { ContentTypeField } from '../models/ContentType';
@@ -25,6 +25,7 @@ import { VersionsResponse } from '../models/Version';
 import LookupTable from '../models/LookupTable';
 import GlobalState from '../models/GlobalState';
 import { SiteConfigurationFile } from '../models/SiteConfigurationFile';
+import { asArray } from '../utils/array';
 
 export type CrafterCMSModules = 'studio' | 'engine';
 
@@ -86,7 +87,7 @@ export function writeConfiguration(
     path,
     content,
     ...(environment && { environment })
-  }).pipe(mapTo(true));
+  }).pipe(map(() => true));
 }
 
 // region AudiencesPanelConfig
@@ -154,8 +155,8 @@ export function setActiveTargetingModel(data): Observable<ActiveTargetingModel> 
 
 // endregion
 
-export function fetchSiteUiConfig(site: string): Observable<string> {
-  return fetchConfigurationXML(site, '/ui.xml', 'studio');
+export function fetchSiteUiConfig(site: string, environment: string): Observable<string> {
+  return fetchConfigurationXML(site, '/ui.xml', 'studio', environment);
 }
 
 const legacyToNextMenuIconMap = {
@@ -210,8 +211,8 @@ export function fetchCannedMessage(site: string, locale: string, type: string): 
   ).pipe(pluck('response'), catchError(errorSelectorApi1));
 }
 
-export function fetchSiteLocale(site: string): Observable<any> {
-  return fetchSiteConfigDOM(site).pipe(
+export function fetchSiteLocale(site: string, environment: string): Observable<any> {
+  return fetchSiteConfigDOM(site, environment).pipe(
     map((xml) => {
       let settings = {};
       if (xml) {
@@ -235,13 +236,15 @@ export function fetchSiteConfigurationFiles(site: string, environment?: string):
           files = deserialize(filesXML).files.file;
         }
       }
-      return files;
+      return asArray(files);
     })
   );
 }
 
-export function fetchUseLegacyPreviewPreference(site: string): Observable<boolean> {
-  return fetchSiteConfigDOM(site).pipe(map((dom) => getInnerHtml(dom.querySelector('usePreview3')) === 'true'));
+export function fetchUseLegacyPreviewPreference(site: string, environment: string): Observable<boolean> {
+  return fetchSiteConfigDOM(site, environment).pipe(
+    map((dom) => getInnerHtml(dom.querySelector('usePreview3')) === 'true')
+  );
 }
 
 export interface StudioSiteConfig {
@@ -265,8 +268,8 @@ export interface StudioSiteConfig {
   };
 }
 
-export function fetchSiteConfig(site: string): Observable<StudioSiteConfig> {
-  return fetchSiteConfigDOM(site).pipe(
+export function fetchSiteConfig(site: string, environment: string): Observable<StudioSiteConfig> {
+  return fetchSiteConfigDOM(site, environment).pipe(
     map((dom) => ({
       site,
       usePreview3: getInnerHtml(dom.querySelector('usePreview3')) === 'true',
@@ -288,8 +291,8 @@ export function fetchSiteConfig(site: string): Observable<StudioSiteConfig> {
   );
 }
 
-function fetchSiteConfigDOM(site: string): Observable<XMLDocument> {
-  return fetchConfigurationDOM(site, '/site-config.xml', 'studio');
+function fetchSiteConfigDOM(site: string, environment: string): Observable<XMLDocument> {
+  return fetchConfigurationDOM(site, '/site-config.xml', 'studio', environment);
 }
 
 export interface CannedMessage {
@@ -298,8 +301,8 @@ export interface CannedMessage {
   message: string;
 }
 
-export function fetchCannedMessages(site: string): Observable<CannedMessage[]> {
-  return fetchConfigurationDOM(site, '/workflow/notification-config.xml', 'studio').pipe(
+export function fetchCannedMessages(site: string, environment: string): Observable<CannedMessage[]> {
+  return fetchConfigurationDOM(site, '/workflow/notification-config.xml', 'studio', environment).pipe(
     map((dom) => {
       const cannedMessages = [];
 

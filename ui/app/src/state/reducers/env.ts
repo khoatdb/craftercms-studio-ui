@@ -18,6 +18,7 @@ import { createReducer } from '@reduxjs/toolkit';
 import { GlobalState } from '../../models/GlobalState';
 import { fetchSystemVersionComplete } from '../actions/env';
 import { Version } from '../../models/monitoring/Version';
+import { setSiteSocketStatus, storeInitialized } from '../actions/system';
 
 export const envInitialState: GlobalState['env'] = ((origin: string) => ({
   authoringBase: process.env.REACT_APP_AUTHORING_BASE ?? `${origin}/studio`,
@@ -27,12 +28,15 @@ export const envInitialState: GlobalState['env'] = ((origin: string) => ({
   guestBase: process.env.REACT_APP_GUEST_BASE ?? origin,
   xsrfHeader: document.querySelector('#xsrfHeader')?.textContent ?? 'X-XSRF-TOKEN',
   xsrfArgument: document.querySelector('#xsrfArgument')?.textContent ?? '_csrf',
+  useBaseDomain: document.querySelector('#useBaseDomain')?.textContent === 'true',
   siteCookieName: 'crafterSite',
   previewLandingBase: process.env.REACT_APP_PREVIEW_LANDING ?? `${origin}/studio/preview-landing`,
   version: null,
   packageBuild: null,
   packageVersion: null,
-  packageBuildDate: null
+  packageBuildDate: null,
+  activeEnvironment: null,
+  socketConnected: false
 }))(window.location.origin);
 
 const reducer = createReducer<GlobalState['env']>(envInitialState, {
@@ -42,6 +46,14 @@ const reducer = createReducer<GlobalState['env']>(envInitialState, {
     packageBuild: payload.packageBuild,
     packageVersion: payload.packageVersion,
     packageBuildDate: payload.packageBuildDate
+  }),
+  [storeInitialized.type]: (state, { payload }) => ({
+    ...state,
+    activeEnvironment: payload.activeEnvironment
+  }),
+  [setSiteSocketStatus.type]: (state, { payload }) => ({
+    ...state,
+    socketConnected: payload.connected
   })
 });
 

@@ -15,7 +15,6 @@
  */
 
 import React, { useState } from 'react';
-import useSelection from '../../../hooks/useSelection';
 import { GlobalAppContextProvider, useGlobalAppState } from '../../GlobalApp';
 import useReference from '../../../hooks/useReference';
 import { useActiveSiteId } from '../../../hooks/useActiveSiteId';
@@ -27,26 +26,28 @@ import { updateWidgetDialog } from '../../../state/actions/dialogs';
 
 interface EmbeddedSiteToolsProps {
   onMinimize?: () => void;
+  onSubmittingAndOrPendingChange?(value: onSubmittingAndOrPendingChangeProps): void;
 }
 
 export const EmbeddedSiteToolsContainer = (props: EmbeddedSiteToolsProps) => {
   const [width, setWidth] = useState(240);
   const [activeToolId, setActiveToolId] = useState<string>();
-  const baseUrl = useSelection<string>((state) => state.env.authoringBase);
   const [{ openSidebar }] = useGlobalAppState();
   const siteTools = useReference('craftercms.siteTools');
   const tools: Tool[] = siteTools?.tools;
   const site = useActiveSiteId();
-  const classes = embeddedStyles();
+  const { classes } = embeddedStyles();
   const dispatch = useDispatch();
 
   const onNavItemClick = (id: string) => {
     setActiveToolId(id);
   };
 
-  const onSubmittingAndOrPendingChange = (value: onSubmittingAndOrPendingChangeProps) => {
-    dispatch(updateWidgetDialog(value));
-  };
+  const onSubmittingAndOrPendingChange =
+    props.onSubmittingAndOrPendingChange ??
+    ((value: onSubmittingAndOrPendingChangeProps) => {
+      dispatch(updateWidgetDialog(value));
+    });
 
   return (
     <SiteTools
@@ -57,7 +58,6 @@ export const EmbeddedSiteToolsContainer = (props: EmbeddedSiteToolsProps) => {
       sidebarBelowToolbar
       hideSidebarLogo
       showAppsButton={false}
-      imageUrl={`${baseUrl}/static-assets/images/choose_option.svg`}
       hideSidebarSiteSwitcher
       activeToolId={activeToolId}
       openSidebar={openSidebar || !activeToolId}

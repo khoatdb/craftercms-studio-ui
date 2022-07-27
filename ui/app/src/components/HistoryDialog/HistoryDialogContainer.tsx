@@ -37,7 +37,7 @@ import translations from './translations';
 import { batchActions } from '../../state/actions/misc';
 import { fetchContentTypes } from '../../state/actions/preview';
 import { fetchContentByCommitId } from '../../services/content';
-import { getEditorMode, isImage } from '../PathNavigator/utils';
+import { getEditorMode, isImage, isPreviewable, isVideo } from '../PathNavigator/utils';
 import {
   compareBothVersions,
   compareToPreviousVersion,
@@ -57,19 +57,23 @@ import DialogFooter from '../DialogFooter/DialogFooter';
 import { HistoryDialogPagination } from './HistoryDialogPagination';
 import { historyStyles } from './HistoryDialog';
 import useSelection from '../../hooks/useSelection';
+import useFetchSandboxItems from '../../hooks/useFetchSandboxItems';
+import { UNDEFINED } from '../../utils/constants';
 
 export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
   const { versionsBranch } = props;
   const { count, page, limit, current, rootPath, isConfig } = versionsBranch;
+  useFetchSandboxItems([versionsBranch.item.path]);
   // TODO: It'd be best for the dialog to directly receive a live item. Must change versions branch to only hold the path.
-  const item = useSelection((state) => state.content.itemsByPath[versionsBranch.item.path]) ?? versionsBranch.item;
+  const item = useSelection((state) => state.content.itemsByPath[versionsBranch.item.path]);
   const path = item?.path ?? '';
   const [openSelector, setOpenSelector] = useState(false);
   const { formatMessage } = useIntl();
-  const classes = historyStyles({});
+  const { classes } = historyStyles();
   const dispatch = useDispatch();
   const site = useActiveSiteId();
   const timeoutRef = useRef(null);
+  const isItemPreviewable = isPreviewable(item);
 
   const [menu, setMenu] = useSpreadState<Menu>(menuInitialState);
 
@@ -91,7 +95,10 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
           label: formatMessage(value.label, value.values)
         };
       });
-      const sections: ContextMenuOption[][] = [[contextMenuOptions.view]];
+      const sections: ContextMenuOption[][] = [];
+      if (isItemPreviewable) {
+        sections.push([contextMenuOptions.view]);
+      }
       if (count > 1) {
         if (hasOptions) {
           if (initialCommit) {
@@ -116,8 +123,18 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
         activeItem: version
       });
     },
-    [item?.systemType, item?.availableActionsMap.revert, count, setMenu, formatMessage, isConfig, item.stateMap.locked]
+    [
+      item?.systemType,
+      item?.availableActionsMap.revert,
+      count,
+      setMenu,
+      formatMessage,
+      isConfig,
+      item?.stateMap.locked,
+      isItemPreviewable
+    ]
   );
+  const hasMenuOptions = isItemPreviewable || count > 1;
 
   const compareVersionDialogWithActions = () =>
     showCompareVersionsDialog({
@@ -150,16 +167,18 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
           })
         ])
       );
-    } else {
+    } else if (isItemPreviewable) {
       fetchContentByCommitId(site, item.path, version.versionNumber).subscribe((content) => {
         const image = isImage(item);
+        const video = isVideo(item);
         dispatch(
           showPreviewDialog({
-            type: image ? 'image' : 'editor',
+            type: image ? 'image' : video ? 'video' : 'editor',
             title: item.label,
-            [image ? 'url' : 'content']: content,
-            mode: image ? void 0 : getEditorMode(item),
-            subtitle: `v.${version.versionNumber}`
+            [image || video ? 'url' : 'content']: content,
+            mode: image || video ? UNDEFINED : getEditorMode(item),
+            subtitle: `v.${version.versionNumber}`,
+            ...(video ? { mimeType: item.mimeType } : {})
           })
         );
       });
@@ -308,7 +327,7 @@ export function HistoryDialogContainer(props: HistoryDialogContainerProps) {
         <SuspenseWithEmptyState resource={versionsResource}>
           <VersionList
             versions={versionsResource}
-            onOpenMenu={handleOpenMenu}
+            onOpenMenu={hasMenuOptions ? handleOpenMenu : null}
             onItemClick={handleViewItem}
             current={current}
           />

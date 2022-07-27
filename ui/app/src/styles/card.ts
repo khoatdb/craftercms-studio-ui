@@ -14,14 +14,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const cardTitleStyles = {
-  fontWeight: '600',
+import { CSSObject } from 'tss-react';
+
+const cardTitleStyles: CSSObject = {
+  fontWeight: 600,
   lineHeight: '1.5rem',
   overflow: 'hidden',
   display: '-webkit-box',
-  '-webkit-line-clamp': 1,
-  '-webkit-box-orient': 'vertical',
+  WebkitLineClamp: 1,
+  WebkitBoxOrient: 'vertical',
   marginBottom: 0,
+  wordBreak: 'break-all'
+};
+
+export const cardSubtitleStyles: CSSObject = {
+  overflow: 'hidden',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
   wordBreak: 'break-all'
 };
 

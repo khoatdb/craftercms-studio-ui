@@ -1313,15 +1313,17 @@ var CStudioForms =
             }
           }
 
-          var buildEntityIdFn = function (draft) {
+          var buildEntityIdFn = function (draft, useCurrentValidFolder) {
             var entityId = path.replace('.html', '.xml');
             var changeTemplate = CStudioAuthoring.Utils.getQueryVariable(location.search, 'changeTemplate');
             var length = entityId.length;
             var index_html = '';
             var fileName = form.model['file-name'];
             var folderName =
-              form.definition.contentAsFolder || form.definition.contentAsFolder == 'true'
-                ? form.model['folder-name']
+              form.definition.contentAsFolder || form.definition.contentAsFolder === 'true'
+                ? useCurrentValidFolder
+                  ? CStudioForms.currentValidFolder ?? CStudioForms.initialModel['folder-name']
+                  : form.model['folder-name']
                 : undefined;
             /*
              * No folderName means it is NOT a content-as-folder content type.
@@ -1459,8 +1461,8 @@ var CStudioForms =
             }
 
             var serviceUrl =
-              '/api/1/services/api/1/content/write-content.json' +
-              '?site=' +
+              CStudioAuthoring.Service.createServiceUri('/api/1/services/api/1/content/write-content.json') +
+              'site=' +
               CStudioAuthoringContext.site +
               '&phase=onSave' +
               '&path=' +
@@ -1493,8 +1495,9 @@ var CStudioForms =
               });
             } else {
               const saveContent = () => {
-                CrafterCMSNext.util.ajax.post(CStudioAuthoring.Service.createServiceUri(serviceUrl), xml).subscribe(
+                CrafterCMSNext.util.ajax.post(serviceUrl, xml).subscribe(
                   function () {
+                    CStudioForms.currentValidFolder = CStudioForms.updatedModel?.['folder-name'];
                     YAHOO.util.Event.removeListener(window, 'beforeunload', unloadFn, me);
 
                     var getContentItemCb = {
@@ -1504,7 +1507,7 @@ var CStudioForms =
                         var formId = CStudioAuthoring.Utils.getQueryVariable(location.search.substring(1), 'wid');
                         var editorId = CStudioAuthoring.Utils.getQueryVariable(location.search, 'editorId');
 
-                        //TODO: We need a method to set disable the .render Buttons;
+                        // TODO: We need a method to set disable the .render Buttons;
                         setButtonsEnabled(true);
                         sendMessage({ type: CHILD_FORM_DRAFT_COMPLETE });
 
@@ -1611,6 +1614,9 @@ var CStudioForms =
                     }
                   },
                   function (err) {
+                    if (!CStudioForms.currentValidFolder) {
+                      CStudioForms.currentValidFolder = CStudioForms.initialModel['folder-name'];
+                    }
                     try {
                       CStudioAuthoring.Operations.showSimpleDialog(
                         'error-dialog',
@@ -1832,7 +1838,7 @@ var CStudioForms =
                 unlockBeforeCancel(path);
               } else {
                 if (!form.readOnly && path && path.indexOf('.xml') != -1 && !me.config.isInclude) {
-                  var entityId = buildEntityIdFn(null);
+                  const entityId = buildEntityIdFn(null, Boolean(CStudioForms.currentValidFolder));
                   CrafterCMSNext.services.content
                     .unlock(CStudioAuthoringContext.site, entityId)
                     .subscribe((response) => {
@@ -1952,8 +1958,10 @@ var CStudioForms =
             }, 500);
           }
 
-          var overlayContainer = parent.document.getElementById(window.frameElement.id).parentElement;
-          YDom.addClass(overlayContainer, 'overlay');
+          if (window.frameElement) {
+            var overlayContainer = parent.document.getElementById(window.frameElement.id).parentElement;
+            YDom.addClass(overlayContainer, 'overlay');
+          }
 
           $(document).on('keyup', function (e) {
             if (e.keyCode === 27) {
@@ -2041,9 +2049,7 @@ var CStudioForms =
             });
             sendMessage({ type: FORM_ENGINE_RENDER_COMPLETE });
           }
-          if (CStudioAuthoring.InContextEdit.getIceCallback(editorId).renderComplete) {
-            CStudioAuthoring.InContextEdit.getIceCallback(editorId).renderComplete();
-          }
+          CStudioAuthoring.InContextEdit.getIceCallback(editorId)?.renderComplete?.();
         });
       },
 
@@ -2109,7 +2115,7 @@ var CStudioForms =
                 onDone();
               } else {
                 jQuery
-                  .getScript(script)
+                  .getScript({ url: script, cache: true })
                   .done(onDone)
                   .fail(
                     (function (datasourceDef) {
@@ -2235,9 +2241,18 @@ var CStudioForms =
             });
           };
 
+          // If the repeating group that it's being re-rendered has RTE5 controls, remove all of them before cleanup up
+          // markup (so it'll remove all things related to those RTEs)
+          const $rteControls = $(controlEl).find('.rte-control');
+          if ($rteControls.length) {
+            const $rteInputs = $rteControls.find('.cstudio-form-control-input');
+            $rteInputs.each((index, element) => {
+              const rteId = element.getAttribute('id');
+              tinymce.get(rteId).remove();
+            });
+          }
           controlEl.formEngine._cleanUpRepeatBodyFields(controlEl, this.repeat.id);
           controlEl.innerHTML = '';
-          $('.tox-silver-sink').remove();
           controlEl.formEngine._renderRepeatBody(controlEl);
         };
 
@@ -2258,6 +2273,19 @@ var CStudioForms =
             }
           }
           repeatContainerEl.formSection.fields = formSectionFields;
+        }
+      },
+
+      _renderRepeatDescription: function (repeatContainerEl) {
+        const repeat = repeatContainerEl.repeat;
+        const description = repeat.description;
+
+        if (description) {
+          var descriptionEl = document.createElement('span');
+          YAHOO.util.Dom.addClass(descriptionEl, 'description');
+          YAHOO.util.Dom.addClass(descriptionEl, 'cstudio-form-field-description repeating-group-description');
+          descriptionEl.textContent = description;
+          repeatContainerEl.appendChild(descriptionEl);
         }
       },
 
@@ -2303,7 +2331,10 @@ var CStudioForms =
             form.model[repeat.id][0] = [];
 
             this.parentNode.parentNode.reRender(this.parentNode.parentNode);
+            repeatEdited = true;
           };
+
+          this._renderRepeatDescription(repeatContainerEl);
 
           formSection.notifyValidation();
           return;
@@ -2439,6 +2470,8 @@ var CStudioForms =
             this._renderField(formDef, field, form, formSection, repeatInstanceContainerEl, repeat, i);
           }
         }
+
+        this._renderRepeatDescription(repeatContainerEl);
       },
 
       /**

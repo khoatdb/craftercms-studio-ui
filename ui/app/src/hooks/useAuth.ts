@@ -14,24 +14,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import createStyles from '@mui/styles/createStyles';
-import makeStyles from '@mui/styles/makeStyles';
+import GlobalState from '../models/GlobalState';
+import { useSelector } from 'react-redux';
 
-const useStyles = makeStyles(() =>
-  createStyles({
-    searchBarRoot: {
-      transition: 'width 500ms',
-      width: '210px',
-      '&.hidden': {
-        width: '50px',
-        border: '0',
-        background: 'none',
-        '& input': {
-          visibility: 'hidden'
-        }
-      }
-    }
-  })
-);
+export function useAuth(): GlobalState['auth'] {
+  return useSelector<GlobalState, GlobalState['auth']>((state) => state.auth);
+}
 
-export default useStyles;
+export default useAuth;

@@ -73,7 +73,7 @@ export function LegacyRecentlyPublishedDashlet() {
   );
   const [expandedItems, setExpandedItems] = useSpreadState<LookupTable<boolean>>({});
   const localeBranch = useLocale();
-  const classes = useStyles();
+  const { classes } = useStyles();
   const dispatch = useDispatch();
 
   const allCollapsed = useMemo(
@@ -246,9 +246,9 @@ export function LegacyRecentlyPublishedDashlet() {
         <>
           <Button onClick={onCollapseAll} className={classes.rightAction} disabled={fetchingHistory}>
             {!allCollapsed ? (
-              <FormattedMessage id="recentlyPublishedDashlet.collapseAll" defaultMessage="Collapse All" />
+              <FormattedMessage id="common.collapseAll" defaultMessage="Collapse All" />
             ) : (
-              <FormattedMessage id="recentlyPublishedDashlet.expandAll" defaultMessage="Expand All" />
+              <FormattedMessage id="common.expandAll" defaultMessage="Expand All" />
             )}
           </Button>
 

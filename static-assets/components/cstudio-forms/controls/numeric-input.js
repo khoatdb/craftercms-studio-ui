@@ -127,8 +127,8 @@
 
     _onChangeVal: function (evt, obj) {
       obj.edited = true;
-      if (this._onChange) {
-        this._onChange(evt, obj);
+      if (obj._onChange) {
+        obj._onChange(evt, obj);
       }
     },
 
@@ -281,12 +281,16 @@
         {
           label: formatMessage(numericInputControlMessages.maximun),
           name: 'maxValue',
-          type: 'float'
+          type: 'minMax',
+          mode: 'max',
+          counterpartControl: 'minValue'
         },
         {
           label: formatMessage(numericInputControlMessages.minimun),
           name: 'minValue',
-          type: 'float'
+          type: 'minMax',
+          mode: 'min',
+          counterpartControl: 'maxValue'
         },
         { label: CMgs.format(langBundle, 'readonly'), name: 'readonly', type: 'boolean' },
         { label: 'Tokenize for Indexing', name: 'tokenize', type: 'boolean', defaultValue: 'false' }

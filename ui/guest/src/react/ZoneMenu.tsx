@@ -33,6 +33,7 @@ import {
   duplicateItem,
   getCachedModel,
   getCachedModels,
+  getCachedSandboxItem,
   insertItem,
   modelHierarchyMap,
   sortDownItem,
@@ -45,15 +46,16 @@ import { extractCollection } from '@craftercms/studio-ui/utils/model';
 import { isSimple, popPiece } from '@craftercms/studio-ui/utils/string';
 import { AnyAction } from '@reduxjs/toolkit';
 import useRef from '@craftercms/studio-ui/hooks/useUpdateRefs';
-import { exists, findContainerRecord, getById, runValidation } from '../iceRegistry';
+import { exists, findContainerRecord, getById, getReferentialEntries, runValidation } from '../iceRegistry';
 import { post } from '../utils/communicator';
 import { requestEdit, validationMessage } from '@craftercms/studio-ui/state/actions/preview';
 import Menu from '@mui/material/Menu';
 import Typography from '@mui/material/Typography';
 import MenuItem from '@mui/material/MenuItem';
 import { getParentModelId } from '../utils/ice';
-import { iceRegistry } from '../index';
 import { fromICEId, get } from '../elementRegistry';
+import { beforeWrite$ } from '../store/util';
+import { useStore } from './GuestContext';
 
 export interface ZoneMenuProps {
   record: ElementRecord;
@@ -97,10 +99,11 @@ export function ZoneMenu(props: ZoneMenuProps) {
     // If the record is a component, get the index from searching the
     // model id inside the container collection (previously computed).
     return recordType === 'component'
-      ? collection.indexOf(modelId)
+      ? collection?.indexOf(modelId)
       : parseInt(isSimple(index) ? String(index) : popPiece(String(index)));
   }, [recordType, collection, modelId, index]);
   const nodeSelectorItemRecord = useMemo(
+    // region
     () =>
       recordType === 'component'
         ? getById(
@@ -110,12 +113,15 @@ export function ZoneMenu(props: ZoneMenuProps) {
               index: modelHierarchyMap[modelId].parentContainerFieldIndex
             })
           )
+        : ['node-selector-item', 'repeat-item'].includes(recordType)
+        ? iceRecord
         : null,
-    [modelId, recordType]
+    // endregion
+    [modelId, recordType, iceRecord]
   );
   const componentId =
     recordType === 'component' ? modelId : recordType === 'node-selector-item' ? collection[elementIndex] : null;
-  const { field, contentType } = useMemo(() => iceRegistry.getReferentialEntries(record.iceIds[0]), [record.iceIds]);
+  const { field, contentType } = useMemo(() => getReferentialEntries(record.iceIds[0]), [record.iceIds]);
   const isMovable =
     ['node-selector-item', 'repeat-item'].includes(recordType) ||
     Boolean(recordType === 'component' && nodeSelectorItemRecord);
@@ -125,11 +131,54 @@ export function ZoneMenu(props: ZoneMenuProps) {
   const isOnlyItem = isMovable ? isFirstItem && isLastItem : null;
   const isEmbedded = useMemo(() => !Boolean(getCachedModel(modelId)?.craftercms.path), [modelId]);
   const showCodeEditOptions = ['component', 'page', 'node-selector-item'].includes(recordType) && !isHeadlessMode;
-  const isTrashable = recordType !== 'field' && recordType !== 'page';
   const showAddItem = recordType === 'field' && field.type === 'repeat';
-  const showDuplicate = ['repeat-item', 'component', 'node-selector-item'].includes(recordType);
+  const { isTrashable, showDuplicate } = useMemo(() => {
+    const actions = {
+      isTrashable: false,
+      showDuplicate: false
+    };
+
+    const nodeSelectorEntries = Boolean(nodeSelectorItemRecord) ? getReferentialEntries(nodeSelectorItemRecord) : null;
+
+    if (Boolean(collection)) {
+      const validations = nodeSelectorEntries?.field?.validations;
+      const maxValidation = validations?.maxCount?.value;
+      const minValidation = validations?.minCount?.value;
+      const trashableValidation = minValidation ? minValidation < numOfItemsInContainerCollection : true;
+      const duplicateValidation = maxValidation ? maxValidation > numOfItemsInContainerCollection : true;
+
+      actions.isTrashable = trashableValidation && recordType !== 'field' && recordType !== 'page';
+      actions.showDuplicate =
+        duplicateValidation && ['repeat-item', 'component', 'node-selector-item'].includes(recordType);
+    }
+
+    return actions;
+  }, [collection, numOfItemsInContainerCollection, recordType, nodeSelectorItemRecord]);
+
+  const store = useStore();
+  const getItemData = () => {
+    const models = getCachedModels();
+    const isNodeSelectorItem = recordType === 'component' && nodeSelectorItemRecord;
+    const itemModelId = isNodeSelectorItem ? nodeSelectorItemRecord.modelId : modelId;
+    const itemFieldId = isNodeSelectorItem ? nodeSelectorItemRecord.fieldId : fieldId;
+    const itemIndex = isNodeSelectorItem ? nodeSelectorItemRecord.index : index;
+    const parentModelId = getParentModelId(itemModelId, models, modelHierarchyMap);
+    const path = models[parentModelId ?? itemModelId].craftercms.path;
+    return { path, itemModelId, itemFieldId, itemIndex };
+  };
 
   // region Callbacks
+
+  const execOperation = (subscriber: () => void) => {
+    const { username, activeSite } = store.getState();
+    const { path } = getItemData();
+    beforeWrite$({
+      path,
+      site: activeSite,
+      username,
+      localItem: getCachedSandboxItem(path)
+    }).subscribe(subscriber);
+  };
 
   const onCancel = () => {
     clearAndListen$.next();
@@ -163,37 +212,45 @@ export function ZoneMenu(props: ZoneMenuProps) {
   };
 
   const onAddRepeatItem = (e) => {
-    insertItem(modelId, fieldId, index, contentType);
+    execOperation(() => {
+      insertItem(modelId, fieldId, index, contentType);
+    });
   };
 
   const onDuplicateItem = (e) => {
-    if (recordType === 'component' && nodeSelectorItemRecord) {
-      duplicateItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
-    } else {
-      duplicateItem(modelId, fieldId, index);
-    }
+    execOperation(() => {
+      if (recordType === 'component' && nodeSelectorItemRecord) {
+        duplicateItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
+      } else {
+        duplicateItem(modelId, fieldId, index);
+      }
+    });
     onCancel();
   };
 
   const onMoveUp = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (recordType === 'component' && nodeSelectorItemRecord) {
-      sortUpItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
-    } else {
-      sortUpItem(modelId, fieldId, index);
-    }
+    execOperation(() => {
+      if (recordType === 'component' && nodeSelectorItemRecord) {
+        sortUpItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
+      } else {
+        sortUpItem(modelId, fieldId, index);
+      }
+    });
     onCancel();
   };
 
   const onMoveDown = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (recordType === 'component' && nodeSelectorItemRecord) {
-      sortDownItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
-    } else {
-      sortDownItem(modelId, fieldId, index);
-    }
+    execOperation(() => {
+      if (recordType === 'component' && nodeSelectorItemRecord) {
+        sortDownItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
+      } else {
+        sortDownItem(modelId, fieldId, index);
+      }
+    });
     onCancel();
   };
 
@@ -205,11 +262,13 @@ export function ZoneMenu(props: ZoneMenuProps) {
     if (minCount) {
       post(validationMessage(minCount));
     } else {
-      if (recordType === 'component' && nodeSelectorItemRecord) {
-        deleteItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
-      } else {
-        deleteItem(modelId, fieldId, index);
-      }
+      execOperation(() => {
+        if (recordType === 'component' && nodeSelectorItemRecord) {
+          deleteItem(nodeSelectorItemRecord.modelId, nodeSelectorItemRecord.fieldId, nodeSelectorItemRecord.index);
+        } else {
+          deleteItem(modelId, fieldId, index);
+        }
+      });
       onCancel();
     }
   };

@@ -24,7 +24,6 @@ import { SearchItem } from '../../models';
 import MediaCard from '../MediaCard/MediaCard';
 import { useStyles } from './styles';
 import SearchBar from '../SearchBar/SearchBar';
-import clsx from 'clsx';
 import MediaSkeletonCard from './MediaSkeletonCard';
 import EmptyState from '../EmptyState/EmptyState';
 import Pagination from '../Pagination';
@@ -35,6 +34,7 @@ import Divider from '@mui/material/Divider';
 import InputUnstyled from '@mui/base/InputUnstyled';
 
 export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
+  // region const { ... } = props;
   const {
     items,
     guestBase,
@@ -46,7 +46,6 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
     limit,
     offset,
     keyword,
-    rowsPerPageOptions = [9, 15, 21],
     total,
     numOfLoaderItems = 12,
     onCardSelected,
@@ -61,18 +60,14 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
     onRefresh,
     onUpload
   } = props;
-  const classes = useStyles();
+  // endregion
+  const { classes, cx: clsx } = useStyles();
   return (
     <>
       <DialogBody className={classes.dialogBody}>
         <Box display="flex">
           <section className={classes.leftWrapper}>
-            <FolderBrowserTreeView
-              classes={{ root: classes.treeView, treeItemLabel: classes.treeItemLabel }}
-              rootPath={path}
-              showPathTextBox={false}
-              onPathSelected={onPathSelected}
-            />
+            <FolderBrowserTreeView rootPath={path} onPathSelected={onPathSelected} selectedPath={currentPath} />
           </section>
           <section className={classes.rightWrapper}>
             <InputUnstyled value={currentPath} className={classes.currentPath} disabled title={currentPath} />
@@ -92,30 +87,28 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
                 classes={{ root: classes.searchRoot }}
               />
             </Box>
-
             <div className={classes.cardsContainer}>
               {items
                 ? items.map((item: SearchItem) => (
                     <MediaCard
                       classes={{
-                        root: clsx(classes.mediaCardRoot, item.path === selectedCard?.path && 'selected'),
-                        header: clsx(!multiSelect && classes.cardHeader)
+                        root: clsx(classes.mediaCardRoot, item.path === selectedCard?.path && classes.selectedCard)
                       }}
                       key={item.path}
                       item={item}
                       selected={multiSelect ? selectedArray : null}
                       onSelect={multiSelect ? onCheckboxChecked : null}
-                      onPreviewButton={item.type === 'Image' ? onPreviewImage : null}
+                      onPreview={() => onPreviewImage(item)}
                       previewAppBaseUri={guestBase}
-                      onCardClicked={onCardSelected}
-                      hasSubheader={false}
+                      onClick={() => onCardSelected(item)}
+                      showPath={false}
                     />
                   ))
                 : new Array(numOfLoaderItems).fill(null).map((x, i) => <MediaSkeletonCard key={i} />)}
             </div>
             {items && items.length === 0 && (
               <EmptyState
-                classes={{ root: classes.emptyState }}
+                styles={{ root: { flexGrow: 1 } }}
                 title={<FormattedMessage id="browseFilesDialog.noResults" defaultMessage="No files found." />}
               />
             )}
@@ -125,12 +118,11 @@ export function BrowseFilesDialogUI(props: BrowseFilesDialogUIProps) {
       <DialogFooter>
         {items && (
           <Pagination
-            rowsPerPageOptions={rowsPerPageOptions}
-            classes={{ root: classes.paginationRoot }}
+            sxs={{ root: { marginRight: 'auto' } }}
             count={total}
             rowsPerPage={limit}
             page={Math.ceil(offset / limit)}
-            onPageChange={(page: number) => onChangePage(page)}
+            onPageChange={(e, page: number) => onChangePage(page)}
             onRowsPerPageChange={onChangeRowsPerPage}
           />
         )}

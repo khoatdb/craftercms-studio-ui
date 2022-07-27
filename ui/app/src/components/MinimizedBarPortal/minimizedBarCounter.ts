@@ -14,18 +14,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import createStyles from '@mui/styles/createStyles';
-import makeStyles from '@mui/styles/makeStyles';
+// This system relies on MinimizedBarPortal mounting and unmounting as bars are minimized/maximized.
 
-export const useStyles = makeStyles(() =>
-  createStyles({
-    container: {
-      '& .title': {
-        display: 'none'
-      },
-      '& .doc-explorer-title, & .history-title': {
-        height: '32px'
-      }
-    }
-  })
-);
+let count = 0;
+
+export const incrementMinimizedBarCount = () => {
+  count++;
+};
+
+export const decrementMinimizedBarCount = () => {
+  count--;
+};
+
+export const getMinimizedBarCount = () => count;
+
+export const hasMinimizedBar = () => count > 0;

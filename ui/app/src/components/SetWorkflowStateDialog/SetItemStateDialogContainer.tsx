@@ -26,19 +26,21 @@ import { useStyles } from './styles';
 import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
 import PrimaryButton from '../PrimaryButton';
-import createStyles from '@mui/styles/createStyles';
-import makeStyles from '@mui/styles/makeStyles';
+import { makeStyles } from 'tss-react/mui';
+
 import Box from '@mui/material/Box';
-import { CSSProperties } from '@mui/styles';
+import { CSSObject as CSSProperties } from 'tss-react';
 import { useUnmount } from '../../hooks/useUnmount';
 import { useSpreadState } from '../../hooks/useSpreadState';
 
 export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
   const { onClose, onClosed, title } = props;
-  const classes = useStyles();
+  const { classes } = useStyles();
   const [update, setUpdate] = useSpreadState({
     clearSystemProcessing: false,
     clearUserLocked: false,
+    clearNew: false,
+    clearModified: false,
     clearLive: false,
     clearStaged: false,
     live: false,
@@ -52,7 +54,9 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
       ...(update.clearSystemProcessing && { clearSystemProcessing: update.clearSystemProcessing }),
       ...(update.clearUserLocked && { clearUserLocked: update.clearUserLocked }),
       ...((update.clearLive || update.live) && { live: update.live }),
-      ...((update.clearStaged || update.staged) && { staged: update.staged })
+      ...((update.clearStaged || update.staged) && { staged: update.staged }),
+      ...(update.clearNew && { new: false }),
+      ...(update.clearModified && { modified: false })
     });
   };
 
@@ -91,6 +95,32 @@ export function SetItemStateDialogContainer(props: SetItemStateDialogProps) {
               />
             }
             label={<FormattedMessage id="setWorkflowStateDialog.clearUserLock" defaultMessage="Clear user lock" />}
+          />
+          <FormControlLabel
+            className={classes.paddedLeft}
+            control={
+              <Switch
+                checked={update.clearNew}
+                color="primary"
+                onChange={(e) => {
+                  setUpdate({ clearNew: e.target.checked });
+                }}
+              />
+            }
+            label={<FormattedMessage id="setWorkflowStateDialog.clearNew" defaultMessage="Clear new" />}
+          />
+          <FormControlLabel
+            className={classes.paddedLeft}
+            control={
+              <Switch
+                checked={update.clearModified}
+                color="primary"
+                onChange={(e) => {
+                  setUpdate({ clearModified: e.target.checked });
+                }}
+              />
+            }
+            label={<FormattedMessage id="setWorkflowStateDialog.clearModified" defaultMessage="Clear modified" />}
           />
           <Box display="flex" alignItems="center">
             <Bracket width="12px" height="42px" styles={{ bracket: { marginRight: '10px' } }} />
@@ -195,23 +225,27 @@ interface BracketProps {
   styles?: Partial<Record<'bracket', CSSProperties>>;
 }
 
-const useBracketStyles = makeStyles((theme) =>
-  createStyles({
-    bracket: (props: BracketProps) => ({
-      width: `${props.width}`,
-      height: `${props.height}`,
-      borderTopLeftRadius: '2px',
-      borderBottomLeftRadius: '2px',
-      borderLeft: `${props.borderWidth} solid ${props.color}`,
-      borderTop: `${props.borderWidth} solid ${props.color}`,
-      borderBottom: `${props.borderWidth} solid ${props.color}`,
-      ...props.styles.bracket
-    })
-  })
-);
+const useBracketStyles = makeStyles<{
+  width: number | string;
+  height: number | string;
+  color: string;
+  borderWidth: number | string;
+  styles: any;
+}>()((theme, { width, height, color, borderWidth, styles } = {} as any) => ({
+  bracket: {
+    width: `${width}`,
+    height: `${height}`,
+    borderTopLeftRadius: '2px',
+    borderBottomLeftRadius: '2px',
+    borderLeft: `${borderWidth} solid ${color}`,
+    borderTop: `${borderWidth} solid ${color}`,
+    borderBottom: `${borderWidth} solid ${color}`,
+    ...styles.bracket
+  }
+}));
 
 function Bracket(props: BracketProps) {
   const { width = '20px', height = '40px', color = '#E0E0E0', borderWidth = '3px', styles } = props;
-  const classes = useBracketStyles({ width, height, color, borderWidth, styles });
+  const { classes } = useBracketStyles({ width, height, color, borderWidth, styles });
   return <div className={classes.bracket} />;
 }
