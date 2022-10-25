@@ -121,6 +121,10 @@ export const sitePolicyMessages = defineMessages({
   itemPasteValidating: {
     id: 'words.validating',
     defaultMessage: 'Validating'
+  },
+  duplicate: {
+    id: 'words.duplicate',
+    defaultMessage: 'Duplicate'
   }
 });
 
@@ -142,11 +146,15 @@ export const itemFailureMessages = defineMessages({
 const inProgressMessages = defineMessages({
   pasting: {
     id: 'words.pasting',
-    defaultMessage: 'Pasting...'
+    defaultMessage: 'Pasting'
   },
   processing: {
     id: 'words.processing',
-    defaultMessage: 'Processing...'
+    defaultMessage: 'Processing'
+  },
+  duplicating: {
+    id: 'words.duplicating',
+    defaultMessage: 'Duplicating'
   }
 });
 
@@ -251,22 +259,31 @@ const content: CrafterCMSEpic[] = [
     ),
   // endregion
   // region duplicateItem
-  (action$, state$) =>
+  (action$, state$, { getIntl }) =>
     action$.pipe(
       ofType(duplicateItem.type),
       withLatestFrom(state$),
-      switchMap(([{ payload }, state]) => {
-        return duplicate(state.sites.active, payload.path).pipe(
-          map(({ item: path }) =>
-            showEditDialog({
-              site: state.sites.active,
-              path,
-              authoringBase: state.env.authoringBase,
-              onSaveSuccess: payload.onSuccess
+      switchMap(([{ payload }, state]) =>
+        merge(
+          of(
+            blockUI({
+              progress: 'indeterminate',
+              message: `${getIntl().formatMessage(inProgressMessages.duplicating)}...`
             })
+          ),
+          duplicate(state.sites.active, payload.path).pipe(
+            switchMap(({ item: path }) => [
+              unblockUI(),
+              showEditDialog({
+                site: state.sites.active,
+                path,
+                authoringBase: state.env.authoringBase,
+                onSaveSuccess: payload.onSuccess
+              })
+            ])
           )
-        );
-      })
+        )
+      )
     ),
   // endregion
   // region unlockItem
@@ -310,27 +327,41 @@ const content: CrafterCMSEpic[] = [
     ),
   // endregion
   // region duplicateAsset
-  (action$, state$) =>
+  (action$, state$, { getIntl }) =>
     action$.pipe(
       ofType(duplicateAsset.type),
       withLatestFrom(state$),
-      switchMap(([{ payload }, state]) => {
-        return duplicate(state.sites.active, payload.path).pipe(
-          map(({ item: path }) => {
-            const mode = getEditorMode(state.content.itemsByPath[payload.path].mimeType);
-            const editableAsset = isEditableAsset(payload.path);
-            if (editableAsset) {
-              return showCodeEditorDialog({
-                authoringBase: state.env.authoringBase,
-                site: state.sites.active,
-                path,
-                mode,
-                onSuccess: payload.onSuccess
-              });
-            }
-          })
-        );
-      })
+      switchMap(([{ payload }, state]) =>
+        merge(
+          of(
+            blockUI({
+              progress: 'indeterminate',
+              message: `${getIntl().formatMessage(inProgressMessages.duplicating)}...`
+            })
+          ),
+          duplicate(state.sites.active, payload.path).pipe(
+            switchMap(({ item: path }) => {
+              const mode = getEditorMode(state.content.itemsByPath[payload.path].mimeType);
+              const editableAsset = isEditableAsset(payload.path);
+
+              return [
+                unblockUI(),
+                ...(editableAsset
+                  ? [
+                      showCodeEditorDialog({
+                        authoringBase: state.env.authoringBase,
+                        site: state.sites.active,
+                        path,
+                        mode,
+                        onSuccess: payload.onSuccess
+                      })
+                    ]
+                  : [])
+              ];
+            })
+          )
+        )
+      )
     ),
   // endregion
   // region duplicateWithPolicyValidation
@@ -348,7 +379,7 @@ const content: CrafterCMSEpic[] = [
             if (allowed && modifiedValue) {
               return showConfirmDialog({
                 body: getIntl().formatMessage(sitePolicyMessages.itemPastePolicyConfirm, {
-                  action: 'duplicate',
+                  action: getIntl().formatMessage(sitePolicyMessages.duplicate),
                   path: target,
                   modifiedPath: modifiedValue
                 }),
@@ -382,7 +413,9 @@ const content: CrafterCMSEpic[] = [
                   });
             } else {
               return showConfirmDialog({
-                body: getIntl().formatMessage(sitePolicyMessages.itemPastePolicyError, { action: duplicate })
+                body: getIntl().formatMessage(sitePolicyMessages.itemPastePolicyError, {
+                  action: getIntl().formatMessage(sitePolicyMessages.duplicate)
+                })
               });
             }
           })
@@ -413,7 +446,7 @@ const content: CrafterCMSEpic[] = [
           of(
             blockUI({
               progress: 'indeterminate',
-              message: getIntl().formatMessage(inProgressMessages.pasting)
+              message: `${getIntl().formatMessage(inProgressMessages.pasting)}...`
             })
           ),
           paste(state.sites.active, payload.path, state.content.clipboard).pipe(
@@ -509,7 +542,7 @@ const content: CrafterCMSEpic[] = [
           );
         } else {
           return merge(
-            of(blockUI({ message: getIntl().formatMessage(inProgressMessages.processing) })),
+            of(blockUI({ message: `${getIntl().formatMessage(inProgressMessages.processing)}...` })),
             fetchItemByPath(state.sites.active, path).pipe(
               switchMap((itemToDelete) => [
                 showDeleteDialog({

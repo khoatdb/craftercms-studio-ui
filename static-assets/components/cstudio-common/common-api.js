@@ -237,7 +237,8 @@ var nodeOpen = false,
         'TIFF',
         'TIF',
         'BMP',
-        'SVG'
+        'SVG',
+        'webp'
       ],
       MAX_INT_VALUE: 2147483647,
       CACHE_TIME_CONFIGURATION: 900000,
@@ -307,7 +308,6 @@ var nodeOpen = false,
         '/static-assets/yui/animation/animation-min.js',
         '/static-assets/yui/container/container-min.js',
         '/static-assets/yui/selector/selector-min.js',
-        '/static-assets/components/cstudio-contextual-nav/contextual-nav.js',
         '/static-assets/yui/calendar/calendar-min.js',
         '/static-assets/components/cstudio-components/loader.js',
         '/static-assets/libs/notify/notify.min.js'
@@ -1528,37 +1528,6 @@ var nodeOpen = false,
         }
       },
 
-      refreshPreviewParent: function () {
-        var previewFrameEl = window.parent.document.getElementById('engineWindow');
-        if (previewFrameEl) {
-          previewFrameEl.contentWindow.location.reload();
-        }
-      },
-
-      refreshPreview: function (context) {
-        var previewFrameEl = document.getElementById('engineWindow');
-        if (previewFrameEl) {
-          if (!context || context.isComponent) {
-            amplify.publish(crafter.studio.preview.cstopic(crafter.studio.preview.Topics.REFRESH_PREVIEW));
-          } else {
-            if (context && context.browserUri) {
-              amplify.publish(
-                crafter.studio.preview.Topics.GUEST_CHECKIN,
-                CStudioAuthoring.Operations.getPreviewUrl(context, false)
-              );
-              return;
-            }
-
-            context.callingWindow.location.reload(true);
-          }
-        }
-      },
-
-      setPreview: function (url) {
-        var previewFrameEl = document.getElementById('engineWindow');
-        previewFrameEl.src = url;
-      },
-
       /**
        * Based on content item, returns preview url properly
        *
@@ -1613,8 +1582,7 @@ var nodeOpen = false,
             systemLinkId: 'preview',
             authoringBase: state.env.authoringBase,
             site: CStudioAuthoringContext.site,
-            page: url,
-            useLegacy: Boolean(state.uiConfig.useLegacyPreviewLookup[CStudioAuthoringContext.site])
+            page: url
           });
         }
       },
@@ -1857,7 +1825,16 @@ var nodeOpen = false,
         );
       },
 
-      performSimpleIceEdit: function (item, field, isEdit, callback, aux, isFlattenedInclude, openHidden) {
+      performSimpleIceEdit: function (
+        item,
+        field,
+        isEdit,
+        callback,
+        aux,
+        isFlattenedInclude,
+        openHidden,
+        fieldsIndexes
+      ) {
         let topWindow = getTopLegacyWindow();
         var editorId = CStudioAuthoring.Utils.generateUUID();
 
@@ -1937,7 +1914,8 @@ var nodeOpen = false,
             $modal.find('.studio-ice-container-' + editorId),
             aux,
             editorId,
-            isFlattenedInclude
+            isFlattenedInclude,
+            fieldsIndexes
           );
 
           view.on('end', function () {
@@ -2817,7 +2795,10 @@ var nodeOpen = false,
        */
       processPathsForMacros: function (path, model, useUUID) {
         const urlParams = new URLSearchParams(window.location.search);
-        const fullParentPath = urlParams.get('path') ?? urlParams.get('parentPath');
+        const pathParam = urlParams.get('path');
+        // pathParam may be an objectId (embedded components)
+        const isPath = pathParam.startsWith('/');
+        const fullParentPath = isPath ? pathParam : urlParams.get('parentPath');
         return CrafterCMSNext.util.path.processPathMacros({
           path,
           useUUID,

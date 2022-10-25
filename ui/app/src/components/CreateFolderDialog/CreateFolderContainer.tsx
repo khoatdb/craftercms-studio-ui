@@ -18,7 +18,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { useDetailedItem } from '../../hooks/useDetailedItem';
 import { DetailedItem, SandboxItem } from '../../models/Item';
 import { getParentPath, getRootPath, withoutIndex } from '../../utils/path';
 import { createFolder, fetchSandboxItem, renameFolder } from '../../services/content';
@@ -34,7 +33,6 @@ import DialogFooter from '../DialogFooter/DialogFooter';
 import SecondaryButton from '../SecondaryButton';
 import PrimaryButton from '../PrimaryButton';
 import ConfirmDialog from '../ConfirmDialog/ConfirmDialog';
-import slugify from 'slugify';
 import useItemsByPath from '../../hooks/useItemsByPath';
 import { UNDEFINED } from '../../utils/constants';
 import { isBlank } from '../../utils/string';
@@ -42,6 +40,8 @@ import { useEnhancedDialogContext } from '../EnhancedDialog';
 import { fetchSandboxItemComplete } from '../../state/actions/content';
 import { switchMap, tap } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { applyFolderNameRules } from '../../utils/content';
+import { useFetchItem } from '../../hooks/useFetchItem';
 
 export function CreateFolderContainer(props: CreateFolderContainerProps) {
   const { onClose, onCreated, onRenamed, rename = false, value = '', allowBraces = false } = props;
@@ -51,12 +51,15 @@ export function CreateFolderContainer(props: CreateFolderContainerProps) {
   const dispatch = useDispatch();
   const site = useActiveSiteId();
   const { formatMessage } = useIntl();
-  const item = useDetailedItem(props.path);
   const [openSelector, setOpenSelector] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DetailedItem>(null);
   const path = useMemo(() => {
     return selectedItem ? withoutIndex(selectedItem.path) : withoutIndex(props.path);
   }, [props.path, selectedItem]);
+  // When folder name changes, path prop will still be the previous one, and useDetailedItem will try to re-fetch the
+  // non-existing item (old folder name path), so we will only re-fetch when the actual path prop of the component
+  // changes (useDetailedItemNoState).
+  const item = useFetchItem(path);
   const itemLookupTable = useItemsByPath();
   const newFolderPath = `${rename ? getParentPath(path) : path}/${name}`;
   const folderExists = rename
@@ -161,17 +164,6 @@ export function CreateFolderContainer(props: CreateFolderContainerProps) {
 
   const onCloseButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => onClose(e, null);
 
-  const cleanupName = (name: string) => {
-    let cleanedUpName = slugify(name, {
-      // Setting `strict: true` would disallow `_`, which we don't want.
-      strict: false,
-      // Because of the moment where the library trims, `trim: true` caused undesired replacement of `-`
-      // at the beginning or end of the slug.
-      trim: false
-    });
-    return cleanedUpName.replace(allowBraces ? /[^a-zA-Z0-9-_{}]/g : /[^a-zA-Z0-9-_]/g, '');
-  };
-
   return (
     <>
       <DialogBody>
@@ -233,7 +225,7 @@ export function CreateFolderContainer(props: CreateFolderContainerProps) {
             InputLabelProps={{
               shrink: true
             }}
-            onChange={(event) => onInputChanges(cleanupName(event.target.value))}
+            onChange={(event) => onInputChanges(applyFolderNameRules(event.target.value, { allowBraces }))}
           />
         </form>
       </DialogBody>

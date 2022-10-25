@@ -55,8 +55,6 @@ import { useSiteUIConfig } from '../../hooks/useSiteUIConfig';
 import { initLauncherConfig } from '../../state/actions/launcher';
 import { getSystemLink, SystemLinkId } from '../../utils/system';
 import { PREVIEW_URL_PATH } from '../../utils/constants';
-import { useLegacyPreviewPreference } from '../../hooks/useLegacyPreviewPreference';
-import { fetchUseLegacyPreviewPreference } from '../../services/configuration';
 import { WidgetDescriptor } from '../../models';
 import useMinimizedDialogWarning from '../../hooks/useMinimizedDialogWarning';
 import TranslationOrText from '../../models/TranslationOrText';
@@ -114,12 +112,6 @@ const useLauncherStyles = makeStyles()((theme) => ({
     borderRadius: '10px',
     overflowY: 'hidden'
   },
-  launcherSkeletonWrapper: {
-    display: 'flex',
-    '@media(min-width: 1097px)': {
-      width: 1065
-    }
-  },
   appsSkeletonTile: {
     margin: 5,
     width: 120,
@@ -148,7 +140,10 @@ const useLauncherStyles = makeStyles()((theme) => ({
   },
   gridContainer: {
     height: '100%',
-    maxHeight: '100%'
+    maxHeight: '100%',
+    '@media(min-width: 1097px)': {
+      width: 1065
+    }
   },
   versionText: {},
   titleCard: {
@@ -355,9 +350,8 @@ export function Launcher(props: LauncherStateProps) {
   const user = useActiveUser();
   const dispatch = useDispatch();
   const version = useSystemVersion();
-  const useLegacy = useLegacyPreviewPreference();
   const { formatMessage } = useIntl();
-  const { authoringBase, useBaseDomain, activeEnvironment } = useEnv();
+  const { authoringBase, useBaseDomain } = useEnv();
   const {
     open,
     anchor: anchorSelector,
@@ -385,7 +379,6 @@ export function Launcher(props: LauncherStateProps) {
                 getSystemLink({
                   systemLinkId: descriptor.systemLinkId,
                   authoringBase,
-                  useLegacy,
                   site
                 }),
               onClick(site) {
@@ -393,7 +386,7 @@ export function Launcher(props: LauncherStateProps) {
               }
             }))
         : null,
-    [siteCardMenuLinks, userRoles, formatMessage, authoringBase, useLegacy, useBaseDomain]
+    [siteCardMenuLinks, userRoles, formatMessage, authoringBase, useBaseDomain]
   );
   const checkMinimized = useMinimizedDialogWarning();
 
@@ -406,23 +399,16 @@ export function Launcher(props: LauncherStateProps) {
   const onSiteCardClick = (site: string) => {
     if (!checkMinimized()) {
       setSiteCookie(site, useBaseDomain);
-      fetchUseLegacyPreviewPreference(site, activeEnvironment).subscribe((useLegacy) => {
-        if (!useLegacy && window.location.href.includes(PREVIEW_URL_PATH)) {
-          // If user is in UI next and switching to a site that's viewed in 4.
-          dispatch(batchActions([changeSite(site), closeLauncher()]));
-        } else {
-          // If we're in legacy preview already (i.e. switching from a legacy-preview site to another legacy-preview
-          // site) only the hash will change and the page won't reload or do anything perceivable since legacy isn't
-          // fully integrated with the URL. In these cases, we need to programmatically reload.
-          window.location.href = getSystemLink({
-            systemLinkId: 'preview',
-            authoringBase,
-            useLegacy,
-            site
-          });
-          useLegacy && window.location.reload();
-        }
-      });
+      if (window.location.href.includes(PREVIEW_URL_PATH)) {
+        // If user is in UI next and switching to a site that's viewed in 4.
+        dispatch(batchActions([changeSite(site), closeLauncher()]));
+      } else {
+        window.location.href = getSystemLink({
+          systemLinkId: 'preview',
+          authoringBase,
+          site
+        });
+      }
     }
   };
 
@@ -479,7 +465,7 @@ export function Launcher(props: LauncherStateProps) {
       onClose={onMenuClose}
       classes={{ paper: classes.popover }}
       anchorOrigin={{
-        vertical: 'bottom',
+        vertical: 'top',
         horizontal: 'right'
       }}
       transformOrigin={{
@@ -501,7 +487,7 @@ export function Launcher(props: LauncherStateProps) {
       {/* endregion */}
       <Suspense
         fallback={
-          <div className={classes.launcherSkeletonWrapper}>
+          <Grid container spacing={0} className={classes.gridContainer}>
             {sitesRailPosition === 'left' ? (
               <>
                 {sitesRailSkeleton()}
@@ -515,7 +501,7 @@ export function Launcher(props: LauncherStateProps) {
             ) : (
               appsRailSkeleton()
             )}
-          </div>
+          </Grid>
         }
       >
         <Grid container spacing={0} className={classes.gridContainer}>

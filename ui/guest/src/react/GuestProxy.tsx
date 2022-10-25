@@ -366,12 +366,37 @@ export function GuestProxy() {
           const { modelId, fieldId, targetIndex, instance } = op.args;
 
           const $spinner = $(`
-            <svg class="craftercms-placeholder-spinner" width=50 height=50 viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-              <circle class="path" fill="none" stroke-width=5 stroke-linecap="round" cx="25" cy="25" r="20"/>
-            </svg>
+            <div style="text-align: center">
+              <svg class="craftercms-placeholder-spinner" width=50 height=50 viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+                <circle class="path" fill="none" stroke-width=5 stroke-linecap="round" cx="25" cy="25" r="20"/>
+              </svg>
+            </div>
           `);
 
           const $daddy = getParentElementFromICEProps(modelId, fieldId, targetIndex);
+
+          // If $daddy has children, get the closest  one to the one that is being added, and get its width to set it
+          // to the spinner container.
+          const childrenLength = $daddy.children().length;
+          if (childrenLength) {
+            const index = typeof targetIndex === 'number' ? targetIndex : parseInt(popPiece(targetIndex));
+            const child = $daddy.children()[index < childrenLength ? index : childrenLength - 1];
+            const daddyDisplay = $daddy.css('display');
+            // set spinner styles according to the parent display
+            $spinner.css(
+              daddyDisplay === 'flex'
+                ? {
+                    display: 'flex',
+                    width: `${child.offsetWidth}px`,
+                    'align-items': 'center',
+                    'justify-content': 'center'
+                  }
+                : {
+                    display: 'inline-block',
+                    width: `${child.offsetWidth}px`
+                  }
+            );
+          }
 
           $daddy.removeClass(emptyCollectionClass);
           insertElement($spinner, $daddy, targetIndex);
@@ -408,24 +433,31 @@ export function GuestProxy() {
           break;
         }
         case updateFieldValueOperation.type:
-          const { modelId, fieldId, index = 0, value } = op.args;
-          const updatedField: JQuery<any> = $(
-            `[data-craftercms-model-id="${modelId}"][data-craftercms-field-id="${fieldId}"]`
+          const { modelId, fieldId, index, value } = op.args;
+          // TODO: consider index 'path'
+          // If index has a value, filter by `data-craftercms-index`
+          let updatedField: JQuery<any> = $(
+            `[data-craftercms-model-id="${modelId}"][data-craftercms-field-id="${fieldId}"]${
+              notNullOrUndefined(index) ? `[data-craftercms-index="${index}"]` : ''
+            }`
           );
           const model = getCachedModel(modelId);
           const contentType = getCachedContentType(model.craftercms.contentTypeId);
           const fieldType = ContentType.getField(contentType, fieldId).type;
 
           if (fieldType === 'image') {
-            const tagName = updatedField.eq(index).prop('tagName').toLowerCase();
+            // At this time all the items in updatedField have the same tagName, use first item
+            const tagName = updatedField.eq(0).prop('tagName').toLowerCase();
             if (tagName === 'img') {
-              updatedField.eq(index).attr('src', value);
+              updatedField.attr('src', value);
             } else {
-              updatedField.eq(index).css('background-image', `url(${value})`);
+              updatedField.css('background-image', `url(${value})`);
             }
           } else if (fieldType === 'video-picker') {
-            updatedField.eq(index).find('source').attr('src', value);
-            updatedField.eq(index)[0].load();
+            updatedField.find('source').attr('src', value);
+            updatedField.each((index, element) => {
+              element.load();
+            });
           }
 
           break;

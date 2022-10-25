@@ -46,9 +46,9 @@ import LoadingState from '../LoadingState/LoadingState';
 import ErrorDialog from '../ErrorDialog/ErrorDialog';
 import { translations } from './translations';
 import { useStyles } from './styles';
-import useDetailedItem from '../../hooks/useDetailedItem';
 import { hasEditAction } from '../../utils/content';
 import { nnou } from '../../utils/object';
+import { useFetchItem } from '../../hooks/useFetchItem';
 
 export const EmbeddedLegacyContainer = React.forwardRef(function EmbeddedLegacyEditor(
   props: LegacyFormDialogContainerProps,
@@ -71,7 +71,8 @@ export const EmbeddedLegacyContainer = React.forwardRef(function EmbeddedLegacyE
     onClose,
     onClosed,
     iceGroupId,
-    newEmbedded
+    newEmbedded,
+    index
   } = props;
 
   const { formatMessage } = useIntl();
@@ -79,8 +80,18 @@ export const EmbeddedLegacyContainer = React.forwardRef(function EmbeddedLegacyE
   const iframeRef = useRef(null);
   const dispatch = useDispatch();
   const [error, setError] = useState<ApiResponse>(null);
-  const item = useDetailedItem(path);
+  // When filename, path prop will still be the previous one, and useDetailedItem will try to re-fetch the
+  // non-existing item (old filename path), so we will only re-fetch when the actual path prop of the component
+  // changes (useDetailedItemNoState).
+  const item = useFetchItem(path);
   const availableActions = item?.availableActions;
+  let fieldsIndexes;
+  if (selectedFields && index) {
+    fieldsIndexes = {};
+    selectedFields.forEach((id) => {
+      fieldsIndexes[id] = index;
+    });
+  }
 
   const src = useMemo(
     () =>
@@ -97,7 +108,8 @@ export const EmbeddedLegacyContainer = React.forwardRef(function EmbeddedLegacyE
         iceGroupId,
         ...(nnou(availableActions) && !isNewContent ? { canEdit: hasEditAction(availableActions) } : {}),
         ...(selectedFields && selectedFields.length ? { selectedFields: JSON.stringify(selectedFields) } : {}),
-        ...(newEmbedded ? { newEmbedded: JSON.stringify(newEmbedded) } : {})
+        ...(newEmbedded ? { newEmbedded: JSON.stringify(newEmbedded) } : {}),
+        ...(fieldsIndexes ? { fieldsIndexes: JSON.stringify(fieldsIndexes) } : {})
       }),
     [
       path,
@@ -112,7 +124,8 @@ export const EmbeddedLegacyContainer = React.forwardRef(function EmbeddedLegacyE
       iceGroupId,
       selectedFields,
       newEmbedded,
-      availableActions
+      availableActions,
+      fieldsIndexes
     ]
   );
 

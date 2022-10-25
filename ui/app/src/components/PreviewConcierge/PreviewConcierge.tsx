@@ -206,19 +206,23 @@ const issueDescriptorRequest = (props) => {
       switchMap((obj: { model: ContentInstance; modelLookup: LookupTable<ContentInstance> }) => {
         let requests: Array<Observable<ContentInstance>> = [];
         let sandboxItemPaths = [];
+        let sandboxItemPathLookup = {};
         Object.values(obj.modelLookup).forEach((model) => {
           if (model.craftercms.path) {
             sandboxItemPaths.push(model.craftercms.path);
+            sandboxItemPathLookup[model.craftercms.path] = true;
+            Object.values(model.craftercms.sourceMap).forEach((path) => {
+              if (!sandboxItemPathLookup[path]) {
+                sandboxItemPathLookup[path] = true;
+                sandboxItemPaths.push(path);
+              }
+              if (!requestedSourceMapPaths.current[path]) {
+                requestedSourceMapPaths.current[path] = true;
+                requests.push(fetchContentInstance(site, path, contentTypes));
+              }
+            });
           }
         });
-
-        Object.values(obj.model.craftercms.sourceMap).forEach((path) => {
-          if (!requestedSourceMapPaths.current[path]) {
-            requestedSourceMapPaths.current[path] = true;
-            requests.push(fetchContentInstance(site, path, contentTypes));
-          }
-        });
-
         return forkJoin({
           sandboxItems: fetchItemsByPath(site, sandboxItemPaths),
           models: requests.length
@@ -663,7 +667,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
               hostToHost$.next(sortItemOperationFailed());
               // If write operation fails the items remains locked, so we need to dispatch unlockItem
               dispatch(unlockItem({ path }));
-              enqueueSnackbar(formatMessage(guestMessages.sortOperationFailed));
+              enqueueSnackbar(formatMessage(guestMessages.sortOperationFailed), { variant: 'error' });
             }
           });
           break;
@@ -713,7 +717,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
               hostToGuest$.next(insertOperationFailed());
               // If write operation fails the items remains locked, so we need to dispatch unlockItem
               dispatch(unlockItem({ path }));
-              enqueueSnackbar(formatMessage(guestMessages.insertOperationFailed));
+              enqueueSnackbar(formatMessage(guestMessages.insertOperationFailed), { variant: 'error' });
             }
           });
           break;
@@ -760,7 +764,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
               hostToGuest$.next(insertOperationFailed());
               // If write operation fails the items remains locked, so we need to dispatch unlockItem
               dispatch(unlockItem({ path }));
-              enqueueSnackbar(formatMessage(guestMessages.insertOperationFailed));
+              enqueueSnackbar(formatMessage(guestMessages.insertOperationFailed), { variant: 'error' });
             }
           });
           break;
@@ -775,11 +779,12 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
               hostToGuest$.next(insertItemOperationComplete());
               enqueueSnackbar(formatMessage(guestMessages.insertItemOperationComplete));
             },
-            error() {
+            error(error) {
+              console.error(`${type} failed`, error);
               hostToGuest$.next(insertItemOperationFailed());
               // If write operation fails the items remains locked, so we need to dispatch unlockItem
               dispatch(unlockItem({ path }));
-              enqueueSnackbar(formatMessage(guestMessages.insertItemOperationFailed));
+              enqueueSnackbar(formatMessage(guestMessages.insertItemOperationFailed), { variant: 'error' });
             }
           });
           break;
@@ -800,11 +805,12 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
               hostToGuest$.next(duplicateItemOperationComplete());
               enqueueSnackbar(formatMessage(guestMessages.duplicateItemOperationComplete));
             },
-            error() {
+            error(error) {
+              console.error(`${type} failed`, error);
               hostToGuest$.next(duplicateItemOperationFailed());
               // If write operation fails the items remains locked, so we need to dispatch unlockItem
               dispatch(unlockItem({ path }));
-              enqueueSnackbar(formatMessage(guestMessages.duplicateItemOperationFailed));
+              enqueueSnackbar(formatMessage(guestMessages.duplicateItemOperationFailed), { variant: 'error' });
             }
           });
           break;
@@ -855,7 +861,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
               hostToGuest$.next(moveItemOperationFailed());
               // If write operation fails the items remains locked, so we need to dispatch unlockItem
               dispatch(batchActions([unlockItem({ path: originPath }), unlockItem({ path: targetPath })]));
-              enqueueSnackbar(formatMessage(guestMessages.moveOperationFailed));
+              enqueueSnackbar(formatMessage(guestMessages.moveOperationFailed), { variant: 'error' });
             }
           });
           break;
@@ -896,7 +902,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
               hostToHost$.next(deleteItemOperationFailed());
               // If write operation fails the items remains locked, so we need to dispatch unlockItem
               dispatch(unlockItem({ path }));
-              enqueueSnackbar(formatMessage(guestMessages.deleteOperationFailed));
+              enqueueSnackbar(formatMessage(guestMessages.deleteOperationFailed), { variant: 'error' });
             }
           });
           break;
@@ -927,9 +933,10 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
                 updatedModifiedItem(path);
                 enqueueSnackbar(formatMessage(guestMessages.updateOperationComplete));
               },
-              error() {
+              error(error) {
+                console.error(`${type} failed`, error);
                 hostToGuest$.next(updateFieldValueOperationFailed());
-                enqueueSnackbar(formatMessage(guestMessages.updateOperationFailed));
+                enqueueSnackbar(formatMessage(guestMessages.updateOperationFailed), { variant: 'error' });
               }
             });
           break;
@@ -987,8 +994,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
                 });
               },
               error(error) {
-                console.log(error);
-                enqueueSnackbar(formatMessage(guestMessages.assetUploadFailed));
+                console.error(`${type} failed`, error);
+                enqueueSnackbar(formatMessage(guestMessages.assetUploadFailed), { variant: 'error' });
               },
               complete() {
                 hostToGuest$.next({
@@ -1044,7 +1051,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
         }
         case requestEdit.type: {
           let { store } = upToDateRefs.current;
-          const { modelId, parentModelId, fields, typeOfEdit: type } = payload;
+          const { modelId, parentModelId, fields, typeOfEdit: type, index } = payload;
           const path = models[parentModelId ? parentModelId : modelId].craftercms.path;
           let item = store.getState().content.itemsByPath[path];
           const model = models[modelId] as ContentInstance;
@@ -1064,7 +1071,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
                 formatMessage,
                 extraPayload: {
                   modelId: parentModelId ? modelId : null,
-                  selectedFields: fields
+                  selectedFields: fields,
+                  index
                 }
               });
             });

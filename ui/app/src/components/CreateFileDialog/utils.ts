@@ -35,8 +35,3 @@ export interface CreateFileStateProps extends CreateFileBaseProps, EnhancedDialo
 }
 
 export interface CreateFileContainerProps extends CreateFileBaseProps, Pick<CreateFileProps, 'onCreated' | 'onClose'> {}
-
-export const getExtension = (type: string) => (type === 'controller' ? `groovy` : `ftl`);
-
-export const getName = (type: string, name: string) =>
-  `${name}.${getExtension(type)}`.replace(/(\.groovy)(\.groovy)|(\.ftl)(\.ftl)/g, '$1$3').replace(/\.{2,}/g, '.');

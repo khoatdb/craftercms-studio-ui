@@ -300,7 +300,8 @@ export function insertComponent(
       const serializedInstance = {};
       for (let key in instance) {
         if (key !== 'craftercms') {
-          serializedInstance[key] = serializeValue?.(key) ? cdataWrap(`${instance[key]}`) : instance[key];
+          serializedInstance[key] =
+            instance[key] && serializeValue?.(key) ? cdataWrap(`${instance[key]}`) : instance[key];
         }
       }
 
@@ -343,7 +344,7 @@ export function insertComponent(
 }
 
 /**
- * Insert a *existing* (i.e. shared) component on to the document
+ * Insert an *existing* (i.e. shared) component on to the document
  * */
 export function insertInstance(
   site: string,
@@ -1341,6 +1342,10 @@ export function renameFolder(site: string, path: string, name: string) {
     pluck('response'),
     catchError(errorSelectorApi1)
   );
+}
+
+export function renameContent(siteId: string, path: string, name: string) {
+  return postJSON(`/studio/api/2/content/rename`, { siteId, path, name }).pipe(pluck('response'));
 }
 
 export function changeContentType(site: string, path: string, contentType: string): Observable<boolean> {

@@ -14,16 +14,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import en from '../translations/locales/en.json';
-import es from '../translations/locales/es.json';
-import de from '../translations/locales/de.json';
-import ko from '../translations/locales/ko.json';
+import es from '../translations/es.json';
+import de from '../translations/de.json';
+import ko from '../translations/ko.json';
 import { createIntl, createIntlCache, IntlShape } from 'react-intl';
 import { Subject } from 'rxjs';
 import TranslationOrText from '../models/TranslationOrText';
 import { nou } from './object';
 import { FormatXMLElementFn, PrimitiveType } from 'intl-messageformat';
-import { ReactElement, ReactNodeArray } from 'react';
+import { ReactNode } from 'react';
 
 export type BundledTranslationsLocaleCodes = 'en' | 'es' | 'de' | 'ko';
 
@@ -31,7 +30,7 @@ export type BundledTranslations = { [T in BundledTranslationsLocaleCodes | 'kr']
 
 /* private */
 const bundledTranslations: BundledTranslations = {
-  en,
+  en: {},
   es,
   de,
   ko,
@@ -56,7 +55,7 @@ function createIntlInstance(locale: string): IntlShape {
   return createIntl(
     {
       locale: locale,
-      messages: currentTranslations[locale] || en
+      messages: currentTranslations[locale] || bundledTranslations.en
     },
     createIntlCache()
   );
@@ -86,16 +85,18 @@ export function getTranslation(key: string, table: any, formatMessage = (descrip
 export function getPossibleTranslation(
   titleOrDescriptor: TranslationOrText,
   formatMessage: IntlShape['formatMessage'],
-  values?: Record<string, PrimitiveType | ReactElement | FormatXMLElementFn>
-): string | ReactNodeArray {
+  // TODO: Fix FormatXMLElementFn generics
+  values?: Record<string, PrimitiveType | FormatXMLElementFn<any, any>>
+): string | ReactNode[] {
   if (nou(titleOrDescriptor)) {
     return null;
   }
   return typeof titleOrDescriptor === 'object' ? formatMessage(titleOrDescriptor, values) : titleOrDescriptor;
 }
 
-export function getCurrentLocale(): string {
-  return getStoredLanguage(localStorage.getItem('username')) || 'en';
+export function getCurrentLocale(username?: string): string {
+  const user = username ?? localStorage.getItem('username');
+  return getStoredLanguage(user) || 'en';
 }
 
 export function getCurrentIntl(): IntlShape {
@@ -111,7 +112,10 @@ export function buildStoredLanguageKey(username: string): string {
 }
 
 export function getStoredLanguage(username?: string): string {
-  return localStorage.getItem(buildStoredLanguageKey(username)) ?? localStorage.getItem(`crafterStudioLanguage`);
+  return (
+    (username ? localStorage.getItem(buildStoredLanguageKey(username)) : null) ??
+    localStorage.getItem(`crafterStudioLanguage`)
+  );
 }
 
 export function setStoredLanguage(language: string, username?: string): void {

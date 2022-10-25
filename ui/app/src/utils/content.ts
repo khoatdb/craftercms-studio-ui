@@ -44,6 +44,8 @@ import {
   CONTENT_REVERT_MASK,
   CONTENT_UPLOAD_MASK,
   FOLDER_CREATE_MASK,
+  pageControllersFieldId,
+  pageControllersLegacyFieldId,
   PUBLISH_APPROVE_MASK,
   PUBLISH_MASK,
   PUBLISH_REJECT_MASK,
@@ -64,13 +66,16 @@ import {
   STATE_SYSTEM_PROCESSING_MASK,
   STATE_TRANSLATION_IN_PROGRESS_MASK,
   STATE_TRANSLATION_PENDING_MASK,
-  STATE_TRANSLATION_UP_TO_DATE_MASK,
-  pageControllersFieldId
+  STATE_TRANSLATION_UP_TO_DATE_MASK
 } from './constants';
 import { SystemType } from '../models/SystemType';
 import { getStateBitmap } from '../components/WorkflowStateManagement/utils';
 import { forEach } from './array';
 import { PublishingTargets } from '../models';
+import slugify from 'slugify';
+import { showCodeEditorDialog, showEditDialog } from '../state/actions/dialogs';
+import { Dispatch } from 'react';
+import { AnyAction } from 'redux';
 
 export function isEditableAsset(path: string) {
   return (
@@ -388,7 +393,7 @@ export function parseContentXML(
             );
           }
         }
-        const field = contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields[tagName];
+        const field = contentTypesLookup[sourceContentTypeId ?? contentTypeId]?.fields?.[tagName];
         if (!field) {
           console.error(
             `[parseContentXML] Field "${tagName}" was not found on "${
@@ -439,7 +444,7 @@ function parseElementByContentType(
     case 'node-selector': {
       const array = [];
       const items = element.querySelectorAll(':scope > item');
-      if (field.id === pageControllersFieldId) {
+      if (field.id === pageControllersFieldId || field.id === pageControllersLegacyFieldId) {
         items.forEach((item) => {
           array.push({
             key: getInnerHtml(item.querySelector(':scope > key')),
@@ -565,13 +570,19 @@ export function createModelHierarchyDescriptorMap(
       ) {
         if (field.type === 'node-selector') {
           field.id !== pageControllersFieldId &&
+            field.id !== pageControllersLegacyFieldId &&
             source[field.id].forEach((component, index) => {
               lookup[currentModelId].children.push(component);
               if (lookup[component]) {
                 if (lookup[component].parentId !== null && lookup[component].parentId !== model.craftercms.id) {
-                  console.error(
-                    `Model ${component} was found in multiple parents (${lookup[component].parentId} and ${model.craftercms.id}). ` +
-                      `Same model twice on a single page may have unexpected behaviours for in-context editing.`
+                  console.error.apply(
+                    console,
+                    [
+                      `Model ${component} was found in multiple parents (${lookup[component].parentId} and ${model.craftercms.id}). ` +
+                        `Same model twice on a single page may have unexpected behaviours for in-context editing.`,
+                      // @ts-ignore
+                      typeof component !== 'string' && component
+                    ].filter(Boolean)
                   );
                 }
               } else {
@@ -694,15 +705,17 @@ export function normalizeModel(model: ContentInstance): ContentInstance {
   Object.entries(model).forEach(([prop, value]) => {
     if (prop === pageControllersFieldId) {
       normalized[prop] = value;
-    } else if (prop.endsWith('_o')) {
+    } else if (
+      // Using `prop.endsWith('_o')` causes issues with old sites which might not be using the post fix.
+      Array.isArray(value) &&
+      value.length
+    ) {
       const collection: ContentInstance[] = value;
-      if (Array.isArray(collection) && collection.length) {
-        const isNodeSelector = Boolean(collection[0]?.craftercms?.id);
-        if (isNodeSelector) {
-          normalized[prop] = collection.map((item) => item.craftercms.id);
-        } else {
-          normalized[prop] = collection.map((item) => normalizeModel(item));
-        }
+      const isNodeSelector = Boolean(collection[0]?.craftercms?.id);
+      if (isNodeSelector) {
+        normalized[prop] = collection.map((item) => item.craftercms.id);
+      } else {
+        normalized[prop] = collection.map((item) => normalizeModel(item));
       }
     }
   });
@@ -943,3 +956,40 @@ export function getComputedPublishingTarget(item: DetailedItem): PublishingTarge
       ? 'staging'
       : null;
 }
+
+export function applyFolderNameRules(name: string, options?: { allowBraces: boolean }): string {
+  let cleanedUpName = slugify(name, {
+    // Setting `strict: true` would disallow `_`, which we don't want.
+    strict: false,
+    // Because of the moment where the library trims, `trim: true` caused undesired replacement of `-`
+    // at the beginning or end of the slug.
+    trim: false
+  });
+  return cleanedUpName.replace(options?.allowBraces ? /[^a-zA-Z0-9-_{}]/g : /[^a-zA-Z0-9-_]/g, '');
+}
+
+export function applyAssetNameRules(name: string, options?: { allowBraces: boolean }): string {
+  return name.replace(options?.allowBraces ? /[^a-zA-Z0-9-_{}.]/g : /[^a-zA-Z0-9-_.]/g, '').replace(/\.{1,}/g, '.');
+}
+
+export const openItemEditor = (
+  item: DetailedItem,
+  authoringBase: string,
+  siteId: string,
+  dispatch: Dispatch<AnyAction>,
+  onSaveSuccess?: AnyAction
+) => {
+  let type = 'controller';
+
+  if (item.systemType === 'component' || item.systemType === 'page') {
+    type = 'form';
+  } else if (item.contentTypeId === 'renderingTemplate') {
+    type = 'template';
+  }
+
+  if (type === 'form') {
+    dispatch(showEditDialog({ path: item.path, authoringBase, site: siteId, onSaveSuccess }));
+  } else {
+    dispatch(showCodeEditorDialog({ site: siteId, authoringBase, path: item.path, type, onSuccess: onSaveSuccess }));
+  }
+};

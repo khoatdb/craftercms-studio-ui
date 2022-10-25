@@ -98,6 +98,10 @@ export function hasExtension(path: string): boolean {
   return getFileExtension(path) !== '';
 }
 
+export function removeExtension(name: string) {
+  return name.replace(/\.[^/.]+$/, '');
+}
+
 export function getParentPath(path: string): string {
   let splitPath = withoutIndex(path).split('/');
   splitPath.pop();
@@ -189,7 +193,8 @@ export function getEditFormSrc({
   isNewContent,
   iceGroupId,
   newEmbedded,
-  canEdit
+  canEdit,
+  fieldsIndexes
 }: {
   path: string;
   selectedFields?: string;
@@ -204,6 +209,7 @@ export function getEditFormSrc({
   iceGroupId?: string;
   newEmbedded?: string;
   canEdit?: boolean;
+  fieldsIndexes?: string;
 }): string {
   const qs = toQueryString({
     site,
@@ -217,7 +223,8 @@ export function getEditFormSrc({
     isNewContent,
     iceId: iceGroupId,
     newEmbedded,
-    canEdit
+    canEdit,
+    fieldsIndexes
   });
   return `${authoringBase}/legacy/form${qs}`;
 }
@@ -326,3 +333,16 @@ export function processPathMacros(dependencies: {
 
   return processedPath;
 }
+
+export const pickExtensionForItemType = (systemType: string, name?: string) => {
+  if (systemType === 'asset') {
+    return getFileExtension(name);
+  } else {
+    return systemType === 'controller' ? `groovy` : `ftl`;
+  }
+};
+
+export const getFileNameWithExtensionForItemType = (type: string, name: string) =>
+  `${name}.${pickExtensionForItemType(type)}`
+    .replace(/(\.groovy)(\.groovy)|(\.ftl)(\.ftl)/g, '$1$3')
+    .replace(/\.{2,}/g, '.');

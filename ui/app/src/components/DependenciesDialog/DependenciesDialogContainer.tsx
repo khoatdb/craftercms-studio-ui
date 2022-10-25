@@ -22,13 +22,14 @@ import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { useSelection } from '../../hooks/useSelection';
 import { useDispatch } from 'react-redux';
 import { DetailedItem } from '../../models/Item';
-import { showCodeEditorDialog, showEditDialog, showHistoryDialog } from '../../state/actions/dialogs';
+import { showHistoryDialog } from '../../state/actions/dialogs';
 import { batchActions } from '../../state/actions/misc';
 import { fetchItemVersions } from '../../state/actions/versions';
 import { getRootPath } from '../../utils/path';
 import { fetchDependant, fetchSimpleDependencies } from '../../services/dependencies';
-import { isEditableAsset, parseLegacyItemToSandBoxItem } from '../../utils/content';
+import { openItemEditor, isEditableAsset, parseLegacyItemToSandBoxItem } from '../../utils/content';
 import DependenciesDialogUI from './DependenciesDialogUI';
+import useMount from '../../hooks/useMount';
 
 export function DependenciesDialogContainer(props: DependenciesDialogContainerProps) {
   const { item, dependenciesShown = 'depends-on', rootPath } = props;
@@ -48,19 +49,7 @@ export function DependenciesDialogContainer(props: DependenciesDialogContainerPr
   const dispatch = useDispatch();
 
   const handleEditorDisplay = (item: DetailedItem) => {
-    let type = 'controller';
-
-    if (item.systemType === 'component' || item.systemType === 'page') {
-      type = 'form';
-    } else if (item.contentTypeId === 'renderingTemplate') {
-      type = 'template';
-    }
-
-    if (type === 'form') {
-      dispatch(showEditDialog({ path: item.path, authoringBase, site: siteId }));
-    } else {
-      dispatch(showCodeEditorDialog({ site: siteId, authoringBase, path: item.path, type }));
-    }
+    openItemEditor(item, authoringBase, siteId, dispatch);
   };
 
   const handleHistoryDisplay = (item: DetailedItem) => {
@@ -76,8 +65,8 @@ export function DependenciesDialogContainer(props: DependenciesDialogContainerPr
   };
 
   const getDepsItems = useCallback(
-    (siteId: string, path: string, newItem?: boolean) => {
-      if (dialog.dependenciesShown === 'depends-on') {
+    (siteId: string, path: string, dependenciesShown: string, newItem?: boolean) => {
+      if (dependenciesShown === 'depends-on') {
         if (dialog.dependantItems === null || newItem) {
           fetchDependant(siteId, path).subscribe({
             next: (response) => {
@@ -111,8 +100,7 @@ export function DependenciesDialogContainer(props: DependenciesDialogContainerPr
         }
       }
     },
-    // eslint-disable-next-line
-    [dialog.item, dialog.dependenciesShown, setDialog]
+    [dialog.dependantItems, dialog.dependencies, setDialog]
   );
 
   useEffect(() => {
@@ -123,17 +111,9 @@ export function DependenciesDialogContainer(props: DependenciesDialogContainerPr
     setDialog({ dependenciesShown });
   }, [dependenciesShown, setDialog]);
 
-  useEffect(() => {
-    if (dialog.item) {
-      getDepsItems(siteId, dialog.item.path, true);
-    }
-  }, [dialog.item, siteId, getDepsItems]);
-
-  useEffect(() => {
-    if (dialog.item) {
-      getDepsItems(siteId, dialog.item.path);
-    }
-  }, [dialog.dependenciesShown, dialog.item, getDepsItems, siteId]);
+  useMount(() => {
+    getDepsItems(siteId, item.path, dependenciesShown, true);
+  });
 
   const setCompactView = (active: boolean) => {
     setDialog({ compactView: active });
@@ -145,10 +125,12 @@ export function DependenciesDialogContainer(props: DependenciesDialogContainerPr
 
   const setItem = (item: DetailedItem) => {
     setDialog({ item });
+    getDepsItems(siteId, item.path, dialog.dependenciesShown, true);
   };
 
   const setDependenciesShow = (dependenciesShown: string) => {
     setDialog({ dependenciesShown });
+    getDepsItems(siteId, dialog.item.path, dependenciesShown);
   };
 
   const handleContextMenuClick = (event: React.MouseEvent<HTMLButtonElement>, dependency: DetailedItem) => {

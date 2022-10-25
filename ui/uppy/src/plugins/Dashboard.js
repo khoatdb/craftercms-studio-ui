@@ -155,11 +155,13 @@ class Dashboard extends UppyDashboard {
 
   validateAndRetry = (fileID) => {
     const invalidFiles = { ...this.getPluginState().invalidFiles };
+    const suggestedName = this.uppy.getFile(fileID).meta.suggestedName;
     invalidFiles[fileID] = false;
     this.setPluginState({ invalidFiles });
     this.uppy.setFileMeta(fileID, {
       allowed: true,
-      suggestedName: null
+      suggestedName: null,
+      name: suggestedName
     });
     this.uppy.retryUpload(fileID);
   };
@@ -212,10 +214,12 @@ class Dashboard extends UppyDashboard {
       if (invalidFiles[fileID]) {
         invalidFiles[fileID] = false;
         const file = this.uppy.getFile(fileID);
+        const suggestedName = this.uppy.getFile(fileID).meta.suggestedName;
         if (file.meta.allowed) {
           this.uppy.setFileMeta(fileID, {
             allowed: true,
-            suggestedName: null
+            suggestedName: null,
+            name: suggestedName
           });
           this.uppy.retryUpload(fileID);
         } else {

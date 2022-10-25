@@ -65,6 +65,7 @@ import { LegacyFormDialogStateProps } from '../components/LegacyFormDialog/utils
 import { SingleFileUploadDialogStateProps } from '../components/SingleFileUploadDialog';
 import { ModelHierarchyMap } from '../utils/content';
 import { UIBlockerStateProps } from '../components/UIBlocker';
+import { RenameAssetStateProps } from '../components/RenameAssetDialog';
 
 export type HighlightMode = 'all' | 'move';
 
@@ -217,6 +218,7 @@ export interface GlobalState {
     reject: RejectDialogStateProps;
     createFolder: CreateFolderStateProps;
     createFile: CreateFileStateProps;
+    renameAsset: RenameAssetStateProps;
     copy: CopyDialogStateProps;
     upload: UploadDialogStateProps;
     singleFileUpload: SingleFileUploadDialogStateProps;
@@ -256,10 +258,10 @@ export interface GlobalState {
       deleteCommentRequired: boolean;
       bulkPublishCommentRequired: boolean;
       publishByCommitCommentRequired: boolean;
+      publishEverythingCommentRequired: boolean;
       submissionCommentMaxLength: number;
     };
     cdataEscapedFieldPatterns: string[];
-    useLegacyPreviewLookup: LookupTable<boolean>;
     references: LookupTable;
     xml: string;
   };

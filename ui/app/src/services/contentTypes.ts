@@ -29,7 +29,7 @@ import {
 import { LookupTable } from '../models/LookupTable';
 import { camelize, capitalize, isBlank } from '../utils/string';
 import { forkJoin, Observable, of, zip } from 'rxjs';
-import { errorSelectorApi1, get, postJSON } from '../utils/ajax';
+import { errorSelectorApi1, get, getBinary, postJSON } from '../utils/ajax';
 import { catchError, map, pluck, switchMap } from 'rxjs/operators';
 import { createLookupTable, nou, toQueryString } from '../utils/object';
 import { fetchItemsByPath } from './content';
@@ -336,7 +336,7 @@ function parseLegacyFormDefinition(definition: LegacyFormDefinition): Partial<Co
 
   // get receptacles dataSources
   asArray(definition.datasources?.datasource).forEach((datasource: LegacyDataSource) => {
-    if (datasource.type === 'dropTargets') dropTargetsLookup[datasource.id] = datasource;
+    if (datasource.type === 'components') dropTargetsLookup[datasource.id] = datasource;
     dataSources[datasource.id] = datasource;
   });
 
@@ -534,4 +534,9 @@ export function dissociateTemplate(site: string, contentTypeId: string): Observa
       }
     })
   );
+}
+
+export function fetchPreviewImage(site: string, contentTypeId: string): Observable<any> {
+  const qs = toQueryString({ siteId: site, contentTypeId });
+  return getBinary(`/studio/api/2/configuration/content-type/preview_image${qs}`);
 }
