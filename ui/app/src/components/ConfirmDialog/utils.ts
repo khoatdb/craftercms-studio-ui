@@ -48,10 +48,3 @@ export interface ConfirmDialogStateProps extends ConfirmDialogBaseProps, Pick<Di
   onClose?: StandardAction;
   onClosed?: StandardAction;
 }
-
-export interface ConfirmDialogContainerProps
-  extends ConfirmDialogBaseProps,
-    Pick<
-      ConfirmDialogProps,
-      'onClose' | 'onClosed' | 'disableOkButton' | 'disableCancelButton' | 'onOk' | 'onCancel' | 'children' | 'classes'
-    > {}

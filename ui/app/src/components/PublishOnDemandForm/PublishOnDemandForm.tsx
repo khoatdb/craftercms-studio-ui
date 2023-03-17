@@ -79,12 +79,12 @@ export function PublishOnDemandForm(props: PublishOnDemandFormProps) {
   return (
     <form>
       <Grid container spacing={3}>
-        {mode !== 'all' && (
+        {mode !== 'everything' && (
           <Grid item xs={12} md={8}>
             <FormControl fullWidth>
               <TextField
                 disabled={disabled}
-                value={mode === 'studio' ? formData.path : formData.commitIds}
+                value={(mode === 'studio' ? formData.path : formData.commitIds) ?? ''}
                 label={
                   mode === 'studio' ? (
                     <FormattedMessage id="publishOnDemand.formPathLabel" defaultMessage="Path to Publish" />
@@ -120,7 +120,7 @@ export function PublishOnDemandForm(props: PublishOnDemandFormProps) {
             </FormControl>
           </Grid>
         )}
-        <Grid item xs={12} md={mode !== 'all' ? 4 : 12}>
+        <Grid item xs={12} md={mode !== 'everything' ? 4 : 12}>
           {publishingTargets ? (
             <FormControl fullWidth variant="outlined" required disabled={disabled}>
               <InputLabel id="publishingTargetLabel">
@@ -131,7 +131,7 @@ export function PublishOnDemandForm(props: PublishOnDemandFormProps) {
                 labelId="publishingTargetLabel"
                 label={<FormattedMessage id="publishOnDemand.publishingTarget" defaultMessage="Publishing Target" />}
                 value={formData.publishingTarget}
-                onChange={handleFormChange('environment')}
+                onChange={handleFormChange('publishingTarget')}
               >
                 {publishingTargets.map((target) => (
                   <MenuItem key={target.name} value={target.name}>

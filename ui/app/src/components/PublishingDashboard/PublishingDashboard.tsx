@@ -25,6 +25,7 @@ import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
+import useActiveUser from '../../hooks/useActiveUser';
 
 interface PublishingDashboardProps {
   embedded?: boolean;
@@ -34,13 +35,18 @@ interface PublishingDashboardProps {
 
 export function PublishingDashboard(props: PublishingDashboardProps) {
   const { embedded, showAppsButton, onSubmittingAndOrPendingChange } = props;
+  const user = useActiveUser();
   const site = useActiveSiteId();
+  const userRoles = user?.rolesBySite[site] ?? [];
+  const userPermissions = user?.permissionsBySite[site] ?? [];
+  const allowedRole = userRoles.some((role) => role === 'developer' || role === 'admin');
+  const hasPublishPermission = userPermissions?.includes('publish');
   const {
     spacing,
     palette: { mode }
   } = useTheme();
   return (
-    <Box component="section" sx={{ bgcolor: `grey.${mode === 'light' ? 100 : 800}`, height: '100%' }}>
+    <Box component="section" sx={{ bgcolor: `grey.${mode === 'light' ? 100 : 800}`, height: '100%', pb: 3 }}>
       {!embedded && (
         <GlobalAppToolbar
           title={<FormattedMessage id="publishingDashboard.title" defaultMessage="Publishing Dashboard" />}
@@ -63,12 +69,20 @@ export function PublishingDashboard(props: PublishingDashboardProps) {
         <Grid item xs={12}>
           <PublishingStatusWidget siteId={site} />
         </Grid>
-        <Grid item xs={12}>
-          <PublishOnDemandWidget siteId={site} onSubmittingAndOrPendingChange={onSubmittingAndOrPendingChange} />
-        </Grid>
-        <Grid item xs={12}>
-          <PublishingQueueWidget siteId={site} />
-        </Grid>
+        {userPermissions.includes('get_publishing_queue') && (
+          <Grid item xs={12}>
+            <PublishingQueueWidget siteId={site} readOnly={!hasPublishPermission} />
+          </Grid>
+        )}
+        {hasPublishPermission && (
+          <Grid item xs={12}>
+            <PublishOnDemandWidget
+              siteId={site}
+              mode={allowedRole ? null : 'everything'}
+              onSubmittingAndOrPendingChange={onSubmittingAndOrPendingChange}
+            />
+          </Grid>
+        )}
       </Grid>
     </Box>
   );

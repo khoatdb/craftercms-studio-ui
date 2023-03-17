@@ -31,13 +31,15 @@ import { DialogBody } from '../DialogBody';
 import { useDispatch } from 'react-redux';
 import { closePreviewDialog, showCodeEditorDialog } from '../../state/actions/dialogs';
 import { batchActions } from '../../state/actions/misc';
-import { hasEditAction } from '../../utils/content';
+import { hasEditAction, isBlobUrl } from '../../utils/content';
+import { useSelection } from '../../hooks/useSelection';
 
 export function PreviewDialogContainer(props: PreviewDialogContainerProps) {
   const { title, content, mode, url, onClose, type, mimeType, backgroundModeIndex } = props;
   const { classes, cx } = useStyles();
   const item = useDetailedItem(url);
   const dispatch = useDispatch();
+  const guestBase = useSelection<string>((state) => state.env.guestBase);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -77,6 +79,9 @@ export function PreviewDialogContainer(props: PreviewDialogContainerProps) {
           </ConditionalLoadingState>
         );
       }
+      case 'pdf': {
+        return <IFrame url={isBlobUrl(url) ? url : `${guestBase}${url}`} title={title} width="100%" height="100vh" />;
+      }
       default:
         break;
     }
@@ -102,6 +107,9 @@ export function PreviewDialogContainer(props: PreviewDialogContainerProps) {
           backgroundModes[backgroundModeIndex]?.mode !== 'default' &&
             classes[backgroundModes[backgroundModeIndex].classKey]
         )}
+        sx={{
+          padding: 0
+        }}
       >
         {renderPreview()}
       </DialogBody>

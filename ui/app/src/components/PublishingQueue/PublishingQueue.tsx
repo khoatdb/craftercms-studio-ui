@@ -23,13 +23,12 @@ import { defineMessages, useIntl } from 'react-intl';
 import PublishingPackage from './PublishingPackage';
 import { cancelPackage, fetchPackages, fetchPublishingTargets } from '../../services/publishing';
 import { CurrentFilters, Package, Selected } from '../../models/Publishing';
-import FilterDropdown from '../CreateSiteDialog/FilterDropdown';
+import FilterDropdown from './FilterDropdown';
 import { setRequestForgeryToken } from '../../utils/auth';
 import TablePagination from '@mui/material/TablePagination';
 import EmptyState from '../EmptyState/EmptyState';
 import Typography from '@mui/material/Typography';
 import HighlightOffIcon from '@mui/icons-material/HighlightOffRounded';
-import Spinner from '../Spinner/Spinner';
 import RefreshIcon from '@mui/icons-material/RefreshRounded';
 import Button from '@mui/material/Button';
 import { alpha } from '@mui/material/styles';
@@ -41,6 +40,7 @@ import ConfirmDropdown from '../ConfirmDropdown';
 import { publishEvent, workflowEvent } from '../../state/actions/system';
 import { getHostToHostBus } from '../../utils/subjects';
 import { filter } from 'rxjs/operators';
+import { LoadingState } from '../LoadingState';
 
 const messages = defineMessages({
   selectAll: {
@@ -159,15 +159,14 @@ const useStyles = makeStyles()((theme) => ({
 const currentFiltersInitialState: CurrentFilters = {
   environment: '',
   path: '',
-  state: [READY_FOR_LIVE],
+  state: [READY_FOR_LIVE, PROCESSING, COMPLETED, CANCELLED, BLOCKED],
   limit: 5,
   page: 0
 };
 
-const selectedInitialState: Selected = {};
-
 export interface PublishingQueueProps {
   siteId: string;
+  readOnly?: boolean;
 }
 
 function getFilters(currentFilters: CurrentFilters) {
@@ -193,14 +192,15 @@ function renderCount(selected: Selected) {
 function PublishingQueue(props: PublishingQueueProps) {
   const { classes } = useStyles();
   const [packages, setPackages] = useState(null);
+  const [isFetchingPackages, setIsFetchingPackages] = useState(false);
   const [filesPerPackage, setFilesPerPackage] = useState(null);
-  const [selected, setSelected] = useState(selectedInitialState);
+  const [selected, setSelected] = useState<Selected>({});
   const [pending, setPending] = useState({});
   const [count, setCount] = useState(0);
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useSpreadState({
     environments: null,
-    states: [READY_FOR_LIVE, PROCESSING, COMPLETED, CANCELLED, BLOCKED]
+    states: currentFiltersInitialState.state
   });
   const [apiState, setApiState] = useSpreadState({
     error: false,
@@ -208,38 +208,44 @@ function PublishingQueue(props: PublishingQueueProps) {
   });
   const [currentFilters, setCurrentFilters] = useState(currentFiltersInitialState);
   const { formatMessage } = useIntl();
-  const { siteId } = props;
+  const { siteId, readOnly } = props;
   const hasReadyForLivePackages = (packages || []).filter((item: Package) => item.state === READY_FOR_LIVE).length > 0;
 
   const getPackages = useCallback(
-    (siteId: string) =>
-      fetchPackages(siteId, getFilters(currentFilters)).subscribe({
-        next: (packages) => {
-          setTotal(packages.total);
-          setPackages(packages);
-        },
-        error: ({ response }) => {
-          setApiState({ error: true, errorResponse: response });
-        }
-      }),
+    (siteId: string) => {
+      setIsFetchingPackages(true);
+      if (currentFilters.state.length) {
+        fetchPackages(siteId, getFilters(currentFilters)).subscribe({
+          next: (packages) => {
+            setIsFetchingPackages(false);
+            setTotal(packages.total);
+            setPackages(packages);
+          },
+          error: ({ response }) => {
+            setIsFetchingPackages(false);
+            setApiState({ error: true, errorResponse: response.response });
+          }
+        });
+      }
+    },
     [currentFilters, setApiState]
   );
 
   setRequestForgeryToken();
 
   useEffect(() => {
-    fetchPublishingTargets(siteId).subscribe(
-      ({ publishingTargets: targets }) => {
+    fetchPublishingTargets(siteId).subscribe({
+      next({ publishingTargets: targets }) {
         let channels: string[] = [];
         targets.forEach((channel) => {
           channels.push(channel.name);
         });
         setFilters({ environments: channels });
       },
-      ({ response }) => {
+      error({ response }) {
         setApiState({ error: true, errorResponse: response });
       }
-    );
+    });
   }, [siteId, setFilters, setApiState]);
 
   useEffect(() => {
@@ -281,6 +287,7 @@ function PublishingQueue(props: PublishingQueueProps) {
         setSelected={setSelected}
         filesPerPackage={filesPerPackage}
         setFilesPerPackage={setFilesPerPackage}
+        readOnly={readOnly}
       />
     ));
   }
@@ -294,8 +301,8 @@ function PublishingQueue(props: PublishingQueueProps) {
       }
     });
     setPending(_pending);
-    cancelPackage(siteId, Object.keys(_pending)).subscribe(
-      () => {
+    cancelPackage(siteId, Object.keys(_pending)).subscribe({
+      next() {
         Object.keys(selected).forEach((key: string) => {
           _pending[key] = false;
         });
@@ -303,10 +310,10 @@ function PublishingQueue(props: PublishingQueueProps) {
         clearSelected();
         getPackages(siteId);
       },
-      ({ response }) => {
+      error({ response }) {
         setApiState({ error: true, errorResponse: response });
       }
-    );
+    });
   }
 
   function clearSelected() {
@@ -386,7 +393,7 @@ function PublishingQueue(props: PublishingQueueProps) {
                 <Checkbox
                   color="primary"
                   checked={areAllSelected()}
-                  disabled={!packages || !hasReadyForLivePackages}
+                  disabled={!packages || !hasReadyForLivePackages || readOnly}
                   onClick={handleSelectAll}
                 />
               }
@@ -411,7 +418,7 @@ function PublishingQueue(props: PublishingQueueProps) {
             confirmText={formatMessage(messages.confirm)}
             confirmHelperText={formatMessage(messages.confirmAllHelper)}
             onConfirm={handleCancelAll}
-            disabled={!(hasReadyForLivePackages && Object.values(selected).length > 0)}
+            disabled={!(hasReadyForLivePackages && Object.values(selected).length > 0) || readOnly}
           />
         )}
         <FilterDropdown
@@ -442,7 +449,7 @@ function PublishingQueue(props: PublishingQueueProps) {
         <ApiResponseErrorState error={apiState.errorResponse} />
       ) : (
         <div className={classes.queueList}>
-          {packages === null && <Spinner />}
+          {packages === null && isFetchingPackages && <LoadingState />}
           {packages && renderPackages()}
           {packages !== null && packages.length === 0 && (
             <div className={classes.empty}>

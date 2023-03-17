@@ -32,12 +32,20 @@ import TransferList from '../TransferList';
 import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import FormHelperText from '@mui/material/FormHelperText';
-import { GROUP_DESCRIPTION_MAX_LENGTH, GROUP_NAME_MAX_LENGTH, GroupEditDialogUIProps } from './utils';
+import { GroupEditDialogUIProps } from './utils';
+import {
+  GROUP_DESCRIPTION_MAX_LENGTH,
+  GROUP_NAME_MAX_LENGTH,
+  GROUP_NAME_MIN_LENGTH,
+  validateGroupNameMinLength,
+  validateRequiredField
+} from '../GroupManagement/utils';
+import { excludeCommonItems } from '../TransferList/utils';
 
 const translations = defineMessages({
   confirmHelperText: {
     id: 'editGroupDialog.helperText',
-    defaultMessage: 'Delete "{name}" group?'
+    defaultMessage: 'Delete group "{name}"?'
   },
   confirmOk: {
     id: 'words.yes',
@@ -56,8 +64,10 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
     title,
     subtitle,
     group,
+    groupNameError,
     onDeleteGroup,
     onSave,
+    submitOk,
     onCancel,
     onChangeValue,
     onAddMembers,
@@ -65,10 +75,33 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
     onCloseButtonClick,
     users,
     members,
+    membersLookup,
     inProgressIds,
     isDirty,
-    isEdit
+    isEdit,
+    transferListState,
+    sourceItemsAllChecked,
+    onFilterUsers,
+    onFetchMoreUsers,
+    hasMoreUsers,
+    disableAddMembers,
+    isSubmitting
   } = props;
+
+  const {
+    sourceItems,
+    sourceFilterKeyword,
+    setSourceFilterKeyword,
+    targetItems,
+    filteredTargetItems,
+    targetFilterKeyword,
+    setTargetFilterKeyword,
+    checkedList,
+    onItemClicked,
+    onCheckAllClicked,
+    disableRemove,
+    targetItemsAllChecked
+  } = transferListState;
 
   return (
     <>
@@ -118,7 +151,7 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
                 </Typography>
               </InputLabel>
               {isEdit ? (
-                <Typography className={classes.fullWidth} color="textSecondary">
+                <Typography className={classes.fullWidth} color="textSecondary" noWrap title={group.name}>
                   {group.name}
                 </Typography>
               ) : (
@@ -126,7 +159,7 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
                   id="groupName"
                   onChange={(e) => onChangeValue({ key: 'name', value: e.currentTarget.value })}
                   value={group.name}
-                  error={isDirty && group.name === ''}
+                  error={groupNameError}
                   fullWidth
                   autoFocus
                   inputProps={{ maxLength: GROUP_NAME_MAX_LENGTH }}
@@ -136,11 +169,27 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
             <Box display="flex" p="0 0 15px">
               <div className={classes.label} />
               <FormHelperText
-                error
+                error={groupNameError}
                 children={
-                  isDirty && group.name === '' ? (
+                  validateRequiredField(group.name, isDirty) ? (
                     <FormattedMessage id="editGroupDialog.requiredGroupName" defaultMessage="Group name is required." />
-                  ) : null
+                  ) : validateGroupNameMinLength(group.name) ? (
+                    <FormattedMessage
+                      id="editGroupDialog.minLength"
+                      defaultMessage="Min {length} characters."
+                      values={{
+                        length: GROUP_NAME_MIN_LENGTH
+                      }}
+                    />
+                  ) : (
+                    <FormattedMessage
+                      id="editGroupDialog.invalidMinLength"
+                      defaultMessage="Max {length} characters, consisting of letters, numbers, dash (-), underscore (_) and dot (.)."
+                      values={{
+                        length: GROUP_NAME_MAX_LENGTH
+                      }}
+                    />
+                  )
                 }
               />
             </Box>
@@ -157,53 +206,82 @@ export function EditGroupDialogUI(props: GroupEditDialogUIProps) {
                 fullWidth
                 autoFocus={isEdit}
                 inputProps={{ maxLength: GROUP_DESCRIPTION_MAX_LENGTH }}
+                disabled={group.externallyManaged}
               />
             </Box>
-            <div className={classes.formActions}>
-              {isEdit && (
-                <SecondaryButton disabled={!isDirty} onClick={onCancel}>
-                  <FormattedMessage id="words.cancel" defaultMessage="Cancel" />
-                </SecondaryButton>
-              )}
-              <PrimaryButton disabled={!isDirty || group.name === ''} type="submit">
-                <FormattedMessage id="words.save" defaultMessage="Save" />
-              </PrimaryButton>
-            </div>
+            {!group.externallyManaged && (
+              <div className={classes.formActions}>
+                {isEdit && (
+                  <SecondaryButton disabled={!isDirty || isSubmitting} onClick={onCancel}>
+                    <FormattedMessage id="words.cancel" defaultMessage="Cancel" />
+                  </SecondaryButton>
+                )}
+                <PrimaryButton disabled={!submitOk} loading={isSubmitting} type="submit">
+                  <FormattedMessage id="words.save" defaultMessage="Save" />
+                </PrimaryButton>
+              </div>
+            )}
           </form>
         </section>
         <Divider />
         <section className={classes.section}>
-          {isEdit && users && members ? (
-            <>
-              <Typography variant="subtitle1" className={classes.sectionTitleEdit}>
-                <FormattedMessage id="editGroupDialog.editGroupMembers" defaultMessage="Edit Group Members" />
-              </Typography>
-              <TransferList
-                onTargetListItemsAdded={(items) => onAddMembers(items.map((item) => item.id))}
-                onTargetListItemsRemoved={(items) => onRemoveMembers(items.map((item) => item.id))}
-                inProgressIds={inProgressIds}
-                source={{
-                  title: <FormattedMessage id="words.users" defaultMessage="Users" />,
-                  items: users.map((user) => ({ id: user.username, title: user.username, subtitle: user.email })),
-                  emptyMessage: (
-                    <FormattedMessage
-                      id="transferList.emptyListMessage"
-                      defaultMessage="All users are members of this group"
-                    />
-                  )
-                }}
-                target={{
-                  title: <FormattedMessage id="words.members" defaultMessage="Members" />,
-                  items: members.map((user) => ({ id: user.username, title: user.username, subtitle: user.email })),
-                  emptyMessage: (
-                    <FormattedMessage
-                      id="transferList.targetEmptyStateMessage"
-                      defaultMessage="No members on this group"
-                    />
-                  )
-                }}
-              />
-            </>
+          {isEdit ? (
+            users &&
+            members && (
+              <>
+                <Typography variant="subtitle1" className={classes.sectionTitleEdit}>
+                  <FormattedMessage id="editGroupDialog.groupMembers" defaultMessage="Group Members" />
+                </Typography>
+                <TransferList
+                  disabled={group.externallyManaged}
+                  inProgressIds={inProgressIds}
+                  source={{
+                    title: <FormattedMessage id="words.users" defaultMessage="Users" />,
+                    items: sourceItems,
+                    filterKeyword: sourceFilterKeyword,
+                    setFilterKeyword: setSourceFilterKeyword,
+                    disabledItems: membersLookup,
+                    emptyStateMessage: (
+                      <FormattedMessage
+                        id="transferList.noResults"
+                        defaultMessage="No results, try to change the query"
+                      />
+                    ),
+                    onItemClick: onItemClicked,
+                    checkedList,
+                    inProgressIds,
+                    isAllChecked: sourceItemsAllChecked,
+                    onCheckAllClicked: (items, checked) => {
+                      onCheckAllClicked(excludeCommonItems(items, targetItems), checked);
+                    },
+                    onFilter: onFilterUsers,
+                    onFetchMore: onFetchMoreUsers,
+                    hasMoreItems: hasMoreUsers
+                  }}
+                  target={{
+                    title: <FormattedMessage id="words.members" defaultMessage="Members" />,
+                    items: filteredTargetItems,
+                    filterKeyword: targetFilterKeyword,
+                    setFilterKeyword: setTargetFilterKeyword,
+                    emptyStateMessage: (
+                      <FormattedMessage
+                        id="transferList.targetEmptyStateMessage"
+                        defaultMessage="No members on this group"
+                      />
+                    ),
+                    onItemClick: onItemClicked,
+                    checkedList,
+                    inProgressIds,
+                    isAllChecked: targetItemsAllChecked,
+                    onCheckAllClicked
+                  }}
+                  disableAdd={disableAddMembers}
+                  disableRemove={disableRemove}
+                  addToTarget={onAddMembers}
+                  removeFromTarget={onRemoveMembers}
+                />
+              </>
+            )
           ) : (
             <Box display="flex" justifyContent="center">
               <Typography variant="subtitle2" color="textSecondary">

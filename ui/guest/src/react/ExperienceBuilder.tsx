@@ -54,8 +54,6 @@ import {
   contentTreeFieldSelected,
   contentTreeSwitchFieldInstance,
   contentTypeDropTargetsRequest,
-  desktopAssetUploadComplete,
-  desktopAssetUploadProgress,
   guestCheckIn,
   guestCheckOut,
   highlightModeChanged,
@@ -94,7 +92,9 @@ import {
   dropzoneEnter,
   dropzoneLeave,
   setDropPosition,
-  startListening
+  startListening,
+  desktopAssetUploadComplete,
+  desktopAssetUploadProgress
 } from '../store/actions';
 import DragGhostElement from './DragGhostElement';
 import GuestGlobalStyles from './GuestGlobalStyles';
@@ -108,6 +108,7 @@ import {
 } from '@craftercms/studio-ui/state/actions/auth';
 import { setJwt } from '@craftercms/studio-ui/utils/auth';
 import { SHARED_WORKER_NAME } from '@craftercms/studio-ui/utils/constants';
+import useUnmount from '@craftercms/studio-ui/hooks/useUnmount';
 
 // TODO: add themeOptions and global styles customising
 interface BaseXBProps {
@@ -207,6 +208,11 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
     [dispatch, hasHost, draggable, editMode, highlightMode]
   );
 
+  useUnmount(() => {
+    clearAndListen$.next();
+    dispatch(clearContentTreeFieldSelected());
+  });
+
   useEffect(() => {
     if (hasHost && authoringBase) {
       const worker = new SharedWorker(`${authoringBase}/static-assets/next/shared-worker.js`, {
@@ -243,9 +249,13 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
   // region Hotkeys
 
   // This requires maintenance as key shortcuts evolve/change.
-  useHotkeys('r,m,e,p,shift+/', (e) => {
-    post(hotKey({ key: e.key, type: 'keydown' }));
-  });
+  useHotkeys(
+    'a,r,m,e,p,shift+/,shift+e',
+    (e) => {
+      post(hotKey({ key: e.key, type: 'keyup', shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey }));
+    },
+    { keyup: true, keydown: false }
+  );
 
   // ICE bypass key
   useHotkeys(
@@ -255,6 +265,22 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
     },
     { keyup: true, keydown: true }
   );
+
+  useEffect(() => {
+    const bypassHandler = (e) => {
+      // check if 'z' key is pressed, if so, 'uncheck' it.
+      if (refs.current.keysPressed['z']) {
+        bypassKeyStroke(e, refs);
+      }
+    };
+
+    // If you're pressing 'z' key and leave current tab, the system stays as if it was still pressed (bypassed).
+    window.addEventListener('blur', bypassHandler, false);
+
+    return () => {
+      window.removeEventListener('blur', bypassHandler);
+    };
+  }, []);
 
   // endregion
 
@@ -472,7 +498,7 @@ function ExperienceBuilderInternal(props: InternalGuestProps) {
         dispatch(contentReady());
       });
 
-    post(guestCheckIn({ location, path, site, documentDomain }));
+    post(guestCheckIn({ location, path, site, documentDomain, version: process.env.VERSION }));
 
     return () => {
       post(guestCheckOut({ path }));

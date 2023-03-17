@@ -30,7 +30,8 @@
     this.allowEmbedded = false;
     this.enableSearch = false;
     this.enableBrowse = false;
-    this.baseRepoPath = '/site/components';
+    this.defaultBaseRepoPath = '/site/components';
+    this.baseRepoPath = null;
     this.baseBrowsePath = '/site/components';
 
     properties.forEach((prop) => {
@@ -132,7 +133,7 @@
         },
         {
           label: formatMessage('baseRepositoryPath'),
-          name: 'baseRepositoryPath',
+          name: 'baseRepoPath',
           type: 'string',
           defaultValue: '/site/components'
         },
@@ -163,6 +164,7 @@
         path,
         contentTypes: [contentType],
         multiSelect,
+        allowUpload: false,
         onSuccess: (result) => {
           (Array.isArray(result) ? result : [result]).forEach(({ name, path }) => {
             const value = name && name !== '' ? name : path;
@@ -174,7 +176,9 @@
     },
 
     _openSearch: function (control) {
+      const searchPath = craftercms.utils.string.ensureSingleSlash(`${this.baseBrowsePath}/.+`);
       const searchContext = {
+        path: searchPath,
         searchId: null,
         itemsPerPage: 12,
         keywords: '',
@@ -232,7 +236,7 @@
         true,
         type === 'embedded',
         (item) => item.type === 'component',
-        this.baseRepoPath
+        this.baseRepoPath ?? this.defaultBaseRepoPath
       );
     },
 
@@ -343,7 +347,7 @@
 
     _openContentTypeForm(contentType, type, control) {
       const self = this;
-      const path = `${self.baseRepoPath}/${contentType.replace(/^\/component(s?)\//, '')}`;
+      const path = this.baseRepoPath ?? craftercms.utils.content.generateComponentBasePath(contentType);
 
       let parentPath = self.form.path;
       CStudioAuthoring.Operations.openContentWebForm(

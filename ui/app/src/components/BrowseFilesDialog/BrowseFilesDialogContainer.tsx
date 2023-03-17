@@ -21,11 +21,7 @@ import { useActiveSiteId } from '../../hooks/useActiveSiteId';
 import { useEnv } from '../../hooks/useEnv';
 import { useDebouncedInput } from '../../hooks/useDebouncedInput';
 import { useSpreadState } from '../../hooks/useSpreadState';
-import {
-  closeSingleFileUploadDialog,
-  showPreviewDialog,
-  showSingleFileUploadDialog
-} from '../../state/actions/dialogs';
+import { closeSingleFileUploadDialog, showSingleFileUploadDialog } from '../../state/actions/dialogs';
 import { useDispatch } from 'react-redux';
 import LookupTable from '../../models/LookupTable';
 import { BrowseFilesDialogUI } from '.';
@@ -36,9 +32,20 @@ import EmptyState from '../EmptyState';
 import BrowseFilesDialogContainerSkeleton from './BrowseFilesDialogContainerSkeleton';
 import { batchActions, dispatchDOMEvent } from '../../state/actions/misc';
 import { createCustomDocumentEventListener } from '../../utils/dom';
+import { getStoredBrowseDialogCompactMode, setStoredBrowseDialogCompactMode } from '../../utils/state';
+import useActiveUser from '../../hooks/useActiveUser';
 
 export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProps) {
-  const { path, onClose, onSuccess, multiSelect = false, mimeTypes, contentTypes, numOfLoaderItems } = props;
+  const {
+    path,
+    onClose,
+    onSuccess,
+    multiSelect = false,
+    mimeTypes,
+    contentTypes,
+    numOfLoaderItems,
+    allowUpload = true
+  } = props;
   const [items, setItems] = useState<SearchItem[]>();
   const site = useActiveSiteId();
   const { guestBase } = useEnv();
@@ -60,12 +67,16 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
   const [currentPath, setCurrentPath] = useState(browsePath);
   const [fetchingBrowsePathExists, setFetchingBrowsePathExists] = useState(false);
   const [browsePathExists, setBrowsePathExists] = useState(false);
+  const [sortKeys, setSortKeys] = useState([]);
+  const { username } = useActiveUser();
+  const [compact, setCompact] = useState(() => getStoredBrowseDialogCompactMode(username));
 
   const fetchItems = useCallback(
     () =>
       search(site, { ...searchParameters, path: `${currentPath}/[^/]+` }).subscribe((response) => {
         setTotal(response.total);
         setItems(response.items);
+        setSortKeys(response.facets.map((facet) => facet.name));
       }),
     [searchParameters, currentPath, site]
   );
@@ -128,16 +139,6 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
     setSelectedLookup({ [path]: selected ? items.find((item) => item.path === path) : null });
   };
 
-  const onPreviewImage = (item: MediaItem) => {
-    dispatch(
-      showPreviewDialog({
-        type: 'image',
-        title: item.name,
-        url: item.path
-      })
-    );
-  };
-
   const onPathSelected = (path: string) => {
     setCurrentPath(path);
   };
@@ -166,10 +167,17 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
     fetchItems();
   };
 
+  const toggleCompact = () => {
+    setStoredBrowseDialogCompactMode(username, !compact);
+    setCompact(!compact);
+  };
+
   return fetchingBrowsePathExists ? (
     <BrowseFilesDialogContainerSkeleton />
   ) : browsePathExists ? (
     <BrowseFilesDialogUI
+      compact={compact}
+      onToggleViewMode={toggleCompact}
       currentPath={currentPath}
       items={items}
       path={browsePath}
@@ -178,9 +186,12 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
       selectedCard={selectedCard}
       selectedArray={selectedArray}
       multiSelect={multiSelect}
+      searchParameters={searchParameters}
+      setSearchParameters={setSearchParameters}
       limit={searchParameters.limit}
       offset={searchParameters.offset}
       total={total}
+      sortKeys={sortKeys}
       onCardSelected={onCardSelected}
       onChangePage={onChangePage}
       onChangeRowsPerPage={onChangeRowsPerPage}
@@ -188,11 +199,11 @@ export function BrowseFilesDialogContainer(props: BrowseFilesDialogContainerProp
       handleSearchKeyword={handleSearchKeyword}
       onCloseButtonClick={onCloseButtonClick}
       onPathSelected={onPathSelected}
-      onPreviewImage={onPreviewImage}
       onSelectButtonClick={onSelectButtonClick}
       numOfLoaderItems={numOfLoaderItems}
       onRefresh={onRefresh}
       onUpload={onUpload}
+      allowUpload={allowUpload}
     />
   ) : (
     <EmptyState

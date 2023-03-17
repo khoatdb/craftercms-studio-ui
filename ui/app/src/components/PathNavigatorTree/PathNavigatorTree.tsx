@@ -30,9 +30,17 @@ import {
 } from '../../state/actions/pathNavigatorTree';
 import { StateStylingProps } from '../../models/UiConfig';
 import LookupTable from '../../models/LookupTable';
-import { getEditorMode, isEditableViaFormEditor, isImage, isNavigable, isPreviewable } from '../PathNavigator/utils';
+import {
+  getEditorMode,
+  isEditableViaFormEditor,
+  isImage,
+  isNavigable,
+  isPreviewable,
+  isVideo,
+  isPdfDocument
+} from '../PathNavigator/utils';
 import ContextMenu, { ContextMenuOption } from '../ContextMenu/ContextMenu';
-import { getNumOfMenuOptionsForItem } from '../../utils/content';
+import { getNumOfMenuOptionsForItem, lookupItemByPath } from '../../utils/content';
 import { previewItem } from '../../state/actions/preview';
 import { getOffsetLeft, getOffsetTop } from '@mui/material/Popover';
 import { showEditDialog, showItemMegaMenu, showPreviewDialog } from '../../state/actions/dialogs';
@@ -69,6 +77,7 @@ export interface PathNavigatorTreeProps
   collapsedIcon?: SystemIconDescriptor;
   container?: Partial<StateStylingProps>;
   initialCollapsed?: boolean;
+  collapsible?: boolean;
   initialSystemTypes?: SystemType[];
   initialExpanded?: string[];
   onNodeClick?: PathNavigatorTreeUIProps['onLabelClick'];
@@ -128,6 +137,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
     rootPath,
     initialExpanded,
     initialCollapsed = true,
+    collapsible = true,
     initialSystemTypes,
     onNodeClick,
     active,
@@ -151,7 +161,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
   const keywordByPath = state?.keywordByPath;
   const totalByPath = state?.totalByPath;
   const childrenByParentPath = state?.childrenByParentPath;
-  const rootItem = itemsByPath[rootPath];
+  const rootItem = lookupItemByPath(rootPath, itemsByPath);
 
   useEffect(() => {
     // Adding uiConfig as means to stop navigator from trying to
@@ -200,7 +210,7 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
   // region Handlers
 
   const onChangeCollapsed = (collapsed) => {
-    dispatch(pathNavigatorTreeToggleCollapsed({ id, collapsed }));
+    collapsible && dispatch(pathNavigatorTreeToggleCollapsed({ id, collapsed }));
   };
 
   const onNodeLabelClick =
@@ -291,10 +301,10 @@ export function PathNavigatorTree(props: PathNavigatorTreeProps) {
   const onPreview = (item: DetailedItem) => {
     if (isEditableViaFormEditor(item)) {
       dispatch(showEditDialog({ path: item.path, authoringBase, site: siteId, readonly: true }));
-    } else if (isImage(item)) {
+    } else if (isImage(item) || isVideo(item) || isPdfDocument(item.mimeType)) {
       dispatch(
         showPreviewDialog({
-          type: 'image',
+          type: isImage(item) ? 'image' : isVideo(item) ? 'video' : 'pdf',
           title: item.label,
           url: item.path
         })

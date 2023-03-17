@@ -435,6 +435,39 @@ export const contentTypesMessages = defineMessages({
   maxValueError: {
     id: 'contentType.maxSizeError',
     defaultMessage: "Maximum value can't be lower than minimum value"
+  },
+  missingTemplateTitle: {
+    id: 'contentType.missingTemplateTitle',
+    defaultMessage: 'Missing Template'
+  },
+  missingTemplateBody: {
+    id: 'contentType.missingTemplateBody',
+    defaultMessage:
+      'Confirm a template is not required for this content type. Failing to assign a template would cause rendering issues on templated apps.'
+  },
+  templateNotRequiredSave: {
+    id: 'contentType.templateNotRequiredSave',
+    defaultMessage: 'Template not required, save'
+  },
+  templateNotRequiredSaveAndClose: {
+    id: 'contentType.templateNotRequiredSaveAndClose',
+    defaultMessage: 'Template not required, save & close'
+  },
+  templateNotRequiredSaveAndMinimize: {
+    id: 'contentType.templateNotRequiredSaveAndMinimize',
+    defaultMessage: 'Template not required, save & minimize'
+  },
+  createATemplate: {
+    id: 'contentType.createATemplate',
+    defaultMessage: 'Create a template'
+  },
+  chooseExistingTemplate: {
+    id: 'contentType.chooseExistingTemplate',
+    defaultMessage: 'Choose existing template'
+  },
+  stayEditing: {
+    id: 'contentType.stayEditing',
+    defaultMessage: 'Stay & continue editing'
   }
 });
 
@@ -849,10 +882,6 @@ export const globalMenuMessages = defineMessages({
     id: 'words.groups',
     defaultMessage: 'Groups'
   },
-  'home.globalMenu.cluster': {
-    id: 'words.cluster',
-    defaultMessage: 'Cluster'
-  },
   'home.globalMenu.audit': {
     id: 'words.audit',
     defaultMessage: 'Audit'
@@ -1067,10 +1096,6 @@ export const localeSelectorControlMessages = defineMessages({
 });
 
 export const adminDashboardMessages = defineMessages({
-  clusterDeleted: {
-    id: 'clusterAdmin.clusterDeleted',
-    defaultMessage: '{cluster} deleted.'
-  },
   siteUpdated: {
     id: 'sitesAdmin.siteUpdated',
     defaultMessage: 'Project Updated.'
@@ -1357,27 +1382,27 @@ export const itemSuccessMessages = defineMessages({
   itemDeleted: {
     id: 'item.delete',
     defaultMessage:
-      '{count, plural, one {The selected item is being deleted and will be removed shortly} other {The selected items are being deleted and will be removed shortly}}'
+      '{count, plural, one {The selected item is being deleted and will be removed soon} other {The selected items are being deleted and will be removed soon}}'
   },
   itemPublishedNow: {
     id: 'item.publishedNow',
     defaultMessage:
-      '{count, plural, one {The selected item has been pushed to {environment}. It will be visible shortly} other {The selected items has been pushed to {environment}. Them will be visible shortly}}'
+      '{count, plural, one {The selected item has been published to {environment}. It will be visible soon} other {The selected items have been published to {environment}. They will be visible soon}}'
   },
   itemRequestedToPublishNow: {
     id: 'item.requestedToPublishNow',
     defaultMessage:
-      '{count, plural, one {The selected item has been requested to be pushed to {environment}} other {The selected items has been requested to be pushed to {environment}}}'
+      '{count, plural, one {The selected item has been requested to be published to {environment}} other {The selected items have been requested to be published to {environment}}}'
   },
   itemRequestedToSchedulePublish: {
     id: 'item.requestedToSchedulePublish',
     defaultMessage:
-      '{count, plural, one {The selected item have been scheduled to go {environment}} other {The selected items have been scheduled to go {environment}}}'
+      '{count, plural, one {The selected item has been scheduled to go {environment}} other {The selected items have been scheduled to go {environment}}}'
   },
   itemSchedulePublished: {
     id: 'item.schedulePublished',
     defaultMessage:
-      '{count, plural, one {The selected item have been scheduled to go {environment}} other {The selected items have been scheduled to go {environment}}}'
+      '{count, plural, one {The selected item has been scheduled to go {environment}} other {The selected items have been scheduled to go {environment}}}'
   },
   itemCreated: {
     id: 'item.created',

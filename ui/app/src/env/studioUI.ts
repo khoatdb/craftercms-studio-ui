@@ -18,7 +18,6 @@ import * as auditService from '../services/audit';
 import * as authService from '../services/auth';
 import * as awsService from '../services/aws';
 import * as boxService from '../services/box';
-import * as clustersService from '../services/clusters';
 import * as cmisService from '../services/cmis';
 import * as configurationService from '../services/configuration';
 import * as contentService from '../services/content';
@@ -66,6 +65,7 @@ export const components = {
   ActionsBar: lazy(() => import('../components/ActionsBar')),
   ActionsGroup: lazy(() => import('../components/ActionsGroup')),
   ActivityDashlet: lazy(() => import('../components/ActivityDashlet')),
+  AlertDialog: lazy(() => import('../components/AlertDialog')),
   ApiResponseErrorState: lazy(() => import('../components/ApiResponseErrorState')),
   AsyncVideoPlayer: lazy(() => import('../components/AsyncVideoPlayer')),
   AuditGrid: lazy(() => import('../components/AuditGrid')),
@@ -78,8 +78,6 @@ export const components = {
   BrowseFilesDialog: lazy(() => import('../components/BrowseFilesDialog')),
   ChangeContentTypeDialog: lazy(() => import('../components/ChangeContentTypeDialog')),
   CharCountStatus: lazy(() => import('../components/CharCountStatus')),
-  ClusterGrid: lazy(() => import('../components/ClusterGrid')),
-  ClusterManagement: lazy(() => import('../components/ClusterManagement')),
   CodeEditorDialog: lazy(() => import('../components/CodeEditorDialog')),
   CommitResolutionDialog: lazy(() => import('../components/CommitResolutionDialog')),
   CompareVersionsDialog: lazy(() => import('../components/CompareVersionsDialog')),
@@ -191,6 +189,7 @@ export const components = {
     () => import('../components/LegacySiteDashboard/LegacyAwaitingApprovalDashletGrid')
   ),
   LegacyDashletCard: lazy(() => import('../components/LegacySiteDashboard/LegacyDashletCard')),
+  LegacyInReviewDashlet: lazy(() => import('../components/LegacySiteDashboard/LegacyInReviewDashlet')),
   LegacyRecentActivityDashlet: lazy(() => import('../components/LegacySiteDashboard/LegacyRecentActivityDashlet')),
   LegacyRecentActivityDashletGrid: lazy(
     () => import('../components/LegacySiteDashboard/LegacyRecentActivityDashletGrid')
@@ -198,6 +197,7 @@ export const components = {
   LegacyRecentlyPublishedDashlet: lazy(
     () => import('../components/LegacySiteDashboard/LegacyRecentlyPublishedDashlet')
   ),
+  LegacyUnpublishedDashlet: lazy(() => import('../components/LegacySiteDashboard/LegacyUnpublishedDashlet')),
   LegacySiteToolsFrame: lazy(() => import('../components/LegacySiteToolsFrame')),
   LoadingState: lazy(() => import('../components/LoadingState')),
   LogConsole: lazy(() => import('../components/LogConsole')),
@@ -223,6 +223,8 @@ export const components = {
   PagesSearchAhead: lazy(() => import('../components/PagesSearchAhead')),
   Pagination: lazy(() => import('../components/Pagination')),
   PasswordRequirementsDisplay: lazy(() => import('../components/PasswordRequirementsDisplay')),
+  PasswordStrengthDisplay: lazy(() => import('../components/PasswordStrengthDisplay')),
+  PasswordStrengthDisplayPopper: lazy(() => import('../components/PasswordStrengthDisplayPopper')),
   PasswordTextField: lazy(() => import('../components/PasswordTextField')),
   PathNavigator: lazy(() => import('../components/PathNavigator')),
   PathNavigatorTree: lazy(() => import('../components/PathNavigatorTree')),
@@ -270,6 +272,7 @@ export const components = {
   QuickCreate: lazy(() => import('../components/QuickCreate')),
   RecentlyPublishedDashlet: lazy(() => import('../components/RecentlyPublishedDashlet')),
   RejectDialog: lazy(() => import('../components/RejectDialog')),
+  RenameAssetDialog: lazy(() => import('../components/RenameAssetDialog')),
   ResetPasswordDialog: lazy(() => import('../components/ResetPasswordDialog')),
   ResizeBar: lazy(() => import('../components/ResizeBar')),
   ResizeableDrawer: lazy(() => import('../components/ResizeableDrawer')),
@@ -277,6 +280,7 @@ export const components = {
   ScheduledDashlet: lazy(() => import('../components/ScheduledDashlet')),
   Search: lazy(() => import('../components/Search')),
   SearchBar: lazy(() => import('../components/SearchBar')),
+  SearchUI: lazy(() => import('../components/SearchUI')),
   SecondaryButton: lazy(() => import('../components/SecondaryButton')),
   SetWorkflowStateDialog: lazy(() => import('../components/SetWorkflowStateDialog')),
   SingleFileUpload: lazy(() => import('../components/SingleFileUpload')),
@@ -307,7 +311,6 @@ export const components = {
   SitesGrid: lazy(() => import('../components/SitesGrid')),
   SitesGridSkeleton: lazy(() => import('../components/SitesGrid/SitesGridSkeleton')),
   SnackbarCloseButton: lazy(() => import('../components/SnackbarCloseButton')),
-  Spinner: lazy(() => import('../components/Spinner')),
   SplitButton: lazy(() => import('../components/SplitButton')),
   StoreProvider: lazy(() => import('../components/StoreProvider')),
   Suspencified: lazy(() => import('../components/Suspencified')),
@@ -338,12 +341,14 @@ export const components = {
   Widget: lazy(() => import('../components/Widget')),
   WidgetDialog: lazy(() => import('../components/WidgetDialog')),
   WidgetDialogIconButton: lazy(() => import('../components/WidgetDialogIconButton')),
+  WidgetsAccordion: lazy(() => import('../components/WidgetsAccordion')),
   WidgetsGrid: lazy(() => import('../components/WidgetsGrid')),
   WorkflowCancellationDialog: lazy(() => import('../components/WorkflowCancellationDialog')),
   WorkflowStateManagement: lazy(() => import('../components/WorkflowStateManagement'))
 };
 export const icons = {
   About: lazy(() => import('../icons/About')),
+  Asterisk: lazy(() => import('../icons/Asterisk')),
   BrokenLink: lazy(() => import('../icons/BrokenLink')),
   Component: lazy(() => import('../icons/Component')),
   ContentTypeField: lazy(() => import('../icons/ContentTypeField')),
@@ -382,7 +387,6 @@ export const services = {
   auth: authService,
   aws: awsService,
   box: boxService,
-  clusters: clustersService,
   cmis: cmisService,
   configuration: configurationService,
   content: contentService,

@@ -43,9 +43,6 @@ import {
   contentTreeFieldSelected,
   contentTreeSwitchFieldInstance,
   contentTypeDropTargetsRequest,
-  desktopAssetUploadComplete,
-  desktopAssetUploadProgress,
-  desktopAssetUploadStarted,
   highlightModeChanged,
   hostCheckIn,
   setEditModePadding,
@@ -66,7 +63,11 @@ import {
   setDropPosition,
   setEditingStatus,
   setEditMode,
-  startListening
+  startListening,
+  desktopAssetUploadComplete,
+  desktopAssetUploadProgress,
+  desktopAssetUploadStarted,
+  desktopAssetUploadFailed
 } from '../actions';
 import { ModelHierarchyMap } from '@craftercms/studio-ui/utils/content';
 
@@ -474,6 +475,15 @@ const reducer = createReducer(initialState, {
     ...state,
     uploading: reversePluckProps(state.uploading, `${record.id}`)
   }),
+  // region desktopAssetUploadFailed
+  [desktopAssetUploadFailed.type]: (
+    state,
+    { payload: { record } }: GuestStandardAction<{ record: ElementRecord }>
+  ) => ({
+    ...state,
+    uploading: reversePluckProps(state.uploading, String(record.id))
+  }),
+  // endregion
   // endregion
   // region desktopAssetUploadProgress
   [desktopAssetUploadProgress.type]: (state, { payload: { percentage, record } }) => ({
@@ -499,7 +509,6 @@ const reducer = createReducer(initialState, {
         validationsLookup
       );
       const highlighted = getHighlighted(dropZones);
-
       return {
         ...state,
         highlighted,
@@ -532,7 +541,9 @@ const reducer = createReducer(initialState, {
         (record: ICERecord, hierarchyMap: ModelHierarchyMap) => {
           const instanceId = instance.craftercms.id;
           return hierarchyMap[record.modelId]?.children.includes(instanceId);
-        }
+        },
+        // This action type ensures we're working with 'shared' components
+        'shared'
       );
       const validationsLookup = iceRegistry.runDropTargetsValidations(dropTargets);
       const { players, siblings, containers, dropZones } = getDragContextFromDropTargets(

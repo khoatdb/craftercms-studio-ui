@@ -14,10 +14,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-export interface ClusterMember {
-  primary: boolean;
-  localAddress: string;
-  state: 'ACTIVE' | 'INACTIVE';
-  gitUrl: string;
-  gitRemoteName: string;
-}
+export const GROUP_NAME_MAX_LENGTH = 512;
+export const GROUP_DESCRIPTION_MAX_LENGTH = 1024;
+export const GROUP_NAME_MIN_LENGTH = 3;
+
+export const validateGroupNameMinLength = (value: string) => {
+  return value.trim() !== '' && value.trim().length < GROUP_NAME_MIN_LENGTH;
+};
+
+export const validateRequiredField = (value: string, isDirty: boolean) => {
+  return isDirty && value.trim() === '';
+};
+
+export const isInvalidGroupName = (groupName: string): boolean => {
+  const groupNameRegex = /^[a-zA-Z0-9_\\.\\-]{3,512}$/g;
+  return Boolean(groupName) && !groupNameRegex.test(groupName);
+};

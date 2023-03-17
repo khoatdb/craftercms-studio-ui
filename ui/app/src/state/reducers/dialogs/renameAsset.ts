@@ -20,19 +20,23 @@ import GlobalState from '../../../models/GlobalState';
 import {
   closeRenameAssetDialog,
   fetchRenameAssetDependantsComplete,
+  fetchRenameAssetDependants,
+  fetchRenameAssetDependantsFailed,
   renameAssetDialogClosed,
   showRenameAssetDialog,
   updateRenameAssetDialog
 } from '../../actions/dialogs';
 
 const initialState: RenameAssetStateProps = {
+  error: undefined,
   open: false,
   isSubmitting: null,
   isMinimized: null,
   hasPendingChanges: null,
   path: null,
   type: null,
-  dependantItems: []
+  dependantItems: null,
+  fetchingDependantItems: false
 };
 
 export default createReducer<GlobalState['dialogs']['renameAsset']>(initialState, {
@@ -53,8 +57,18 @@ export default createReducer<GlobalState['dialogs']['renameAsset']>(initialState
     ...payload
   }),
   [renameAssetDialogClosed.type]: () => initialState,
+  [fetchRenameAssetDependants.type]: (state) => ({
+    ...state,
+    fetchingDependantItems: true
+  }),
   [fetchRenameAssetDependantsComplete.type]: (state, { payload }) => ({
     ...state,
-    dependantItems: payload.dependants
+    dependantItems: payload.dependants,
+    fetchingDependantItems: false
+  }),
+  [fetchRenameAssetDependantsFailed.type]: (state, { payload }) => ({
+    ...state,
+    fetchingDependantItems: false,
+    error: payload
   })
 });

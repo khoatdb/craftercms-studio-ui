@@ -105,7 +105,14 @@ import {
   hasUnlockAction,
   hasUploadAction
 } from './content';
-import { getEditorMode, isImage, isNavigable, isPreviewable, isVideo } from '../components/PathNavigator/utils';
+import {
+  getEditorMode,
+  isPdfDocument,
+  isImage,
+  isNavigable,
+  isPreviewable,
+  isVideo
+} from '../components/PathNavigator/utils';
 import React from 'react';
 import { previewItem } from '../state/actions/preview';
 import { createPresenceTable } from './array';
@@ -359,7 +366,7 @@ export function generateSingleItemOptions(
     if (['page', 'component', 'taxonomy', 'levelDescriptor'].includes(type)) {
       sectionA.push(menuOptions.view);
     } else if (isPreviewable(item)) {
-      if (isImage(item) || isVideo(item)) {
+      if (isImage(item) || isVideo(item) || isPdfDocument(item.mimeType)) {
         sectionA.push(menuOptions.viewMedia);
       } else {
         sectionA.push(menuOptions.viewCode);
@@ -652,24 +659,35 @@ export const itemActionDispatcher = ({
         );
         fetchSandboxItem(site, item.path).subscribe({
           next(item) {
-            dispatch(
-              batchActions([
-                unblockUI(),
-                setClipboard({
-                  type: 'COPY',
-                  paths: [item.path],
-                  sourcePath: item.path
-                }),
-                showCopyItemSuccessNotification()
-              ])
-            );
+            if (item) {
+              dispatch(
+                batchActions([
+                  unblockUI(),
+                  setClipboard({
+                    type: 'COPY',
+                    paths: [item.path],
+                    sourcePath: item.path
+                  }),
+                  showCopyItemSuccessNotification()
+                ])
+              );
+            } else {
+              dispatch(
+                batchActions([
+                  unblockUI(),
+                  showErrorDialog({
+                    error: {
+                      code: '7000',
+                      message: `Content not found`,
+                      remedialAction: `Check if the item was deleted from the system or blob store`
+                    }
+                  })
+                ])
+              );
+            }
           },
           error(response) {
-            dispatch(
-              showErrorDialog({
-                error: response
-              })
-            );
+            dispatch(batchActions([unblockUI(), showErrorDialog({ error: response })]));
           }
         });
         break;
@@ -855,7 +873,7 @@ export const itemActionDispatcher = ({
       case 'viewMedia': {
         dispatch(
           showPreviewDialog({
-            type: isImage(item) ? 'image' : 'video',
+            type: isImage(item) ? 'image' : isVideo(item) ? 'video' : 'pdf',
             title: item.label,
             url: item.path
           })

@@ -27,6 +27,8 @@ import { useSpreadState } from '../../hooks/useSpreadState';
 import { useSitesBranch } from '../../hooks/useSitesBranch';
 import { EditUserDialogContainerProps } from './utils';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
+import { isInvalidEmail, validateFieldMinLength } from '../UserManagement/utils';
+import { pluckProps } from '../../utils/object';
 
 const translations = defineMessages({
   userDeleted: {
@@ -48,8 +50,14 @@ const translations = defineMessages({
 });
 
 export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
-  const { open, onClose, onUserEdited, passwordRequirementsRegex, isSubmitting, onSubmittingAndOrPendingChange } =
-    props;
+  const {
+    open,
+    onClose,
+    onUserEdited,
+    passwordRequirementsMinComplexity,
+    isSubmitting,
+    onSubmittingAndOrPendingChange
+  } = props;
   const dispatch = useDispatch();
   const { formatMessage } = useIntl();
   const [user, setUser] = useSpreadState<User>({
@@ -61,6 +69,7 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
     enabled: false,
     externallyManaged: false
   });
+  const [submitOk, setSubmitOk] = useState(false);
   const sites = useSitesBranch();
   const sitesById = sites.byId;
   const mySites = useMemo(() => Object.values(sitesById), [sitesById]);
@@ -71,20 +80,6 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
   const fnRefs = useUpdateRefs({ onSubmittingAndOrPendingChange, onUserEdited });
 
   const editMode = !props.user?.externallyManaged;
-
-  useEffect(() => {
-    if (open) {
-      setUser(props.user);
-    }
-  }, [props.user, open, setUser]);
-
-  useEffect(() => {
-    if (mySites.length && props.user?.username) {
-      fetchRolesBySite(props.user.username, mySites).subscribe((response) => {
-        setRolesBySite(response);
-      });
-    }
-  }, [mySites, props.user?.username]);
 
   const onInputChange = (value: object) => {
     setDirty(true);
@@ -138,7 +133,7 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
     onSubmittingAndOrPendingChange({
       isSubmitting: true
     });
-    update(user).subscribe({
+    update(pluckProps(user, 'id', 'firstName', 'lastName', 'email', 'enabled')).subscribe({
       next() {
         dispatch(
           showSystemNotification({
@@ -187,6 +182,35 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
   };
 
   useEffect(() => {
+    if (open) {
+      setUser(props.user);
+    }
+  }, [props.user, open, setUser]);
+
+  useEffect(() => {
+    if (mySites.length && props.user?.username) {
+      fetchRolesBySite(props.user.username, mySites).subscribe((response) => {
+        setRolesBySite(response);
+      });
+    }
+  }, [mySites, props.user?.username]);
+
+  const refs = useUpdateRefs({
+    validateFieldMinLength
+  });
+
+  useEffect(() => {
+    setSubmitOk(
+      Boolean(
+        user.firstName.trim() &&
+          !validateFieldMinLength('firstName', user.firstName) &&
+          user.lastName.trim() &&
+          !validateFieldMinLength('lastName', user.lastName) &&
+          !isInvalidEmail(user.email)
+      )
+    );
+  }, [user, refs]);
+  useEffect(() => {
     onSubmittingAndOrPendingChange({
       hasPendingChanges: dirty
     });
@@ -197,10 +221,11 @@ export function EditUserDialogContainer(props: EditUserDialogContainerProps) {
       user={user}
       openResetPassword={openResetPassword}
       inProgress={isSubmitting}
+      submitOk={submitOk}
       dirty={dirty}
       sites={mySites}
       rolesBySite={rolesBySite}
-      passwordRequirementsRegex={passwordRequirementsRegex}
+      passwordRequirementsMinComplexity={passwordRequirementsMinComplexity}
       onSave={onSave}
       onCloseButtonClick={(e) => onClose(e, null)}
       onDelete={onDelete}

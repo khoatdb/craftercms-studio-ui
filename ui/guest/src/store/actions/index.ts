@@ -25,7 +25,7 @@ export const moveComponent = /*#__PURE__*/ createAction('move_component');
 export const insertComponent = /*#__PURE__*/ createAction('insert_component');
 export const insertInstance = /*#__PURE__*/ createAction('insert_instance');
 export const computedDragEnd = /*#__PURE__*/ createAction('computed_dragend');
-export const computedDragOver = /*#__PURE__*/ createAction('computed_dragover');
+export const computedDragOver = /*#__PURE__*/ createAction<{ record: ElementRecord; event }>('computed_dragover');
 export const iceZoneSelected = /*#__PURE__*/ createAction<{ record: ElementRecord; event }>('ice_zone_selected');
 export const editComponentInline = /*#__PURE__*/ createAction('edit_component_inline');
 export const exitComponentInlineEdit = /*#__PURE__*/ createAction<{ path: string; saved: boolean }>(
@@ -46,3 +46,15 @@ export const desktopAssetDragStarted = /*#__PURE__*/ createAction<{ asset: DataT
 );
 export const desktopAssetDragEnded = /*#__PURE__*/ createAction('desktop_asset_drag_ended');
 export const setEditingStatus = /*#__PURE__*/ createAction<{ status: EditingStatus }>('set_editing_status');
+export const desktopAssetUploadComplete = /*#__PURE__*/ createAction<{ record: ElementRecord; path: string }>(
+  'DESKTOP_ASSET_UPLOAD_COMPLETE'
+);
+export const desktopAssetUploadProgress = /*#__PURE__*/ createAction<{ record: ElementRecord; percentage: number }>(
+  'DESKTOP_ASSET_UPLOAD_PROGRESS'
+);
+export const desktopAssetUploadStarted = /*#__PURE__*/ createAction<{ record: ElementRecord }>(
+  'DESKTOP_ASSET_UPLOAD_STARTED'
+);
+export const desktopAssetUploadFailed = /*#__PURE__*/ createAction<{ record: ElementRecord }>(
+  'DESKTOP_ASSET_UPLOAD_FAILED'
+);

@@ -88,7 +88,10 @@ export function isEditableAsset(path: string) {
     path.endsWith('.hbs') ||
     (path.endsWith('.xml') && !path.startsWith('/config/studio/content-types')) ||
     path.endsWith('.tmpl') ||
-    path.endsWith('.htm')
+    path.endsWith('.htm') ||
+    path.endsWith('.sass') ||
+    path.endsWith('.scss') ||
+    path.endsWith('.less')
   );
 }
 
@@ -138,6 +141,10 @@ export function isImage(path: string): boolean {
 
 export function isItemLockedForMe(item: DetailedItem | SandboxItem | LegacyItem, username: string): boolean {
   return item ? isLockedState(item.state) && item.lockOwner !== username : true;
+}
+
+export function isBlobUrl(url: string): boolean {
+  return url.startsWith('blob:');
 }
 
 /**
@@ -543,7 +550,7 @@ export function createModelHierarchyDescriptorMap(
   const contentTypeMissingWarning = (model: ContentInstance) => {
     if (!contentTypes[model.craftercms.contentTypeId]) {
       console.error(
-        `[createModelMap] Content type with id ${model.craftercms.contentTypeId} was not found. ` +
+        `[createModelHierarchyDescriptorMap] Content type with id ${model.craftercms.contentTypeId} was not found. ` +
           `Unable to fully process model at '${model.craftercms.path}' with id ${model.craftercms.id}`
       );
     }
@@ -990,6 +997,23 @@ export const openItemEditor = (
   if (type === 'form') {
     dispatch(showEditDialog({ path: item.path, authoringBase, site: siteId, onSaveSuccess }));
   } else {
-    dispatch(showCodeEditorDialog({ site: siteId, authoringBase, path: item.path, type, onSuccess: onSaveSuccess }));
+    dispatch(
+      showCodeEditorDialog({
+        site: siteId,
+        authoringBase,
+        path: item.path,
+        type,
+        mode: getEditorMode(item.mimeType),
+        onSuccess: onSaveSuccess
+      })
+    );
   }
 };
+
+export function generateComponentBasePath(contentType: string) {
+  return `/site/components/${contentType.replace('/component/', '')}s/`.replace(/\/{1,}$/m, '');
+}
+
+export function generateComponentPath(modelId: string, contentType: string) {
+  return `${generateComponentBasePath(contentType)}/${modelId}.xml`;
+}

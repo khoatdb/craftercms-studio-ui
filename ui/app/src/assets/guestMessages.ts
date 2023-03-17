@@ -149,5 +149,22 @@ export const guestMessages = defineMessages({
   noPathSetInDataSource: {
     id: 'validations.noPathSetInDataSource',
     defaultMessage: 'No path was set for the data source'
+  },
+  noPolicyComply: {
+    id: 'desktopAssetUpload.noPolicyComply',
+    defaultMessage: 'File "{fileName}" doesn\'t comply with project policies and can\'t be uploaded'
+  },
+  fileNameChangedPolicy: {
+    id: 'desktopAssetUpload.fileNameChangedPolicy',
+    defaultMessage: 'File "{fileName}" was renamed to "{modifiedFileName}" to comply with project policies'
+  },
+  uploadError: {
+    id: 'desktopAssetUpload.uploadError',
+    defaultMessage: 'Upload error. File was not uploaded'
+  },
+  outdatedExpBuilderVersion: {
+    id: 'validations.outdatedExpBuilderVersion',
+    defaultMessage:
+      "Your application's Experience Builder package version is out of date. Please notify the development team to perform the necessary updates to avoid any possible issues."
   }
 });

@@ -56,6 +56,7 @@ export function AuditManagement(props: AuditManagementProps) {
     offset: 0,
     limit: 10,
     sort: 'date',
+    order: 'DESC',
     siteId: site
   });
   const [parametersLookup, setParametersLookup] = useSpreadState<LookupTable<AuditLogEntryParameter[]>>({});
@@ -132,7 +133,7 @@ export function AuditManagement(props: AuditManagementProps) {
       setDialogParams(parametersLookup[id]);
       auditLogEntryParametersDialogState.onOpen();
     } else {
-      fetchAuditLogEntry(id).subscribe({
+      fetchAuditLogEntry(id, site).subscribe({
         next(response) {
           setParametersLookup({ [id]: response.parameters });
           if (response.parameters.length) {

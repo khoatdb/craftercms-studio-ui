@@ -21,31 +21,31 @@ import SiteSearchFilters from '../SiteSearchFilters';
 import { makeStyles } from 'tss-react/mui';
 import palette from '../../styles/palette';
 import { ElasticParams, Filter, MediaItem, SearchResult } from '../../models/Search';
-import { CheckedFilter, drawerWidth } from './utils';
+import { CheckedFilter, drawerWidth } from '../Search/utils';
 import LookupTable from '../../models/LookupTable';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Typography from '@mui/material/Typography';
-import { translations } from './translations';
+import { translations } from '../Search/translations';
 import TablePagination from '@mui/material/TablePagination';
 import ApiResponseErrorState from '../ApiResponseErrorState';
 import Grid from '@mui/material/Grid';
-import Spinner from '../Spinner/Spinner';
 import MediaCard from '../MediaCard/MediaCard';
 import EmptyState from '../EmptyState/EmptyState';
 import ItemActionsSnackbar from '../ItemActionsSnackbar';
 import Button from '@mui/material/Button';
 import ListItemText from '@mui/material/ListItemText';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { AllItemActions, DetailedItem } from '../../models/Item';
+import { AllItemActions } from '../../models/Item';
 import { ContextMenuOption } from '../ContextMenu';
 import ApiResponse from '../../models/ApiResponse';
 import IconButton from '@mui/material/IconButton';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { UNDEFINED } from '../../utils/constants';
+import { LoadingState } from '../LoadingState';
 
-interface SearchUIProps {
+export interface SearchUIProps {
   selectedPath: string;
   selected: string[];
   selectionOptions: ContextMenuOption[];
@@ -64,7 +64,6 @@ interface SearchUIProps {
   searchParameters: ElasticParams;
   error: ApiResponse;
   isFetching: boolean;
-  itemsByPath: LookupTable<DetailedItem>;
   onActionClicked(option: AllItemActions, event: React.MouseEvent<HTMLButtonElement, MouseEvent>): void;
   handleSelectAll(checked: any): void;
   onSelectedPathChanges(path: string): void;
@@ -82,7 +81,7 @@ interface SearchUIProps {
   onHeaderButtonClick(event: any, item: MediaItem): void;
   handleClearSelected(): void;
   onClose(): void;
-  onAcceptSelection?(items: DetailedItem[]): void;
+  onAcceptSelection?(items: string[]): void;
 }
 
 const useStyles = makeStyles()((theme) => ({
@@ -274,7 +273,6 @@ export function SearchUI(props: SearchUIProps) {
   // region const { ... } = props
   const {
     areAllSelected,
-    itemsByPath,
     error,
     isFetching,
     sortBy,
@@ -443,9 +441,14 @@ export function SearchUI(props: SearchUIProps) {
           {error ? (
             <ApiResponseErrorState error={error} />
           ) : (
-            <Grid container spacing={3} className={searchResults?.items.length === 0 ? classes.empty : ''}>
+            <Grid
+              container
+              spacing={3}
+              minHeight="100%"
+              className={searchResults?.items.length === 0 ? classes.empty : ''}
+            >
               {isFetching || searchResults === null ? (
-                <Spinner background="inherit" />
+                <LoadingState />
               ) : (
                 <>
                   {searchResults.items.length > 0 ? (
@@ -519,7 +522,7 @@ export function SearchUI(props: SearchUIProps) {
             variant="contained"
             color="primary"
             disabled={selected.length === 0}
-            onClick={() => onAcceptSelection?.(selected.map((path) => itemsByPath?.[path]))}
+            onClick={() => onAcceptSelection?.(selected)}
           >
             {formatMessage(translations.acceptSelection)}
           </Button>

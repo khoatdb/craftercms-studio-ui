@@ -19,7 +19,7 @@ import { PagedArray } from '../../models/PagedArray';
 import Box from '@mui/material/Box';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useStyles } from './styles';
-import { DataGrid, GridCellParams, GridColDef, DataGridProps, GridOverlay, GridSortModel } from '@mui/x-data-grid';
+import { DataGrid, DataGridProps, GridCellParams, GridColDef, GridSortModel } from '@mui/x-data-grid';
 import { defineMessages, FormattedMessage, useIntl } from 'react-intl';
 import { AuditOptions } from '../../services/audit';
 import { Site } from '../../models/Site';
@@ -99,10 +99,6 @@ export const translations = defineMessages({
   parameters: {
     id: 'auditGrid.parameters',
     defaultMessage: 'Parameters'
-  },
-  clusterNode: {
-    id: 'auditGrid.clusterNode',
-    defaultMessage: 'Cluster Node'
   }
 });
 
@@ -112,8 +108,7 @@ export const fieldIdMapping = {
   actorId: 'user',
   origin: 'origin',
   operation: 'operations',
-  primaryTargetValue: 'target',
-  clusterNodeId: 'clusterNodeId'
+  primaryTargetValue: 'target'
 };
 
 export function AuditGridUI(props: AuditGridUIProps) {
@@ -171,11 +166,7 @@ export function AuditGridUI(props: AuditGridUIProps) {
 
     if (newSort !== sort) {
       setSortModel(model);
-      if (newSort === 'asc') {
-        onFilterChange({ id: 'order', value: newSort.toUpperCase() });
-      } else {
-        onFilterChange({ id: 'order', value: undefined });
-      }
+      onFilterChange({ id: 'order', value: newSort.toUpperCase() });
     }
   };
 
@@ -333,21 +324,6 @@ export function AuditGridUI(props: AuditGridUIProps) {
         },
         sortable: false,
         cellClassName: classes.cellRoot
-      },
-      {
-        field: 'clusterNodeId',
-        headerName: formatMessage(translations.clusterNode),
-        width: 200,
-        sortable: false,
-        cellClassName: classes.cellRoot,
-        headerClassName: filters[fieldIdMapping['clusterNodeId']] && classes.activeFilter,
-        renderCell: (params: GridCellParams) => {
-          return (
-            <Typography variant="body2" className={classes.ellipsis} title={params.value?.toString()}>
-              {params.value}
-            </Typography>
-          );
-        }
       }
     ],
     [
@@ -371,21 +347,24 @@ export function AuditGridUI(props: AuditGridUIProps) {
         sortingOrder={['desc', 'asc']}
         sortModel={sortModel}
         sortingMode="server"
-        autoHeight
+        autoHeight={Boolean(auditLogs.length)}
         disableColumnFilter
         className={classes.gridRoot}
         components={{
           ColumnMenu: onFilterSelected,
           NoRowsOverlay: () => (
-            <GridOverlay className={classes.gridOverlay}>
-              <EmptyState title={<FormattedMessage id="auditGrid.emptyStateMessage" defaultMessage="No Logs Found" />}>
+            <Box>
+              <EmptyState
+                styles={{ root: { position: 'relative', zIndex: 1, paddingTop: 10, paddingBottom: 10, margin: 0 } }}
+                title={<FormattedMessage id="auditGrid.emptyStateMessage" defaultMessage="No Logs Found" />}
+              >
                 {hasActiveFilters && (
-                  <Button variant="text" color="primary" onClick={() => onResetFilters()}>
+                  <Button variant="text" color="primary" onClick={onResetFilters}>
                     <FormattedMessage id="auditGrid.clearFilters" defaultMessage="Clear filters" />
                   </Button>
                 )}
               </EmptyState>
-            </GridOverlay>
+            </Box>
           )
         }}
         disableSelectionOnClick

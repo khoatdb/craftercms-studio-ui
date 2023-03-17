@@ -19,7 +19,6 @@ import ApiResponse from '../../models/ApiResponse';
 import { fetchItemStates, setItemStates, setItemStatesByQuery, StatesToUpdate } from '../../services/workflow';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { SuspenseWithEmptyState } from '../Suspencified';
 import ItemStatesGridUI, { ItemStatesGridSkeletonTable } from '../ItemStatesGrid';
 import SetItemStateDialog from '../SetWorkflowStateDialog';
 import Button from '@mui/material/Button';
@@ -45,7 +44,6 @@ import ItemStateIcon from '../ItemStateIcon';
 import translations from './translations';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
 import { useActiveSiteId } from '../../hooks/useActiveSiteId';
-import { useLogicResource } from '../../hooks/useLogicResource';
 import { useDebouncedInput } from '../../hooks/useDebouncedInput';
 import { useSpreadState } from '../../hooks/useSpreadState';
 import ItemActionsSnackbar from '../ItemActionsSnackbar';
@@ -55,6 +53,10 @@ import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { useDispatch } from 'react-redux';
 import { showSystemNotification } from '../../state/actions/system';
 import { defineMessages } from 'react-intl';
+import useMount from '../../hooks/useMount';
+import { fetchPublishingTargets } from '../../services/publishing';
+import { ApiResponseErrorState } from '../ApiResponseErrorState';
+import { EmptyState } from '../EmptyState';
 
 const workflowStateManagementMessages = defineMessages({
   statesUpdatedMessage: {
@@ -71,7 +73,7 @@ export interface WorkflowStateManagementProps {
 
 const drawerWidth = 260;
 
-const states: ItemStates[] = [
+const initialStates: ItemStates[] = [
   'new',
   'modified',
   'deleted',
@@ -91,7 +93,9 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
   const siteId = useActiveSiteId();
   const [openSetStateDialog, setOpenSetStateDialog] = useState(false);
   const [openFiltersDrawer, setOpenFiltersDrawer] = useState(false);
-  const [filtersLookup, setFiltersLookup] = useSpreadState<LookupTable<boolean>>(createPresenceTable(states, false));
+  const [filtersLookup, setFiltersLookup] = useSpreadState<LookupTable<boolean>>(
+    createPresenceTable(initialStates, false)
+  );
   const [pathRegex, setPathRegex] = useState('');
   const [debouncePathRegex, setDebouncePathRegex] = useState('');
   const [invalidPathRegex, setInvalidPathRegex] = useState(false);
@@ -100,6 +104,11 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
   const [selectedItems, setSelectedItems] = useState<LookupTable<SandboxItem>>({});
   const [selectedItem, setSelectedItem] = useState<SandboxItem>(null);
   const [isSelectedItemsOnAllPages, setIsSelectedItemsOnAllPages] = useState(false);
+  const [hasStaging, setHasStaging] = useState(false);
+  const states = useMemo(
+    () => (hasStaging ? initialStates : initialStates.filter((state) => state !== 'staged')),
+    [hasStaging]
+  );
   const { classes } = useStyles();
   const { formatMessage } = useIntl();
   const fnRefs = useUpdateRefs({ onSubmittingAndOrPendingChange });
@@ -122,16 +131,16 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
     let stateBitmap = getStateBitmap(filtersLookup as ItemStateMap);
 
     setFetching(true);
-    fetchItemStates(siteId, debouncePathRegex, stateBitmap ? stateBitmap : null, { limit, offset }).subscribe(
-      (states) => {
+    fetchItemStates(siteId, debouncePathRegex, stateBitmap ? stateBitmap : null, { limit, offset }).subscribe({
+      next(states) {
         setItems(states);
         setFetching(false);
       },
-      ({ response }) => {
+      error({ response }) {
         setError(response);
         setFetching(false);
       }
-    );
+    });
   }, [debouncePathRegex, filtersLookup, siteId, limit, offset]);
 
   useEffect(() => {
@@ -144,19 +153,16 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
     });
   }, [hasSelectedItems, fnRefs]);
 
-  const resource = useLogicResource<
-    PagedArray<SandboxItem>,
-    { states: PagedArray<SandboxItem>; error: ApiResponse; fetching: boolean }
-  >(
-    useMemo(() => ({ states: items, error, fetching }), [items, error, fetching]),
-    {
-      shouldResolve: (source) => Boolean(source.states) && !fetching,
-      shouldReject: ({ error }) => Boolean(error),
-      shouldRenew: (source, resource) => fetching && resource.complete,
-      resultSelector: (source) => source.states,
-      errorSelector: () => error
-    }
-  );
+  useMount(() => {
+    const sub = fetchPublishingTargets(siteId).subscribe({
+      next({ publishingTargets: targets }) {
+        setHasStaging(targets.some((target) => target.name === 'staging'));
+      }
+    });
+    return () => {
+      sub.unsubscribe();
+    };
+  });
 
   const onPathRegex$ = useDebouncedInput(
     useCallback(
@@ -165,6 +171,7 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
 
         try {
           new RegExp(keyword);
+          setOffset(0);
           setDebouncePathRegex(keyword);
           setInvalidPathRegex(false);
         } catch (e) {
@@ -184,6 +191,7 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
 
   const onFilterChecked = (id: string, value: boolean) => {
     clearSelectedItems();
+    setOffset(0);
     if (id === 'any') {
       setFiltersLookup(createPresenceTable(states, !value));
     } else {
@@ -192,6 +200,7 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
   };
 
   const onClearFilters = () => {
+    setOffset(0);
     setFiltersLookup(createPresenceTable(states, false));
     setDebouncePathRegex('');
     setPathRegex('');
@@ -349,25 +358,17 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
             onActionClicked={onOptionClicked}
           />
         )}
-        <SuspenseWithEmptyState
-          resource={resource}
-          withEmptyStateProps={{
-            emptyStateProps: {
-              title: <FormattedMessage id="itemStates.emptyStateMessage" defaultMessage="No results found" />,
-              styles: {
-                root: {
-                  height: '100%',
-                  margin: 0
-                }
-              }
-            }
-          }}
-          suspenseProps={{
-            fallback: <ItemStatesGridSkeletonTable />
-          }}
-        >
+
+        {fetching && <ItemStatesGridSkeletonTable />}
+        {error && <ApiResponseErrorState error={error} />}
+        {items?.length === 0 && (
+          <EmptyState
+            title={<FormattedMessage id="itemStates.emptyStateMessage" defaultMessage="No results found" />}
+          />
+        )}
+        {Boolean(items?.length) && (
           <ItemStatesGridUI
-            resource={resource}
+            itemStates={items}
             selectedItems={selectedItems}
             allItemsSelected={isSelectedItemsOnAllPages}
             hasThisPageItemsChecked={hasThisPageItemsChecked}
@@ -378,7 +379,7 @@ export function WorkflowStateManagement(props: WorkflowStateManagementProps) {
             onRowsPerPageChange={onRowsPerPageChange}
             onRowSelected={onRowSelected}
           />
-        </SuspenseWithEmptyState>
+        )}
         <ResizeableDrawer
           open={openFiltersDrawer}
           width={drawerWidth}

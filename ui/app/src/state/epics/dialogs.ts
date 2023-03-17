@@ -15,7 +15,7 @@
  */
 
 import { ofType } from 'redux-observable';
-import { filter, ignoreElements, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import { filter, ignoreElements, map, switchMap, takeUntil, tap, withLatestFrom } from 'rxjs/operators';
 import { NEVER, of } from 'rxjs';
 import GlobalState from '../../models/GlobalState';
 import { camelize, dasherize } from '../../utils/string';
@@ -38,15 +38,16 @@ import {
   fetchDeleteDependenciesFailed,
   fetchRenameAssetDependants,
   fetchRenameAssetDependantsComplete,
+  fetchRenameAssetDependantsFailed,
   newContentCreationComplete,
   showCodeEditorDialog,
   showConfirmDialog,
   showEditDialog,
   showPreviewDialog,
-  showPublishDialog,
   updateCodeEditorDialog,
   updateEditConfig,
-  updatePreviewDialog
+  updatePreviewDialog,
+  closeRenameAssetDialog
 } from '../actions/dialogs';
 import { fetchDeleteDependencies as fetchDeleteDependenciesService, fetchDependant } from '../../services/dependencies';
 import { fetchContentXML, fetchItemVersion } from '../../services/content';
@@ -60,7 +61,7 @@ import { formEngineMessages } from '../../env/i18n-legacy';
 import infoGraphic from '../../assets/information.svg';
 import { nnou, nou } from '../../utils/object';
 import { getHostToGuestBus } from '../../utils/subjects';
-import { fetchDetailedItems, unlockItem } from '../actions/content';
+import { unlockItem } from '../actions/content';
 import { parseLegacyItemToDetailedItem } from '../../utils/content';
 import { LegacyItem } from '../../models';
 
@@ -226,14 +227,6 @@ const dialogEpics: CrafterCMSEpic[] = [
       ignoreElements()
     ),
   // endregion
-  // region Show Publish Dialog
-  (action$) =>
-    action$.pipe(
-      ofType(showPublishDialog.type),
-      filter(({ payload }) => Boolean(payload.items?.length)),
-      map(({ payload }) => fetchDetailedItems({ paths: payload.items.map((item) => item.path) }))
-    ),
-  // endregion
   // region closeCodeEditorDialog
   // Moved unlock from dialog to epics since the container has no visibility of the backdrop click close and
   // was hence unable to unlock the item in all cases.
@@ -256,10 +249,12 @@ const dialogEpics: CrafterCMSEpic[] = [
       withLatestFrom(state$),
       switchMap(([, state]) =>
         fetchDependant(state.sites.active, state.dialogs.renameAsset.path).pipe(
+          takeUntil(action$.pipe(ofType(closeRenameAssetDialog.type))),
           map((response: LegacyItem[]) => {
             const dependants = parseLegacyItemToDetailedItem(response);
             return fetchRenameAssetDependantsComplete({ dependants });
-          })
+          }),
+          catchAjaxError(fetchRenameAssetDependantsFailed)
         )
       )
     )

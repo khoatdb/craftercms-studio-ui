@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Resource } from '../../models/Resource';
 import TableContainer from '@mui/material/TableContainer';
 import Table from '@mui/material/Table';
 import TableHead from '@mui/material/TableHead';
@@ -32,16 +31,15 @@ import GlobalAppGridCell from '../GlobalAppGridCell';
 import Box from '@mui/material/Box';
 
 export interface UsersGridUIProps {
-  resource: Resource<PagedArray<User>>;
+  users: PagedArray<User>;
   onRowClicked(user: User): void;
   onPageChange(page: number): void;
   onRowsPerPageChange?: React.ChangeEventHandler<HTMLTextAreaElement | HTMLInputElement>;
 }
 
 export function UsersGridUI(props: UsersGridUIProps) {
-  const { resource, onRowClicked, onPageChange, onRowsPerPageChange } = props;
+  const { users, onRowClicked, onPageChange, onRowsPerPageChange } = props;
   const { classes } = useStyles();
-  const users = resource.read();
   return (
     <Box display="flex" flexDirection="column">
       <TableContainer>
@@ -81,7 +79,9 @@ export function UsersGridUI(props: UsersGridUIProps) {
                   {user.firstName} {user.lastName}
                 </GlobalAppGridCell>
                 <GlobalAppGridCell align="left" className="width20">
-                  {user.username}
+                  <Typography variant="body2" noWrap title={user.username}>
+                    {user.username}
+                  </Typography>
                 </GlobalAppGridCell>
                 <GlobalAppGridCell align="left" className="width60">
                   {user.email}

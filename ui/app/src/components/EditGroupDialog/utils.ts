@@ -19,6 +19,8 @@ import React from 'react';
 import User from '../../models/User';
 import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDialogState';
 import { EnhancedDialogProps } from '../EnhancedDialog';
+import { LookupTable, PaginationOptions } from '../../models';
+import { useTransferListStateReturn } from '../TransferList/utils';
 
 export interface EditGroupBaseProps {
   group?: Group;
@@ -32,10 +34,14 @@ export interface EditGroupDialogProps extends EditGroupBaseProps, EnhancedDialog
 
 export interface EditGroupDialogContainerProps
   extends EditGroupBaseProps,
-    Pick<EditGroupDialogProps, 'onClose' | 'onGroupSaved' | 'onGroupDeleted' | 'onSubmittingAndOrPendingChange'> {}
+    Pick<
+      EditGroupDialogProps,
+      'onClose' | 'onGroupSaved' | 'onGroupDeleted' | 'isSubmitting' | 'onSubmittingAndOrPendingChange'
+    > {}
 
 export interface GroupEditDialogUIProps {
   group?: Group;
+  groupNameError: boolean;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   isEdit: boolean;
@@ -43,14 +49,20 @@ export interface GroupEditDialogUIProps {
   onCloseButtonClick?(e: React.MouseEvent<HTMLButtonElement, MouseEvent>): void;
   onDeleteGroup?(group: Group): void;
   onSave(): void;
+  submitOk: boolean;
   onCancel(): void;
   onChangeValue(value: { key: string; value: string }): void;
-  onAddMembers?(members: (string | number)[]): void;
-  onRemoveMembers?(members: (string | number)[]): void;
+  onAddMembers?(): void;
+  onRemoveMembers?(): void;
   users?: User[];
   members?: User[];
+  membersLookup?: LookupTable<boolean>;
   inProgressIds?: (string | number)[];
+  transferListState: useTransferListStateReturn;
+  sourceItemsAllChecked: boolean;
+  onFilterUsers(keyword: string): void;
+  onFetchMoreUsers(options?: Partial<PaginationOptions & { keyword?: string }>): void;
+  hasMoreUsers: boolean;
+  disableAddMembers: boolean;
+  isSubmitting: boolean;
 }
-
-export const GROUP_NAME_MAX_LENGTH = 512;
-export const GROUP_DESCRIPTION_MAX_LENGTH = 1024;

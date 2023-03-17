@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import LookupTable from './LookupTable';
+
 export type PublishingTargets = 'live' | 'staging';
 
 export interface Package {
@@ -26,9 +28,7 @@ export interface Package {
   comment: string;
 }
 
-export interface Selected {
-  [keys: string]: boolean;
-}
+export type Selected = LookupTable<boolean>;
 
 export interface File {
   contentTypeClass: string;
@@ -44,9 +44,18 @@ export interface CurrentFilters {
   page: number;
 }
 
+export type PublishingStatusCodes =
+  | 'ready'
+  | 'processing'
+  | 'publishing'
+  | 'queued'
+  | 'stopped'
+  | 'error'
+  | 'readyWithErrors';
+
 export interface PublishingStatus {
   enabled: boolean;
-  status: 'ready' | 'processing' | 'publishing' | 'queued' | 'stopped' | 'error';
+  status: PublishingStatusCodes;
   lockOwner: string;
   lockTTL: string;
   published: boolean;
@@ -63,7 +72,7 @@ export interface PublishFormData {
   publishingTarget: string;
 }
 
-export type PublishOnDemandMode = 'studio' | 'git' | 'all';
+export type PublishOnDemandMode = 'studio' | 'git' | 'everything';
 
 export interface PublishingTarget {
   name: string;

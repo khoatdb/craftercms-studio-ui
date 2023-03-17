@@ -40,7 +40,9 @@ export function isVideo(item: DetailedItem | SandboxItem): boolean {
 export function isTextContent(mimeType: string): boolean {
   return (
     /^text\//.test(mimeType) ||
-    /^application\/(x-httpd-php|rtf|xhtml\+xml|xml|json|ld\+json|javascript|x-groovy|x-sh)$/.test(mimeType)
+    /^application\/(x-httpd-php|rtf|xhtml\+xml|xml|json|ld\+json|javascript|x-groovy|x-sh|x-yaml|ld+json|x-csh)$/.test(
+      mimeType
+    )
   );
 }
 
@@ -48,9 +50,13 @@ export function isMediaContent(mimeType: string) {
   return /^image\//.test(mimeType) || /^video\//.test(mimeType);
 }
 
+export function isPdfDocument(mimeType: string) {
+  return 'application/pdf' === mimeType;
+}
+
 export function isPreviewable(item: DetailedItem | SandboxItem): boolean {
   if (item?.systemType === 'asset') {
-    return isMediaContent(item.mimeType) || isTextContent(item.mimeType);
+    return isMediaContent(item.mimeType) || isTextContent(item.mimeType) || isPdfDocument(item.mimeType);
   } else {
     return ['page', 'component', 'renderingTemplate', 'script', 'taxonomy'].includes(item?.systemType);
   }

@@ -29,7 +29,7 @@ import Skeleton from '@mui/material/Skeleton';
 import EmptyState from '../EmptyState/EmptyState';
 import { translations } from './translations';
 import { getTranslation } from '../../utils/i18n';
-import { ConditionalLoadingState } from '../LoadingState/LoadingState';
+import { LoadingState } from '../LoadingState/LoadingState';
 import AceEditor from '../AceEditor/AceEditor';
 import GlobalAppToolbar from '../GlobalAppToolbar';
 import ResizeableDrawer from '../ResizeableDrawer/ResizeableDrawer';
@@ -53,7 +53,7 @@ import SearchBar from '../SearchBar/SearchBar';
 import Alert from '@mui/material/Alert';
 import { showHistoryDialog } from '../../state/actions/dialogs';
 import { batchActions } from '../../state/actions/misc';
-import { capitalize } from '../../utils/string';
+import { capitalize, stripCData } from '../../utils/string';
 import { itemReverted, showSystemNotification } from '../../state/actions/system';
 import { getHostToHostBus } from '../../utils/subjects';
 import { filter, map } from 'rxjs/operators';
@@ -71,6 +71,8 @@ import { onSubmittingAndOrPendingChangeProps } from '../../hooks/useEnhancedDial
 import { findPendingEncryption } from './utils';
 import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { UNDEFINED } from '../../utils/constants';
+import { ApiResponseErrorState } from '../ApiResponseErrorState';
+import { nnou } from '../../utils/object';
 
 interface SiteConfigurationManagementProps {
   embedded?: boolean;
@@ -89,10 +91,12 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
   const [files, setFiles] = useState<SiteConfigurationFileWithId[]>();
   const [selectedConfigFile, setSelectedConfigFile] = useState<SiteConfigurationFileWithId>(null);
   const [selectedConfigFileXml, setSelectedConfigFileXml] = useState(null);
+  const [configError, setConfigError] = useState(null);
   const [selectedSampleConfigFileXml, setSelectedSampleConfigFileXml] = useState(null);
   const [loadingXml, setLoadingXml] = useState(true);
   const [encrypting, setEncrypting] = useState(false);
   const [loadingSampleXml, setLoadingSampleXml] = useState(false);
+  const [sampleError, setSampleError] = useState(null);
   const [showSampleEditor, setShowSampleEditor] = useState(false);
   const [width, setWidth] = useState(240);
   const [openDrawer, setOpenDrawer] = useState(true);
@@ -139,24 +143,45 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
   }, [confirmDialogProps, disabledSaveButton, history]);
 
   useMount(() => {
-    fetchActiveEnvironment().subscribe((env) => {
-      setEnvironment(env);
+    fetchActiveEnvironment().subscribe({
+      next(env) {
+        setEnvironment(env);
+      },
+      error({ response }) {
+        dispatch(showErrorDialog({ error: response }));
+      }
     });
   });
 
   useEffect(() => {
     if (site && environment !== UNDEFINED) {
-      fetchSiteConfigurationFiles(site, environment).subscribe((files) => {
-        setFiles(files.map((file) => ({ ...file, id: `${file.module}/${file.path}` })));
+      fetchSiteConfigurationFiles(site, environment).subscribe({
+        next(files) {
+          setFiles(files.map((file) => ({ ...file, id: `${file.module}/${file.path}` })));
+        },
+        error({ response }) {
+          dispatch(showErrorDialog({ error: response.response }));
+        }
       });
     }
-  }, [environment, site]);
+  }, [environment, site, dispatch]);
 
   useEffect(() => {
     if (selectedConfigFile && environment) {
-      fetchConfigurationXML(site, selectedConfigFile.path, selectedConfigFile.module, environment).subscribe((xml) => {
-        setSelectedConfigFileXml(xml ?? '');
-        setLoadingXml(false);
+      setConfigError(null);
+      fetchConfigurationXML(site, selectedConfigFile.path, selectedConfigFile.module, environment).subscribe({
+        next(xml) {
+          setSelectedConfigFileXml(xml ?? '');
+          setLoadingXml(false);
+        },
+        error({ response }) {
+          if (response.response.code === 7000) {
+            setSelectedConfigFileXml('');
+          } else {
+            setConfigError(response.response);
+          }
+          setLoadingXml(false);
+        }
       });
     }
   }, [selectedConfigFile, environment, site]);
@@ -210,8 +235,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
     const items = findPendingEncryption(tags);
     if (items.length) {
       setEncrypting(true);
-      forkJoin(items.map(({ tag, text }) => encrypt(text, site).pipe(map((text) => ({ tag, text }))))).subscribe(
-        (encrypted) => {
+      forkJoin(
+        items.map(({ tag, text }) => encrypt(stripCData(text), site).pipe(map((text) => ({ tag, text }))))
+      ).subscribe({
+        next(encrypted) {
           encrypted.forEach(({ text, tag }) => {
             tag.innerHTML = `\${enc:${text}}`;
             tag.setAttribute('encrypted', 'true');
@@ -219,10 +246,10 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
           editorRef.current.setValue(serialize(doc), -1);
           setEncrypting(false);
         },
-        ({ response: { response } }) => {
+        error({ response: { response } }) {
           dispatch(showErrorDialog({ error: response }));
         }
-      );
+      });
     } else {
       setConfirmDialogProps({
         open: true,
@@ -285,14 +312,21 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
     setLoadingSampleXml(true);
     setShowSampleEditor(!showSampleEditor);
     if (showSampleEditor === false) {
+      setSampleError(null);
       fetchConfigurationXML(
         'studio_root',
         `/configuration/samples/${selectedConfigFile.samplePath}`,
         selectedConfigFile.module,
         environment
-      ).subscribe((xml) => {
-        setSelectedSampleConfigFileXml(xml);
-        setLoadingSampleXml(false);
+      ).subscribe({
+        next(xml) {
+          setSelectedSampleConfigFileXml(xml);
+          setLoadingSampleXml(false);
+        },
+        error({ response }) {
+          setSampleError(response.response);
+          setLoadingSampleXml(false);
+        }
       });
     }
   };
@@ -594,94 +628,108 @@ export function SiteConfigurationManagement(props: SiteConfigurationManagementPr
           flexDirection={loadingXml ? 'row' : 'column'}
           paddingLeft={openDrawer ? `${width}px` : 0}
         >
-          <ConditionalLoadingState isLoading={loadingXml}>
-            <GlobalAppToolbar
-              classes={{
-                appBar: classes.appBar
-              }}
-              styles={{
-                toolbar: { '& > section': {} }
-              }}
-              showHamburgerMenuButton={false}
-              showAppsButton={false}
-              startContent={
-                <IconButton onClick={onToggleDrawer} size="large">
-                  {openDrawer ? <MenuOpenRoundedIcon /> : <MenuRoundedIcon />}
-                </IconButton>
-              }
-              title={getTranslation(selectedConfigFile.title, translations, formatMessage)}
-              subtitle={getTranslation(selectedConfigFile.description, translations, formatMessage)}
-              rightContent={
-                <>
-                  <ButtonGroup variant="outlined" className={classes.buttonGroup}>
-                    <SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
-                      {formatMessage(translations.encryptMarked)}
-                    </SecondaryButton>
-                    <Button size="small" onClick={onEncryptHelpClick}>
-                      <HelpOutlineRoundedIcon />
-                    </Button>
-                  </ButtonGroup>
-                  <SecondaryButton onClick={onViewSampleClick}>
-                    {showSampleEditor ? (
-                      <FormattedMessage id="siteConfigurationManagement.hideSample" defaultMessage="Hide Sample" />
-                    ) : (
-                      <FormattedMessage id="siteConfigurationManagement.viewSample" defaultMessage="View Sample" />
-                    )}
-                  </SecondaryButton>
-                </>
-              }
-            />
-            <Box display="flex" flexGrow={1}>
-              <AceEditor
-                ref={editorRef}
-                styles={{
-                  root: {
-                    display: 'flex',
-                    width: leftEditorWidth ? `${leftEditorWidth}px` : 'auto',
-                    flexGrow: leftEditorWidth ? 0 : 1
-                  },
-                  editorRoot: {
-                    margin: 0,
-                    opacity: encrypting ? 0.5 : 1,
-                    border: '0',
-                    borderRadius: '0'
-                  }
+          {configError ? (
+            <ApiResponseErrorState error={configError} classes={{ root: classes.errorState }} />
+          ) : loadingXml ? (
+            <LoadingState />
+          ) : nnou(selectedConfigFileXml) ? (
+            <>
+              <GlobalAppToolbar
+                classes={{
+                  appBar: classes.appBar
                 }}
-                mode="ace/mode/xml"
-                theme="ace/theme/textmate"
-                readOnly={encrypting}
-                autoFocus={true}
-                onChange={onEditorChanges}
-                value={selectedConfigFileXml}
+                styles={{
+                  toolbar: { '& > section': {} }
+                }}
+                showHamburgerMenuButton={false}
+                showAppsButton={false}
+                startContent={
+                  <IconButton onClick={onToggleDrawer} size="large">
+                    {openDrawer ? <MenuOpenRoundedIcon /> : <MenuRoundedIcon />}
+                  </IconButton>
+                }
+                title={getTranslation(selectedConfigFile.title, translations, formatMessage)}
+                subtitle={getTranslation(selectedConfigFile.description, translations, formatMessage)}
+                rightContent={
+                  <>
+                    <ButtonGroup variant="outlined" className={classes.buttonGroup}>
+                      <SecondaryButton disabled={encrypting} onClick={onEncryptClick} loading={encrypting}>
+                        {formatMessage(translations.encryptMarked)}
+                      </SecondaryButton>
+                      <Button size="small" onClick={onEncryptHelpClick}>
+                        <HelpOutlineRoundedIcon />
+                      </Button>
+                    </ButtonGroup>
+                    <SecondaryButton onClick={onViewSampleClick}>
+                      {showSampleEditor ? (
+                        <FormattedMessage id="siteConfigurationManagement.hideSample" defaultMessage="Hide Sample" />
+                      ) : (
+                        <FormattedMessage id="siteConfigurationManagement.viewSample" defaultMessage="View Sample" />
+                      )}
+                    </SecondaryButton>
+                  </>
+                }
               />
-              {showSampleEditor && (
-                <>
-                  <ResizeBar onWidthChange={onEditorResize} element={editorRef.current.container} />
-                  <ConditionalLoadingState isLoading={loadingSampleXml} classes={{ root: classes.loadingStateRight }}>
-                    <AceEditor
-                      classes={{ root: classes.rootEditor, editorRoot: classes.editorRoot }}
-                      mode="ace/mode/xml"
-                      theme="ace/theme/textmate"
-                      autoFocus={false}
-                      readOnly={true}
-                      value={selectedSampleConfigFileXml}
-                    />
-                  </ConditionalLoadingState>
-                </>
-              )}
-            </Box>
-            <DialogFooter>
-              <SecondaryButton disabled={encrypting} className={classes.historyButton} onClick={onShowHistory}>
-                <FormattedMessage id="siteConfigurationManagement.history" defaultMessage="History" />
-              </SecondaryButton>
-              <SecondaryButton disabled={encrypting} onClick={onCancel}>
-                <FormattedMessage id="words.cancel" defaultMessage="Cancel" />
-              </SecondaryButton>
-              <PrimaryButton disabled={disabledSaveButton || encrypting || isSubmitting} onClick={onSave}>
-                <FormattedMessage id="words.save" defaultMessage="Save" />
-              </PrimaryButton>
-            </DialogFooter>
-          </ConditionalLoadingState>
+              <Box display="flex" flexGrow={1}>
+                <AceEditor
+                  ref={editorRef}
+                  styles={{
+                    root: {
+                      display: 'flex',
+                      width: leftEditorWidth ? `${leftEditorWidth}px` : 'auto',
+                      flexGrow: leftEditorWidth ? 0 : 1
+                    },
+                    editorRoot: {
+                      margin: 0,
+                      opacity: encrypting ? 0.5 : 1,
+                      border: '0',
+                      borderRadius: '0'
+                    }
+                  }}
+                  mode="ace/mode/xml"
+                  theme="ace/theme/textmate"
+                  readOnly={encrypting}
+                  autoFocus={true}
+                  onChange={onEditorChanges}
+                  value={selectedConfigFileXml}
+                />
+                {showSampleEditor && (
+                  <>
+                    <ResizeBar onWidthChange={onEditorResize} element={editorRef.current.container} />
+                    {sampleError ? (
+                      <ApiResponseErrorState error={sampleError} classes={{ root: classes.sampleErrorState }} />
+                    ) : loadingSampleXml ? (
+                      <LoadingState />
+                    ) : nnou(selectedSampleConfigFileXml) ? (
+                      <AceEditor
+                        classes={{ root: classes.rootEditor, editorRoot: classes.editorRoot }}
+                        mode="ace/mode/xml"
+                        theme="ace/theme/textmate"
+                        autoFocus={false}
+                        readOnly={true}
+                        value={selectedSampleConfigFileXml}
+                      />
+                    ) : (
+                      <></>
+                    )}
+                  </>
+                )}
+              </Box>
+              <DialogFooter>
+                <SecondaryButton disabled={encrypting} className={classes.historyButton} onClick={onShowHistory}>
+                  <FormattedMessage id="siteConfigurationManagement.history" defaultMessage="History" />
+                </SecondaryButton>
+                <SecondaryButton disabled={encrypting} onClick={onCancel}>
+                  <FormattedMessage id="words.cancel" defaultMessage="Cancel" />
+                </SecondaryButton>
+                <PrimaryButton disabled={disabledSaveButton || encrypting || isSubmitting} onClick={onSave}>
+                  <FormattedMessage id="words.save" defaultMessage="Save" />
+                </PrimaryButton>
+              </DialogFooter>
+            </>
+          ) : (
+            <></>
+          )}
         </Box>
       ) : (
         <Box

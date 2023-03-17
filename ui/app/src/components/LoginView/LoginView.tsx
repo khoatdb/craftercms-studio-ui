@@ -44,9 +44,9 @@ import { buildStoredLanguageKey, dispatchLanguageChange, getCurrentLocale, setSt
 import CrafterCMSLogo from '../../icons/CrafterCMSLogo';
 import LanguageRounded from '@mui/icons-material/LanguageRounded';
 import Menu from '@mui/material/Menu';
-import PasswordRequirementsDisplay from '../PasswordRequirementsDisplay';
 import { useMount } from '../../hooks/useMount';
 import { useDebouncedInput } from '../../hooks/useDebouncedInput';
+import { PasswordStrengthDisplayPopper } from '../PasswordStrengthDisplayPopper';
 
 export interface SystemLang {
   id: string;
@@ -62,7 +62,7 @@ interface LanguageDropDownProps {
 export interface LoginViewProps {
   xsrfToken: string;
   xsrfParamName: string;
-  passwordRequirementsRegex: string;
+  passwordRequirementsMinComplexity: number;
 }
 
 type Modes = 'login' | 'recover' | 'reset';
@@ -71,7 +71,7 @@ type SubViewProps = React.PropsWithChildren<{
   token?: string;
   language?: string;
   setMode?: React.Dispatch<React.SetStateAction<Modes>>;
-  passwordRequirementsRegex?: string;
+  passwordRequirementsMinComplexity?: number;
   children: React.ReactNode;
   isFetching: boolean;
   onSubmit: React.Dispatch<React.SetStateAction<boolean>>;
@@ -265,8 +265,8 @@ function RecoverView(props: SubViewProps) {
     setError('');
     onSubmit(true);
     !isBlank(username) &&
-      sendPasswordRecovery(username).subscribe(
-        () => {
+      sendPasswordRecovery(username).subscribe({
+        next() {
           onSubmit(false);
           setMode('login');
           onSnack({
@@ -274,11 +274,11 @@ function RecoverView(props: SubViewProps) {
             message: formatMessage(translations.recoverYourPasswordSuccessMessage, { username })
           });
         },
-        (error) => {
+        error(error) {
           onSubmit(false);
           setError(error.message);
         }
-      );
+      });
   };
   return (
     <form onSubmit={onSubmitRecover}>
@@ -329,13 +329,24 @@ function RecoverView(props: SubViewProps) {
 }
 
 function ResetView(props: SubViewProps) {
-  const { children, isFetching, onSubmit, classes, formatMessage, onSnack, setMode, token, passwordRequirementsRegex } =
-    props;
+  const {
+    children,
+    isFetching,
+    onSubmit,
+    classes,
+    formatMessage,
+    onSnack,
+    setMode,
+    token,
+    passwordRequirementsMinComplexity
+  } = props;
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [isValid, setValid] = useState<boolean>(null);
   const [passwordsMismatch, setPasswordMismatch] = useState(false);
   const [error, setError] = useState('');
+  const [anchorEl, setAnchorEl] = useState(null);
+  const submitDisabled = newPassword === '' || isFetching || !isValid;
   useEffect(() => {
     if (isBlank(newPasswordConfirm) || newPasswordConfirm === newPassword) {
       setPasswordMismatch(false);
@@ -386,11 +397,13 @@ function ResetView(props: SubViewProps) {
             />
           }
         />
-        <PasswordRequirementsDisplay
+        <PasswordStrengthDisplayPopper
+          open={Boolean(anchorEl)}
+          anchorEl={anchorEl}
+          placement="top"
           value={newPassword}
+          passwordRequirementsMinComplexity={passwordRequirementsMinComplexity}
           onValidStateChanged={setValid}
-          formatMessage={formatMessage}
-          passwordRequirementsRegex={passwordRequirementsRegex}
         />
         <PasswordTextField
           id="resetFormPasswordField"
@@ -400,6 +413,9 @@ function ResetView(props: SubViewProps) {
           onChange={(e) => setNewPassword(e.target.value)}
           className={classes.resetPassword}
           placeholder={formatMessage(translations.resetPasswordFieldPlaceholderLabel)}
+          onFocus={(e) => setAnchorEl(e.target)}
+          onBlur={() => setAnchorEl(null)}
+          inputProps={{ autoComplete: 'new-password' }}
         />
         <PasswordTextField
           id="resetFormPasswordConfirmField"
@@ -416,7 +432,7 @@ function ResetView(props: SubViewProps) {
         {children}
       </DialogContent>
       <DialogActions>
-        <Button type="submit" color="primary" disabled={isFetching} variant="contained" fullWidth>
+        <Button type="submit" color="primary" disabled={submitDisabled} variant="contained" fullWidth>
           <FormattedMessage id="words.submit" defaultMessage="Submit" />
         </Button>
       </DialogActions>
@@ -490,7 +506,7 @@ export function LoginViewContainer(props: LoginViewProps) {
   const { formatMessage } = useIntl();
   const { classes, cx } = useStyles();
   const token = parse(window.location.search).token as string;
-  const { passwordRequirementsRegex, xsrfToken, xsrfParamName } = props;
+  const { xsrfToken, xsrfParamName, passwordRequirementsMinComplexity } = props;
 
   const [mode, setMode] = useState<Modes>(token ? 'reset' : 'login');
   const [language, setLanguage] = useState(() => getCurrentLocale());
@@ -511,7 +527,7 @@ export function LoginViewContainer(props: LoginViewProps) {
     classes,
     onSubmit,
     onSnack,
-    passwordRequirementsRegex,
+    passwordRequirementsMinComplexity,
     setLanguage,
     onRecover: () => setMode('recover'),
     xsrfToken,

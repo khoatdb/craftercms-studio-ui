@@ -14,11 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { get } from '../utils/ajax';
-import { ClusterMember } from '../models/Clusters';
-import { pluck } from 'rxjs/operators';
-import { Observable } from 'rxjs';
+export { default } from './SearchUI';
 
-export function fetchMembers(): Observable<ClusterMember[]> {
-  return get<{ clusterMembers: ClusterMember[] }>(`/studio/api/2/cluster`).pipe(pluck('response', 'clusterMembers'));
-}
+export * from './SearchUI';

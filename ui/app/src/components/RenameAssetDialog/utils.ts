@@ -18,16 +18,19 @@ import { EnhancedDialogProps } from '../EnhancedDialog';
 import { EnhancedDialogState } from '../../hooks/useEnhancedDialogState';
 import StandardAction from '../../models/StandardAction';
 import { DetailedItem } from '../../models';
+import { AjaxError } from 'rxjs/ajax';
 
 export interface RenameAssetBaseProps {
   path: string;
   type: 'controller' | 'template' | 'asset';
   dependantItems: DetailedItem[];
+  fetchingDependantItems: boolean;
   value?: string;
   allowBraces?: boolean;
+  error: AjaxError;
 }
 
-export interface RenameAssetProps extends RenameAssetBaseProps, EnhancedDialogProps {
+export interface RenameAssetDialogProps extends RenameAssetBaseProps, EnhancedDialogProps {
   onRenamed?(response: { path: string; name: string }): void;
 }
 
@@ -38,6 +41,9 @@ export interface RenameAssetStateProps extends RenameAssetBaseProps, EnhancedDia
 }
 
 export interface RenameAssetContainerProps
-  extends Pick<RenameAssetProps, 'path' | 'value' | 'allowBraces' | 'onRenamed' | 'onClose' | 'type'> {
+  extends Pick<
+    RenameAssetDialogProps,
+    'path' | 'value' | 'allowBraces' | 'onRenamed' | 'onClose' | 'type' | 'fetchingDependantItems' | 'error'
+  > {
   dependantItems: DetailedItem[];
 }

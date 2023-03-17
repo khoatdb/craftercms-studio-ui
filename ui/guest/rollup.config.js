@@ -28,12 +28,13 @@ const extensions = ['.js', '.jsx', '.ts', '.tsx'];
 const plugins = [
   replace({
     preventAssignment: true,
-    'process.env.NODE_ENV': JSON.stringify('production')
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    'process.env.VERSION': JSON.stringify(pkg.version)
   }),
   babel({
     exclude: 'node_modules/**',
     // TODO: @babel/preset-env breaks the build of AMD-style third party libs (e.g. jQuery, js-cookie)
-    presets: [/* '@babel/preset-env', */ '@babel/preset-react', '@babel/preset-typescript'],
+    presets: ['@babel/preset-react', '@babel/preset-typescript'],
     plugins: [
       'babel-plugin-transform-react-remove-prop-types',
       '@babel/plugin-proposal-nullish-coalescing-operator',

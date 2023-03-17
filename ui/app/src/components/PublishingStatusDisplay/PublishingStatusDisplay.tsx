@@ -50,7 +50,16 @@ export function PublishingStatusDisplay(props: PublishingStatusDisplayProps) {
                     <br />
                   </>
                 )}
-                {lockTTL && formatMessage(publishingStatusMessages.lockTTL, { lockTTL })}
+                {lockTTL && (
+                  <>
+                    {formatMessage(publishingStatusMessages.lockTTL, { lockTTL })}
+                    <br />
+                  </>
+                )}
+                {status === 'readyWithErrors' &&
+                  formatMessage({
+                    defaultMessage: 'Last publish completed with errors, please see the logs for more information.'
+                  })}
               </>
             )
           }

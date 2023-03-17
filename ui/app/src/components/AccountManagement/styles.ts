@@ -36,6 +36,13 @@ const useStyles = makeStyles()((theme) => ({
   },
   save: {
     marginLeft: 'auto'
+  },
+  passwordStrengthPopper: {
+    zIndex: theme.zIndex.modal
+  },
+  passwordStrengthPaper: {
+    padding: '10px',
+    margin: '10px 0'
   }
 }));
 

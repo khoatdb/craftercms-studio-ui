@@ -14,18 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { makeStyles } from 'tss-react/mui';
+export { default } from './PasswordStrengthDisplayPopper';
 
-const useStyles = makeStyles()((theme) => ({
-  active: {
-    color: theme.palette.success.main
-  },
-  inactive: {
-    color: theme.palette.error.main
-  },
-  marginCenter: {
-    margin: '0 auto'
-  }
-}));
-
-export default useStyles;
+export * from './PasswordStrengthDisplayPopper';

@@ -25,6 +25,7 @@ export interface BrowseFilesDialogBaseProps {
   contentTypes?: string[];
   mimeTypes?: string[];
   numOfLoaderItems?: number;
+  allowUpload?: boolean;
 }
 
 export interface BrowseFilesDialogProps extends BrowseFilesDialogBaseProps, EnhancedDialogProps {
@@ -47,15 +48,20 @@ export interface BrowseFilesDialogUIProps {
   selectedCard: MediaItem;
   selectedArray: string[];
   multiSelect?: boolean;
+  compact?: boolean;
   path: string;
   currentPath: string;
+  searchParameters: ElasticParams;
+  setSearchParameters(params: Partial<ElasticParams>): void;
   limit: number;
   offset: number;
   keyword: string;
   total: number;
   numOfLoaderItems?: number;
+  allowUpload?: boolean;
+  sortKeys: Array<string>;
   onCardSelected(item: MediaItem): void;
-  onPreviewImage(item: MediaItem): void;
+  onPreviewImage?(item: MediaItem): void;
   onCheckboxChecked(path: string, selected: boolean): void;
   handleSearchKeyword(keyword: string): void;
   onPathSelected(path: string): void;
@@ -65,6 +71,7 @@ export interface BrowseFilesDialogUIProps {
   onCloseButtonClick?(e: React.MouseEvent<HTMLButtonElement, MouseEvent>): void;
   onRefresh(): void;
   onUpload(): void;
+  onToggleViewMode?(): void;
 }
 
 export const initialParameters: ElasticParams = {

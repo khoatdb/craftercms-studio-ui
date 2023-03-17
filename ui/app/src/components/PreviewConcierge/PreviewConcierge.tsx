@@ -24,10 +24,6 @@ import {
   deleteItemOperation,
   deleteItemOperationComplete,
   deleteItemOperationFailed,
-  desktopAssetDrop,
-  desktopAssetUploadComplete,
-  desktopAssetUploadProgress,
-  desktopAssetUploadStarted,
   duplicateItemOperation,
   duplicateItemOperationComplete,
   duplicateItemOperationFailed,
@@ -44,7 +40,6 @@ import {
   iceZoneSelected,
   initRichTextEditorConfig,
   insertComponentOperation,
-  insertInstanceOperation,
   insertItemOperation,
   insertItemOperationComplete,
   insertItemOperationFailed,
@@ -75,9 +70,11 @@ import {
   updateFieldValueOperationComplete,
   updateFieldValueOperationFailed,
   updateRteConfig,
-  validationMessage
+  snackGuestMessage,
+  InsertComponentOperationPayload
 } from '../../state/actions/preview';
 import {
+  writeInstance,
   deleteItem,
   duplicateItem,
   fetchContentInstance,
@@ -90,15 +87,14 @@ import {
   insertItem,
   moveItem,
   sortItem,
-  updateField,
-  uploadDataUrl
+  updateField
 } from '../../services/content';
-import { filter, map, pluck, switchMap, takeUntil } from 'rxjs/operators';
+import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
 import { forkJoin, Observable, of } from 'rxjs';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { getGuestToHostBus, getHostToGuestBus, getHostToHostBus } from '../../utils/subjects';
 import { useDispatch, useStore } from 'react-redux';
-import { nnou, pluckProps } from '../../utils/object';
+import { nnou } from '../../utils/object';
 import { findParentModelId, getModelIdFromInheritedField, isInheritedField } from '../../utils/model';
 import RubbishBin from '../RubbishBin/RubbishBin';
 import { useSnackbar } from 'notistack';
@@ -107,7 +103,9 @@ import {
   getStoredEditModeChoice,
   getStoredEditModePadding,
   getStoredHighlightModeChoice,
-  removeStoredClipboard
+  removeStoredClipboard,
+  getOutdatedXBValidationDate,
+  setOutdatedXBValidationDate
 } from '../../utils/state';
 import {
   fetchSandboxItem,
@@ -120,6 +118,7 @@ import EditFormPanel from '../EditFormPanel/EditFormPanel';
 import {
   createModelHierarchyDescriptorMap,
   getComputedEditMode,
+  getNumOfMenuOptionsForItem,
   hasEditAction,
   isItemLockedForMe,
   normalizeModel,
@@ -139,11 +138,13 @@ import { useActiveUser } from '../../hooks/useActiveUser';
 import { useMount } from '../../hooks/useMount';
 import { usePreviewNavigation } from '../../hooks/usePreviewNavigation';
 import { useActiveSite } from '../../hooks/useActiveSite';
-import { getPathFromPreviewURL, processPathMacros } from '../../utils/path';
+import { getPathFromPreviewURL, processPathMacros, withIndex } from '../../utils/path';
 import {
+  closeItemMegaMenu,
   closeSingleFileUploadDialog,
   rtePickerActionResult,
   showEditDialog,
+  showItemMegaMenu,
   showRtePickerActions,
   ShowRtePickerActionsPayload,
   showSingleFileUploadDialog,
@@ -184,6 +185,8 @@ import DataSourcesActionsList, { DataSourcesActionsListProps } from '../DataSour
 import { editControllerActionCreator, itemActionDispatcher } from '../../utils/itemActions';
 import useEnv from '../../hooks/useEnv';
 import useAuth from '../../hooks/useAuth';
+import { getOffsetLeft, getOffsetTop } from '@mui/material/Popover';
+import { isSameDay } from '../../utils/datetime';
 
 const originalDocDomain = document.domain;
 
@@ -325,6 +328,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
   const [dataSourceActionsListState, setDataSourceActionsListState] = useSpreadState<DataSourcesActionsListProps>(
     dataSourceActionsListInitialState
   );
+  const env = useEnv();
   const conditionallyToggleEditMode = (nextHighlightMode?: HighlightMode) => {
     if (item && !isItemLockedForMe(item, user.username) && hasEditAction(item.availableActions)) {
       dispatch(
@@ -365,7 +369,8 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
     showToolsPanel,
     toolsPanelWidth,
     browseFilesDialogState,
-    onShortCutKeypress(key: string) {
+    onShortCutKeypress(event: KeyboardEvent) {
+      const key = event.key;
       switch (key) {
         case 'e':
           upToDateRefs.current.conditionallyToggleEditMode('all');
@@ -381,8 +386,48 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
           break;
         case 'r':
           getHostToGuestBus().next(reloadRequest());
+          break;
+        case 'E':
+          dispatch(
+            showEditDialog({
+              site: upToDateRefs.current.siteId,
+              path: upToDateRefs.current.guest.path,
+              readonly: isItemLockedForMe(upToDateRefs.current.item, upToDateRefs.current.user.username),
+              authoringBase: upToDateRefs.current.authoringBase
+            })
+          );
+          break;
+        case 'a':
+          if (store.getState().dialogs.itemMegaMenu.open) {
+            dispatch(closeItemMegaMenu());
+          } else if (upToDateRefs.current.item) {
+            let top, left;
+            let menuButton = document.querySelector('#previewAddressBarActionsMenuButton');
+            if (menuButton) {
+              let anchorRect = menuButton.getBoundingClientRect();
+              top = anchorRect.top + getOffsetTop(anchorRect, 'top');
+              left = anchorRect.left + getOffsetLeft(anchorRect, 'left');
+            } else {
+              top = 80;
+              left = (upToDateRefs.current.showToolsPanel ? upToDateRefs.current.toolsPanelWidth : 0) + 20;
+            }
+            let path = upToDateRefs.current.item.path;
+            if (path === '/site/website') {
+              path = withIndex(path);
+            }
+            dispatch(
+              showItemMegaMenu({
+                path: path,
+                anchorReference: 'anchorPosition',
+                anchorPosition: { top, left },
+                loaderItems: getNumOfMenuOptionsForItem(item)
+              })
+            );
+          }
+          break;
       }
-    }
+    },
+    env
   });
 
   const onRtePickerResult = (payload?: { path: string; name: string }) => {
@@ -510,12 +555,26 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
         authoringBase,
         formatMessage,
         modelIdByPath,
-        enqueueSnackbar
+        enqueueSnackbar,
+        env,
+        user
       } = upToDateRefs.current;
       const { type, payload } = action;
       switch (type) {
         case guestSiteLoad.type:
         case guestCheckIn.type:
+          const { version: guestVersion } = payload;
+          const studioVersion = env.version;
+
+          if (type === guestCheckIn.type && guestVersion?.substr(0, 5) !== studioVersion) {
+            const xbOutdatedValidationDate = getOutdatedXBValidationDate(siteId, user.username);
+            // If message has not been shown today or not shown at all
+            if (!xbOutdatedValidationDate || !isSameDay(xbOutdatedValidationDate, new Date())) {
+              enqueueSnackbar(formatMessage(guestMessages.outdatedExpBuilderVersion));
+              setOutdatedXBValidationDate(siteId, user.username, new Date());
+            }
+          }
+
           clearTimeout(guestDetectionTimeoutRef.current);
           setGuestDetectionSnackbarOpen(false);
           break;
@@ -673,73 +732,64 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
           break;
         }
         case insertComponentOperation.type: {
-          const { fieldId, targetIndex, instance, shared } = payload;
+          const {
+            fieldId,
+            targetIndex,
+            instance,
+            shared = false,
+            create = false
+          } = payload as InsertComponentOperationPayload;
           let { modelId, parentModelId } = payload;
           const path = models[modelId ?? parentModelId].craftercms.path;
+          const contentType = contentTypes[instance.craftercms.contentTypeId];
 
           if (isInheritedField(models[modelId], fieldId)) {
             modelId = getModelIdFromInheritedField(models[modelId], fieldId, modelIdByPath);
             parentModelId = findParentModelId(modelId, hierarchyMap, models);
           }
 
-          insertComponent(
-            siteId,
-            modelId,
-            fieldId,
-            targetIndex,
-            contentTypes[instance.craftercms.contentTypeId],
-            instance,
-            models[parentModelId ? parentModelId : modelId].craftercms.path,
-            shared,
-            (instanceFieldId) =>
-              upToDateRefs.current.cdataEscapedFieldPatterns.some((pattern) => Boolean(instanceFieldId.match(pattern)))
-          ).subscribe({
-            next() {
-              issueDescriptorRequest({
-                site: siteId,
-                path: path ?? models[parentModelId].craftercms.path,
-                contentTypes,
-                requestedSourceMapPaths,
-                dispatch,
-                completeAction: fetchGuestModelComplete
-              });
-              hostToGuest$.next(
-                insertOperationComplete({
-                  ...payload,
-                  currentFullUrl: `${guestBase}${upToDateRefs.current.currentUrlPath}`
-                })
+          const shouldSerializeFn = (instanceFieldId) =>
+            upToDateRefs.current.cdataEscapedFieldPatterns.some((pattern) => Boolean(instanceFieldId.match(pattern)));
+
+          // Cases:
+          // - Shared new - shared: true, create: true -> insertComponent
+          // - Shared existing - shared: true, create: false -> insertInstance
+          // - Embedded new - shared: false, create: true -> insertComponent
+          // * Embedded existing - shared: false, create: false -> insertInstance <- This case doesn't go through here, it goes by the move/sort operation.
+          let serviceObservable = create
+            ? // region insertComponent
+              insertComponent(
+                siteId,
+                modelId,
+                fieldId,
+                targetIndex,
+                contentType,
+                instance,
+                models[parentModelId ? parentModelId : modelId].craftercms.path,
+                shared,
+                shouldSerializeFn
+              )
+            : // endregion
+              // region insertInstance
+              insertInstance(
+                siteId,
+                modelId,
+                fieldId,
+                targetIndex,
+                instance,
+                models[parentModelId ? parentModelId : modelId].craftercms.path
               );
-              updatedModifiedItem(path);
-              enqueueSnackbar(formatMessage(guestMessages.insertOperationComplete));
-            },
-            error(error) {
-              console.error(`${type} failed`, error);
-              hostToGuest$.next(insertOperationFailed());
-              // If write operation fails the items remains locked, so we need to dispatch unlockItem
-              dispatch(unlockItem({ path }));
-              enqueueSnackbar(formatMessage(guestMessages.insertOperationFailed), { variant: 'error' });
-            }
-          });
-          break;
-        }
-        case insertInstanceOperation.type: {
-          const { fieldId, targetIndex, instance } = payload;
-          let { modelId, parentModelId } = payload;
-          const path = models[modelId ?? parentModelId].craftercms.path;
+          // endregion
 
-          if (isInheritedField(models[modelId], fieldId)) {
-            modelId = getModelIdFromInheritedField(models[modelId], fieldId, modelIdByPath);
-            parentModelId = findParentModelId(modelId, hierarchyMap, models);
+          // Writing the xml document for the component being inserted only applies to new & shared.
+          if (shared && create) {
+            let postWriteObs = serviceObservable;
+            serviceObservable = writeInstance(siteId, instance, contentType, shouldSerializeFn).pipe(
+              switchMap(() => postWriteObs)
+            );
           }
 
-          insertInstance(
-            siteId,
-            modelId,
-            fieldId,
-            targetIndex,
-            instance,
-            models[parentModelId ? parentModelId : modelId].craftercms.path
-          ).subscribe({
+          serviceObservable.subscribe({
             next() {
               issueDescriptorRequest({
                 site: siteId,
@@ -749,7 +799,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
                 dispatch,
                 completeAction: fetchGuestModelComplete
               });
-
               hostToGuest$.next(
                 insertOperationComplete({
                   ...payload,
@@ -954,83 +1003,27 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
           dispatch(setItemBeingDragged(type === instanceDragBegun.type ? payload : null));
           break;
         }
-        case desktopAssetDrop.type: {
-          enqueueSnackbar(formatMessage(guestMessages.assetUploadStarted));
-          // @ts-ignore - TODO: type action accordingly
-          hostToHost$.next(desktopAssetUploadStarted(payload));
-          const {
-            validations: { allowImageUpload }
-          } = payload.field;
-
-          const path =
-            allowImageUpload && allowImageUpload.value
-              ? processPathMacros({
-                  path: allowImageUpload.value,
-                  objectId: payload.record.modelId
-                })
-              : `/static-assets/images/${payload.record.modelId}`;
-
-          const uppySubscription = uploadDataUrl(
-            siteId,
-            pluckProps(payload, 'name', 'type', 'dataUrl'),
-            path,
-            upToDateRefs.current.xsrfArgument
-          )
-            .pipe(
-              filter(({ type }) => type === 'progress'),
-              pluck('payload')
-            )
-            .subscribe({
-              next({ progress }) {
-                const percentage = Math.floor(
-                  parseInt(((progress.bytesUploaded / progress.bytesTotal) * 100).toFixed(2))
-                );
-                hostToGuest$.next({
-                  type: desktopAssetUploadProgress.type,
-                  payload: {
-                    record: payload.record,
-                    percentage
-                  }
-                });
-              },
-              error(error) {
-                console.error(`${type} failed`, error);
-                enqueueSnackbar(formatMessage(guestMessages.assetUploadFailed), { variant: 'error' });
-              },
-              complete() {
-                hostToGuest$.next({
-                  type: desktopAssetUploadComplete.type,
-                  payload: {
-                    record: payload.record,
-                    path: `${path}${path.endsWith('/') ? '' : '/'}${payload.name}`
-                  }
-                });
-              }
-            });
-          const sub = hostToHost$.subscribe((action) => {
-            const { type, payload: uploadFile } = action;
-            if (type === desktopAssetUploadStarted.type && uploadFile.record.id === payload.record.id) {
-              sub.unsubscribe();
-              uppySubscription.unsubscribe();
-            }
-          });
-          break;
-        }
         case contentTypeDropTargetsResponse.type: {
           dispatch(setContentTypeDropTargets(payload));
           break;
         }
-        case validationMessage.type: {
+        case snackGuestMessage.type: {
           enqueueSnackbar(
             payload.id in guestMessages ? formatMessage(guestMessages[payload.id], payload.values ?? {}) : payload.id,
             {
-              variant: payload.level === 'required' ? 'error' : payload.level === 'suggestion' ? 'warning' : 'info'
+              variant: payload.level
+                ? payload.level === 'required'
+                  ? 'error'
+                  : payload.level === 'suggestion'
+                  ? 'warning'
+                  : 'info'
+                : null
             }
           );
           break;
         }
         case hotKey.type: {
-          upToDateRefs.current.onShortCutKeypress(payload.key);
+          upToDateRefs.current.onShortCutKeypress(payload);
           break;
         }
         case showEditDialogAction.type: {
@@ -1315,15 +1308,21 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
   }, [uiConfig.xml, siteId, rteConfig, dispatch]);
 
   // Host hotkeys
-  useHotkeys('r,e,m,p,shift+/', (e) => {
-    upToDateRefs.current.onShortCutKeypress(e.key);
-  });
+  useHotkeys(
+    'a,r,e,m,p,shift+/,shift+e',
+    (e) => {
+      upToDateRefs.current.onShortCutKeypress(e);
+    },
+    { keyup: true, keydown: false }
+  );
 
   // Guest hotkeys
   useHotkeys(
     'z',
     (e) => {
-      getHostToGuestBus().next(hotKey({ key: e.key, type: e.type as 'keyup' }));
+      getHostToGuestBus().next(
+        hotKey({ key: e.key, type: e.type as 'keyup', shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey })
+      );
     },
     { keyup: true, keydown: true }
   );

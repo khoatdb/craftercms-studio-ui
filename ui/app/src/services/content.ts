@@ -17,7 +17,15 @@
 import { errorSelectorApi1, get, getBinary, getGlobalHeaders, getText, post, postJSON } from '../utils/ajax';
 import { catchError, map, pluck, switchMap, tap } from 'rxjs/operators';
 import { forkJoin, Observable, of, zip } from 'rxjs';
-import { cdataWrap, createElement, createElements, fromString, getInnerHtml, serialize } from '../utils/xml';
+import {
+  cdataWrap,
+  createElement,
+  createElements,
+  fromString,
+  getInnerHtml,
+  newXMLDocument,
+  serialize
+} from '../utils/xml';
 import { ContentType } from '../models/ContentType';
 import { createLookupTable, nnou, nou, toQueryString } from '../utils/object';
 import { LookupTable } from '../models/LookupTable';
@@ -32,7 +40,12 @@ import { getRequestForgeryToken } from '../utils/auth';
 import { DetailedItem, LegacyItem, SandboxItem } from '../models/Item';
 import { VersionsResponse } from '../models/Version';
 import { GetChildrenOptions } from '../models/GetChildrenOptions';
-import { parseContentXML, parseSandBoxItemToDetailedItem, prepareVirtualItemProps } from '../utils/content';
+import {
+  generateComponentPath,
+  parseContentXML,
+  parseSandBoxItemToDetailedItem,
+  prepareVirtualItemProps
+} from '../utils/content';
 import QuickCreateItem from '../models/content/QuickCreateItem';
 import ApiResponse from '../models/ApiResponse';
 import { fetchContentTypes } from './contentTypes';
@@ -44,7 +57,7 @@ import { GetItemWithChildrenResponse } from '../models/GetItemWithChildrenRespon
 import { FetchItemsByPathOptions } from '../models/FetchItemsByPath';
 import { v4 as uuid } from 'uuid';
 import FetchItemsByPathArray from '../models/FetchItemsByPathArray';
-import { isMediaContent, isTextContent } from '../components/PathNavigator/utils';
+import { isPdfDocument, isMediaContent, isTextContent } from '../components/PathNavigator/utils';
 
 export function fetchComponentInstanceHTML(path: string): Observable<string> {
   return getText(`/crafter-controller/component.html${toQueryString({ path })}`).pipe(pluck('response'));
@@ -85,6 +98,7 @@ export function fetchDescriptorDOM(
   return fetchDescriptorXML(site, path, options).pipe(map(fromString));
 }
 
+// region fetchSandboxItem
 export function fetchSandboxItem(site: string, path: string): Observable<SandboxItem>;
 export function fetchSandboxItem(
   site: string,
@@ -103,6 +117,7 @@ export function fetchSandboxItem(
 ): Observable<SandboxItem | DetailedItem> {
   return fetchItemsByPath(site, [path], options).pipe(pluck(0));
 }
+// endregion
 
 export function fetchDetailedItem(
   siteId: string,
@@ -143,7 +158,12 @@ export function fetchContentInstance(
   return fetchContentDOM(site, path).pipe(map((doc) => parseContentXML(doc, path, contentTypesLookup, {})));
 }
 
-export function writeContent(site: string, path: string, content: string, options?: { unlock: boolean }) {
+export function writeContent(
+  site: string,
+  path: string,
+  content: string,
+  options?: { unlock: boolean }
+): Observable<boolean> {
   options = Object.assign({ unlock: true }, options);
   return post(
     writeContentUrl({
@@ -155,7 +175,7 @@ export function writeContent(site: string, path: string, content: string, option
     content
   ).pipe(
     map((ajaxResponse) => {
-      if (ajaxResponse.response.result.error) {
+      if (ajaxResponse.response.result?.error) {
         // eslint-disable-next-line no-throw-literal
         throw {
           ...ajaxResponse,
@@ -197,8 +217,57 @@ function writeContentUrl(qs: object): string {
   return `/studio/api/1/services/api/1/content/write-content.json?${qs.toString()}`;
 }
 
-// region Operations
+function createComponentObject(
+  instance: ContentInstance,
+  contentType: ContentType,
+  shouldSerializeValueFn: (fieldId) => boolean
+) {
+  const id = (instance.craftercms.id = instance.craftercms.id ?? uuid());
+  const path = (instance.craftercms.path =
+    instance.craftercms.path ?? generateComponentPath(id, instance.craftercms.contentTypeId));
+  const fileName = getFileNameFromPath(path);
 
+  const serializedInstance = {};
+  for (let key in instance) {
+    if (key !== 'craftercms' && key !== 'fileName' && key !== 'internalName') {
+      let value = instance[key];
+      serializedInstance[key] =
+        nnou(value) && (typeof value !== 'string' || !isBlank(value)) && shouldSerializeValueFn?.(key)
+          ? cdataWrap(`${value}`)
+          : value;
+    }
+  }
+
+  return mergeContentDocumentProps('component', {
+    '@attributes': { id },
+    'content-type': contentType.id,
+    'display-template': contentType.displayTemplate,
+    // TODO: per this, at this point, internal-name is always cdata wrapped, not driven by config.
+    'internal-name': cdataWrap(instance.craftercms.label),
+    'file-name': fileName,
+    objectId: id,
+    ...serializedInstance
+  });
+}
+
+// region writeInstance
+/**
+ * Creates a new content item xml document and writes it to the repo.
+ */
+export function writeInstance(
+  site: string,
+  instance: ContentInstance,
+  contentType: ContentType,
+  shouldSerializeValueFn?: (fieldId: any) => boolean
+): Observable<any> {
+  const doc = newXMLDocument('component');
+  const transferObj = createComponentObject(instance, contentType, shouldSerializeValueFn);
+  createElements(doc.documentElement, transferObj);
+  return writeContent(site, instance.craftercms.path, serialize(doc));
+}
+// endregion
+
+// region updateField
 export function updateField(
   site: string,
   modelId: string,
@@ -237,7 +306,9 @@ export function updateField(
     modelId
   );
 }
+// endregion
 
+// region performMutation
 function performMutation(
   site: string,
   path: string,
@@ -269,9 +340,12 @@ function performMutation(
     })
   );
 }
+// endregion
 
+// region insertComponent
 /**
- * Insert a *new* component on to the document
+ * Inserts a *new* component item on the specified component collection field. In case of shared components, only
+ * updates the target content item field to include the reference, does not create/write the shared component document.
  * */
 export function insertComponent(
   site: string,
@@ -282,59 +356,28 @@ export function insertComponent(
   instance: ContentInstance,
   path: string,
   shared = false,
-  serializeValue?: (instanceFieldId: string) => boolean
+  shouldSerializeValueFn?: (fieldId: string) => boolean
 ): Observable<any> {
   return performMutation(
     site,
     path,
     (element) => {
       const id = instance.craftercms.id;
-      const path = shared ? instance.craftercms.path ?? getComponentPath(id, instance.craftercms.contentTypeId) : null;
+      const path = shared
+        ? instance.craftercms.path ?? generateComponentPath(id, instance.craftercms.contentTypeId)
+        : null;
 
       // Create the new `item` that holds or references (embedded vs shared) the component.
       const newItem = createElement('item');
 
-      delete instance.fileName;
-      delete instance.internalName;
-
-      const serializedInstance = {};
-      for (let key in instance) {
-        if (key !== 'craftercms') {
-          serializedInstance[key] =
-            instance[key] && serializeValue?.(key) ? cdataWrap(`${instance[key]}`) : instance[key];
-        }
-      }
-
-      // Create the new component that will be either embedded into the parent's XML or
-      // shared stored on it's own.
-      const component = mergeContentDocumentProps('component', {
-        '@attributes': { id },
-        'content-type': contentType.id,
-        'display-template': contentType.displayTemplate,
-        // TODO: per this, at this point, internal-name is always cdata wrapped, not driven by config.
-        'internal-name': cdataWrap(instance.craftercms.label),
-        'file-name': `${id}.xml`,
-        objectId: id,
-        ...serializedInstance
-      });
-
       // Add the child elements into the `item` node
       createElements(newItem, {
-        '@attributes': {
-          // TODO: Hardcoded value. Fix.
-          datasource: '',
-          ...(shared ? {} : { inline: true })
-        },
+        '@attributes': { inline: !shared },
         key: shared ? path : id,
         value: cdataWrap(instance.craftercms.label),
         ...(shared
-          ? {
-              include: path,
-              disableFlattening: 'false'
-            }
-          : {
-              component
-            })
+          ? { include: path, disableFlattening: 'false' }
+          : { component: createComponentObject(instance, contentType, shouldSerializeValueFn) })
       });
 
       insertCollectionItem(element, fieldId, targetIndex, newItem);
@@ -342,7 +385,9 @@ export function insertComponent(
     modelId
   );
 }
+// endregion
 
+// region insertInstance
 /**
  * Insert an *existing* (i.e. shared) component on to the document
  * */
@@ -379,7 +424,9 @@ export function insertInstance(
     modelId
   );
 }
+// endregion
 
+// region insertItem
 export function insertItem(
   site: string,
   modelId: string,
@@ -387,7 +434,7 @@ export function insertItem(
   index: string | number,
   instance: InstanceRecord,
   path: string,
-  serializeValue?: (instanceFieldId: string) => boolean
+  shouldSerializeValueFn?: (fieldId: string) => boolean
 ): Observable<any> {
   return performMutation(
     site,
@@ -398,7 +445,11 @@ export function insertItem(
       const serializedInstance = {};
       for (let key in instance) {
         if (key !== 'craftercms') {
-          serializedInstance[key] = serializeValue?.(key) ? cdataWrap(`${instance[key]}`) : instance[key];
+          let value = instance[key];
+          serializedInstance[key] =
+            nnou(value) && (typeof value !== 'string' || !isBlank(value)) && shouldSerializeValueFn?.(key)
+              ? cdataWrap(`${value}`)
+              : value;
         }
       }
       createElements(newItem, serializedInstance);
@@ -407,6 +458,7 @@ export function insertItem(
     modelId
   );
 }
+// endregion
 
 export function duplicateItem(
   site: string,
@@ -628,8 +680,6 @@ export function deleteItem(
   );
 }
 
-// endregion
-
 interface SearchServiceResponse {
   response: ApiResponse;
   result: {
@@ -826,7 +876,7 @@ function extractNode(doc: XMLDocument | Element, fieldId: string, index: string 
   }
 }
 
-function mergeContentDocumentProps(type: string, data: AnyObject): LegacyContentDocumentProps {
+function mergeContentDocumentProps(type: 'page' | 'component', data: AnyObject): LegacyContentDocumentProps {
   // Dasherized props...
   // content-type, display-template, no-template-required, internal-name, file-name
   // merge-strategy, folder-name, parent-descriptor
@@ -845,21 +895,16 @@ function mergeContentDocumentProps(type: string, data: AnyObject): LegacyContent
       objectId: ''
     },
     type === 'page' ? { placeInNav: 'false' as 'false' } : {},
-    data || {}
+    data
   );
 }
 
-function createModifiedDate() {
+function createModifiedDate(): string {
   return new Date().toISOString();
 }
 
-function updateModifiedDateElement(doc: Element) {
+function updateModifiedDateElement(doc: Element): void {
   doc.querySelector(':scope > lastModifiedDate_dt').innerHTML = createModifiedDate();
-}
-
-function getComponentPath(id: string, contentType: string) {
-  const pathBase = `/site/components/${contentType.replace('/component/', '')}s/`.replace(/\/{1,}$/m, '');
-  return `${pathBase}/${id}.xml`;
 }
 
 function insertCollectionItem(
@@ -1391,7 +1436,7 @@ export function fetchContentByCommitId(site: string, path: string, commitId: str
     switchMap((ajax) => {
       const blob = ajax.response;
       const type = ajax.xhr.getResponseHeader('content-type');
-      if (isMediaContent(type)) {
+      if (isMediaContent(type) || isPdfDocument(type)) {
         return of(URL.createObjectURL(blob));
       } else if (isTextContent(type)) {
         return blob.text() as Promise<string>;
