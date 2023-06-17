@@ -292,9 +292,12 @@ function deleteItemFromHierarchyMap(modelId: string) {
 
 export function updateField(modelId: string, fieldId: string, index: string | number, value: unknown): void {
   const models = getCachedModels();
-  const model = { ...models[modelId] };
-  const parentModelId = getParentModelId(modelId, models, modelHierarchyMap);
-  const modelsToUpdate = collectReferrers(modelId);
+  const isInherited = isInheritedField(modelId, fieldId);
+  let inheritorModel;
+  const modelIdToEdit = isInherited ? getModelIdFromInheritedField(modelId, fieldId) : modelId;
+  const model = { ...models[modelIdToEdit] };
+  const parentModelId = getParentModelId(modelIdToEdit, models, modelHierarchyMap);
+  const modelsToUpdate = collectReferrers(modelIdToEdit);
 
   // Using `index` being present as the factor to determine how to treat this update.
   // For now, fieldId should only ever have a `.` if the target zone is inside some collection
@@ -322,13 +325,19 @@ export function updateField(modelId: string, fieldId: string, index: string | nu
     target[specificFieldId] = value;
   } else {
     Model.value(model, fieldId, value);
+    if (isInherited) {
+      inheritorModel = { ...models[modelId] };
+      // If inherited field - update the value in the model from where it inherits the field.
+      Model.value(inheritorModel, fieldId, value);
+    }
   }
 
   // Update the model cache
   models$.next({
     ...models,
     ...modelsToUpdate,
-    [modelId]: model
+    [modelIdToEdit]: model,
+    ...(isInherited && { [modelId]: inheritorModel })
   });
 
   const action = updateFieldValueOperation({

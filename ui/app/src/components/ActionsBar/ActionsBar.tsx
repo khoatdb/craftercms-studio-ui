@@ -16,7 +16,7 @@
 
 import { useIntl } from 'react-intl';
 import Checkbox, { CheckboxProps } from '@mui/material/Checkbox';
-import React from 'react';
+import React, { ReactElement } from 'react';
 import { getPossibleTranslation } from '../../utils/i18n';
 import Button, { ButtonProps } from '@mui/material/Button';
 import TranslationOrText from '../../models/TranslationOrText';
@@ -31,9 +31,11 @@ export interface ActionsBarAction {
 
 interface ActionsBarProps {
   options: ActionsBarAction[];
+  noSelectionContent?: ReactElement;
   numOfSkeletonItems?: number;
   isLoading?: boolean;
   isIndeterminate: boolean;
+  showCheckbox?: boolean;
   isChecked: boolean;
   classes?: Partial<Record<'root' | 'container' | 'checkbox' | 'button', string>>;
   onOptionClicked(optionId: string): void;
@@ -52,9 +54,11 @@ export function ActionsBar(props: ActionsBarProps) {
   const { formatMessage } = useIntl();
   const {
     options,
+    noSelectionContent,
     onOptionClicked,
     isIndeterminate,
     onCheckboxChange,
+    showCheckbox = true,
     isChecked,
     isLoading = false,
     numOfSkeletonItems = 5,
@@ -65,15 +69,18 @@ export function ActionsBar(props: ActionsBarProps) {
   return (
     <Box className={props.classes?.root} sx={{ bgcolor: 'background.paper', ...sxs?.root }}>
       <Box sx={{ bgcolor: 'action.selected', ...sxs?.container }}>
-        <Checkbox
-          disabled={disabled}
-          sx={{ width: 48, ...sxs?.checkbox }}
-          color="primary"
-          indeterminate={isIndeterminate}
-          checked={isChecked}
-          className={props.classes?.checkbox}
-          onChange={onCheckboxChange}
-        />
+        {showCheckbox && (
+          <Checkbox
+            disabled={disabled}
+            sx={{ width: 48, ...sxs?.checkbox }}
+            color="primary"
+            indeterminate={isIndeterminate}
+            checked={isChecked}
+            className={props.classes?.checkbox}
+            onChange={onCheckboxChange}
+          />
+        )}
+        {!isLoading && !isIndeterminate && !isChecked && noSelectionContent}
         {isLoading
           ? new Array(numOfSkeletonItems).fill(null).map((nothing, index) => (
               <Button

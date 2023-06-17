@@ -203,7 +203,6 @@ CStudioAuthoring.Dialogs.NewContentType = CStudioAuthoring.Dialogs.NewContentTyp
     // 'Display Label' input
     YEvent.on('contentTypeDisplayName', 'keyup', function () {
       value = document.getElementById('contentTypeDisplayName').value;
-
       value = value.toLowerCase();
 
       self.onSetDirty(Boolean(value));
@@ -550,6 +549,7 @@ CStudioAuthoring.Dialogs.NewContentType = CStudioAuthoring.Dialogs.NewContentTyp
     const newContentType = `/${type}/${contentTypeName}`;
 
     contentTypeNameInvalidMessage.classList.add('hidden');
+
     const contentTypeIdExists = Boolean(contentTypes.find((contentType) => contentType.name === newContentType));
     if (contentTypeIdExists) {
       contentTypeNameErrorMessage.classList.remove('hidden');
@@ -590,6 +590,7 @@ CStudioAuthoring.Dialogs.NewContentType = CStudioAuthoring.Dialogs.NewContentTyp
 
     var checkButton = function () {
       enableButton = true;
+
       // Clean content-type id
       document.getElementById('contentTypeName').value = document
         .getElementById('contentTypeName')
@@ -597,6 +598,7 @@ CStudioAuthoring.Dialogs.NewContentType = CStudioAuthoring.Dialogs.NewContentTyp
         .value.normalize('NFD')
         .replace(/\p{Diacritic}/gu, '')
         .replace(/[^a-zA-Z0-9-_\/.]/g, '');
+
       const isValid = me.validateContentType();
 
       controlLoop: for (var inputId in configObj) {

@@ -107,6 +107,7 @@ function unauthenticated(excludeClient?: MessagePort) {
   log(`Auth has expired.`);
   clearTimeout(timeout);
   status = 'expired';
+  socketClient?.deactivate();
   broadcast(sharedWorkerUnauthenticated(), excludeClient);
 }
 
@@ -166,8 +167,9 @@ function openSocket({ site, xsrfToken }) {
     socketClient.deactivate();
   }
   let subscription: StompSubscription;
+  let protocol = self.location.protocol === 'https:' ? 'wss' : 'ws';
   socketClient = new Client({
-    brokerURL: `ws://${isProduction ? self.location.host : 'localhost:8080'}/studio/events`,
+    brokerURL: `${protocol}://${isProduction ? self.location.host : 'localhost:8080'}/studio/events`,
     ...(!isProduction && { debug: log }),
     connectHeaders: { [XSRF_TOKEN_HEADER_NAME]: xsrfToken },
     onConnect() {

@@ -138,7 +138,7 @@ function GitForm(props: GitFormProps) {
 
   return (
     <>
-      <Grid item xs={12}>
+      <Grid item xs={12} data-field-id="repoUrl">
         <TextField
           id="repoUrl"
           name="repoUrl"
@@ -160,7 +160,7 @@ function GitForm(props: GitFormProps) {
           )}
         />
       </Grid>
-      <Grid item xs={12}>
+      <Grid item xs={12} data-field-id="repoRemoteName">
         <TextField
           id="repoRemoteName"
           name="repoRemoteName"
@@ -176,7 +176,12 @@ function GitForm(props: GitFormProps) {
       </Grid>
       <Grid item xs={12}>
         <div className={classes.formControl}>
-          <GitAuthForm inputs={inputs} setInputs={setInputs} handleInputChange={handleInputChange} />
+          <GitAuthForm
+            inputs={inputs}
+            setInputs={setInputs}
+            handleInputChange={handleInputChange}
+            onKeyPress={onKeyPress}
+          />
         </div>
       </Grid>
       <Grid item xs={12} sx={{ mb: 2 }}>

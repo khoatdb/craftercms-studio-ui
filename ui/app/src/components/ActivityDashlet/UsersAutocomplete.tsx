@@ -21,27 +21,38 @@ import Autocomplete from '@mui/material/Autocomplete';
 import useDebouncedInput from '../../hooks/useDebouncedInput';
 import { fetchAll } from '../../services/users';
 import CircularProgress from '@mui/material/CircularProgress';
-import { FormattedMessage } from 'react-intl';
+import { FormattedMessage, useIntl } from 'react-intl';
 import Typography from '@mui/material/Typography';
 import User from '../../models/User';
+import { USER_USERNAME_MAX_LENGTH } from '../UserManagement/utils';
+import { createErrorStatePropsFromApiResponse } from '../ApiResponseErrorState';
 
 export interface UsersAutocompleteProps {
+  value: User[];
   onChange(value: User[]): void;
 }
 
 export function UsersAutocomplete(props: UsersAutocompleteProps) {
-  const { onChange } = props;
-  const [value, setValue] = useState([]);
+  const { onChange, value } = props;
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState('');
+  const [error, setError] = useState(null);
   const keyword$ = useDebouncedInput((k) => setKeyword(k.trim()));
+  const { formatMessage } = useIntl();
   useEffect(() => {
     if (keyword) {
       setLoading(true);
-      fetchAll({ limit: 50, keyword }).subscribe((users) => {
-        setUsers(users);
-        setLoading(false);
+      setError(null);
+      fetchAll({ limit: 50, keyword }).subscribe({
+        next: (users) => {
+          setUsers(users);
+          setLoading(false);
+        },
+        error: ({ response }) => {
+          setLoading(false);
+          setError(response);
+        }
       });
     } else {
       setUsers([]);
@@ -54,11 +65,19 @@ export function UsersAutocomplete(props: UsersAutocompleteProps) {
       multiple
       noOptionsText={
         keyword ? (
-          <FormattedMessage
-            id="activityDashlet.noUsersMatchKeywordsMessage"
-            defaultMessage='No users match "{user}"'
-            values={{ user: keyword }}
-          />
+          error ? (
+            error?.response.code === 1001 ? (
+              error.validationErrors[0].message
+            ) : (
+              createErrorStatePropsFromApiResponse(error.response, formatMessage).message
+            )
+          ) : (
+            <FormattedMessage
+              id="activityDashlet.noUsersMatchKeywordsMessage"
+              defaultMessage='No users match "{user}"'
+              values={{ user: keyword }}
+            />
+          )
         ) : (
           <FormattedMessage id="activityDashlet.emptyUserQueryMessage" defaultMessage="Type a username to find" />
         )
@@ -86,6 +105,7 @@ export function UsersAutocomplete(props: UsersAutocompleteProps) {
         <TextField
           {...params}
           label={<FormattedMessage id="words.username" defaultMessage="Username" />}
+          inputProps={{ ...params.inputProps, maxLength: USER_USERNAME_MAX_LENGTH }}
           onChange={(e) => {
             keyword$.next(e.target.value);
           }}
@@ -104,7 +124,6 @@ export function UsersAutocomplete(props: UsersAutocompleteProps) {
       onChange={(event, newValue) => {
         const nextValue = [...newValue];
         setUsers([]);
-        setValue(nextValue);
         onChange(nextValue);
       }}
     />

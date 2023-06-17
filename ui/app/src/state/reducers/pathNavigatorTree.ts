@@ -38,7 +38,7 @@ import { fetchSiteUiConfig } from '../actions/configuration';
 import { reversePluckProps } from '../../utils/object';
 import { SocketEventBase, StandardAction } from '../../models';
 import { fetchSandboxItemComplete, FetchSandboxItemCompletePayload } from '../actions/content';
-import { getIndividualPaths, getParentPath, withoutIndex } from '../../utils/path';
+import { getIndividualPaths, getParentPath, withIndex, withoutIndex } from '../../utils/path';
 import { deleteContentEvent, moveContentEvent, MoveContentEventPayload } from '../actions/system';
 import { createPresenceTable } from '../../utils/array';
 
@@ -49,7 +49,14 @@ export function contentAndDeleteEventForEachApplicableTree(
 ): void {
   const parentPathOfTargetPath = getParentPath(targetPath);
   Object.values(state).forEach((tree) => {
-    if (tree.rootPath === targetPath || targetPath in tree.totalByPath || parentPathOfTargetPath in tree.totalByPath) {
+    if (
+      tree.rootPath === targetPath ||
+      tree.rootPath === withIndex(targetPath) ||
+      targetPath in tree.totalByPath ||
+      withIndex(targetPath) in tree.totalByPath ||
+      parentPathOfTargetPath in tree.totalByPath ||
+      withIndex(parentPathOfTargetPath) in tree.totalByPath
+    ) {
       callbackFn(tree, targetPath, parentPathOfTargetPath);
     }
   });
@@ -69,6 +76,8 @@ const expandPath = (state: LookupTable<PathNavigatorTreeStateProps>, { payload: 
 export function deleteItemFromState(tree: PathNavigatorTreeStateProps, targetPath: string): void {
   let parentPath = getParentPath(targetPath);
   let totalByPath = tree.totalByPath;
+  // path in totalByPath may be a page, and its path has index.xml
+  parentPath = totalByPath[parentPath] ? parentPath : withIndex(parentPath);
   let childrenByParentPath = tree.childrenByParentPath;
 
   // Remove deleted item from the parent path's children
@@ -203,11 +212,12 @@ const reducer = createReducer<LookupTable<PathNavigatorTreeStateProps>>(
     // Assumption: this reducer is a reset. Not suitable for partial updates.
     [pathNavigatorTreeRestoreComplete.type]: (
       state,
-      { payload: { id, children, items } }: { payload: PathNavigatorTreeRestoreCompletePayload }
+      { payload: { id, children, items, expanded } }: { payload: PathNavigatorTreeRestoreCompletePayload }
     ) => {
       const chunk = state[id];
       chunk.childrenByParentPath = {};
       chunk.totalByPath = {};
+      chunk.expanded = expanded;
       const childrenByParentPath = chunk.childrenByParentPath;
       const totalByPath = chunk.totalByPath;
       const offsetByPath = chunk.offsetByPath;

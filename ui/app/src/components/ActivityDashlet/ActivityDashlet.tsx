@@ -15,8 +15,9 @@
  */
 
 import { Activity } from '../../models/Activity';
-import React, { useEffect, useMemo } from 'react';
-import { MoreVertRounded, RefreshRounded } from '@mui/icons-material';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import RefreshRounded from '@mui/icons-material/RefreshRounded';
+import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import { PREVIEW_URL_PATH, UNDEFINED } from '../../utils/constants';
 import useActiveSiteId from '../../hooks/useActiveSiteId';
 import useEnv from '../../hooks/useEnv';
@@ -32,7 +33,6 @@ import TimelineDot from '@mui/lab/TimelineDot';
 import TimelineContent from '@mui/lab/TimelineContent';
 import TimelineConnector from '@mui/lab/TimelineConnector';
 import Typography from '@mui/material/Typography';
-import { CommonDashletProps } from '../SiteDashboard/utils';
 import DropDownMenu from '../DropDownMenuButton/DropDownMenuButton';
 import {
   ActivitiesAndAll,
@@ -46,7 +46,7 @@ import Skeleton from '@mui/material/Skeleton';
 import { styled } from '@mui/material/styles';
 import { RangePickerModal } from './RangePickerModal';
 import Tooltip from '@mui/material/Tooltip';
-import DashletCard from '../DashletCard/DashletCard';
+import DashletCard, { DashletCardProps } from '../DashletCard/DashletCard';
 import { asLocalizedDateTime } from '../../utils/datetime';
 import { DashletAvatar, DashletEmptyMessage, PersonAvatar, PersonFullName } from '../DashletCard/dashletCommons';
 import { getSystemLink } from '../../utils/system';
@@ -54,8 +54,14 @@ import { useDispatch } from 'react-redux';
 import { changeCurrentUrl } from '../../state/actions/preview';
 import { useWidgetDialogContext } from '../WidgetDialog';
 import PackageDetailsDialog from '../PackageDetailsDialog/PackageDetailsDialog';
+import InfiniteScroll from 'react-infinite-scroller';
+import Box from '@mui/material/Box';
+import { contentEvent, deleteContentEvent, publishEvent, workflowEvent } from '../../state/actions/system';
+import { getHostToHostBus } from '../../utils/subjects';
+import { filter } from 'rxjs/operators';
+import LoadingIconButton from '../LoadingIconButton';
 
-export interface ActivityDashletProps extends CommonDashletProps {}
+export interface ActivityDashletProps extends Partial<DashletCardProps> {}
 
 interface ActivityDashletState {
   openRangePicker: boolean;
@@ -143,8 +149,8 @@ export function ActivityDashlet(props: ActivityDashletProps) {
       offset,
       total,
       openRangePicker,
-      loadingChunk,
       loadingFeed,
+      loadingChunk,
       selectedPackageId,
       openPackageDetailsDialog
     },
@@ -160,7 +166,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
     feedType: 'timeline',
     dateFrom: null,
     dateTo: null,
-    limit: 10,
+    limit: 50,
     offset: 0,
     total: null
   });
@@ -202,9 +208,11 @@ export function ActivityDashlet(props: ActivityDashletProps) {
   );
   // endregion
   // region onRefresh
-  const onRefresh = useMemo(
-    () => () => {
-      setState({ feed: null, total: null, offset: 0, loadingFeed: true });
+  const onLoad = useMemo(
+    () => (backgroundRefresh?: boolean) => {
+      if (!backgroundRefresh) {
+        setState({ feed: null, total: null, offset: 0, loadingFeed: true });
+      }
       fetchActivity(site, {
         actions: activities.filter((key) => key !== 'ALL'),
         usernames,
@@ -212,12 +220,13 @@ export function ActivityDashlet(props: ActivityDashletProps) {
         dateFrom,
         limit
       }).subscribe((feed) => {
-        setState({ feed, total: feed.total, loadingFeed: false });
+        setState({ feed, total: feed.total, ...(!backgroundRefresh && { loadingFeed: false }) });
       });
     },
     [site, activities, dateFrom, dateTo, limit, setState, usernames]
   );
   // endregion
+  const listRef = useRef();
   const loadNextPage = () => {
     let newOffset = offset + limit;
     setState({ loadingChunk: true });
@@ -237,6 +246,21 @@ export function ActivityDashlet(props: ActivityDashletProps) {
       });
     });
   };
+  const onRefresh = useCallback(() => {
+    setState({
+      loadingChunk: true
+    });
+    fetchActivity(site, {
+      actions: activities.filter((key) => key !== 'ALL'),
+      usernames,
+      dateTo,
+      dateFrom,
+      offset: 0,
+      limit: offset + limit
+    }).subscribe((feed) => {
+      setState({ feed, total: feed.total, loadingChunk: false });
+    });
+  }, [activities, dateFrom, dateTo, limit, offset, setState, site, usernames]);
   const onItemClick = (previewUrl, e) => {
     const pathname = window.location.pathname;
     if (pathname.includes(PREVIEW_URL_PATH)) {
@@ -256,17 +280,31 @@ export function ActivityDashlet(props: ActivityDashletProps) {
   };
   const hasMoreItemsToLoad = total > 0 && limit + offset < total;
   useEffect(() => {
-    onRefresh();
-  }, [onRefresh, setState]);
+    onLoad();
+  }, [onLoad, setState]);
+
+  // region Item Updates Propagation
+  useEffect(() => {
+    const events = [deleteContentEvent.type, workflowEvent.type, publishEvent.type, contentEvent.type];
+    const hostToHost$ = getHostToHostBus();
+    const subscription = hostToHost$.pipe(filter((e) => events.includes(e.type))).subscribe(({ type, payload }) => {
+      onRefresh();
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [onRefresh]);
+  // endregion
+
   return (
     <DashletCard
       {...props}
       borderLeftColor={borderLeftColor}
       title={<FormattedMessage id="words.activity" defaultMessage="Activity" />}
       headerAction={
-        <IconButton onClick={onRefresh}>
+        <LoadingIconButton onClick={() => onRefresh()} loading={loadingChunk}>
           <RefreshRounded />
-        </IconButton>
+        </LoadingIconButton>
       }
       actionsBar={
         <>
@@ -315,6 +353,7 @@ export function ActivityDashlet(props: ActivityDashletProps) {
           </DropDownMenu>
         </>
       }
+      cardContentProps={{ ref: listRef }}
     >
       {loadingFeed && (
         <Timeline position="right">
@@ -359,69 +398,48 @@ export function ActivityDashlet(props: ActivityDashletProps) {
             </SizedTimelineSeparator>
             <TimelineContent sx={emptyTimelineContentSx} />
           </CustomTimelineItem>
-          {feed.map((activity) => (
-            <CustomTimelineItem key={activity.id}>
-              <SizedTimelineSeparator>
-                <TimelineConnector />
-                <TimelineDotWithAvatar>
-                  <PersonAvatar person={activity.person} />
-                </TimelineDotWithAvatar>
-                <TimelineConnector />
-              </SizedTimelineSeparator>
-              <TimelineContent sx={{ py: '12px', px: 2 }}>
-                <PersonFullName person={activity.person} />
-                <Typography>{renderActivity(activity, { formatMessage, onPackageClick, onItemClick })}</Typography>
-                <Typography
-                  variant="caption"
-                  title={asLocalizedDateTime(activity.actionTimestamp, locale.localeCode, locale.dateTimeFormatOptions)}
-                >
-                  {renderActivityTimestamp(activity.actionTimestamp, locale)}
-                </Typography>
-              </TimelineContent>
-            </CustomTimelineItem>
-          ))}
-          {loadingChunk ? (
-            getSkeletonTimelineItems({ items: 3 })
-          ) : (
+          <InfiniteScroll
+            initialLoad={false}
+            pageStart={0}
+            loadMore={() => {
+              loadNextPage();
+            }}
+            hasMore={hasMoreItemsToLoad}
+            loader={<Box key={0}>{getSkeletonTimelineItems({ items: 3 })}</Box>}
+            useWindow={false}
+            getScrollParent={() => listRef.current}
+          >
+            {feed.map((activity) => (
+              <CustomTimelineItem key={activity.id}>
+                <SizedTimelineSeparator>
+                  <TimelineConnector />
+                  <TimelineDotWithAvatar>
+                    <PersonAvatar person={activity.person} />
+                  </TimelineDotWithAvatar>
+                  <TimelineConnector />
+                </SizedTimelineSeparator>
+                <TimelineContent sx={{ py: '12px', px: 2 }}>
+                  <PersonFullName person={activity.person} />
+                  <Typography>{renderActivity(activity, { formatMessage, onPackageClick, onItemClick })}</Typography>
+                  <Typography
+                    variant="caption"
+                    title={asLocalizedDateTime(
+                      activity.actionTimestamp,
+                      locale.localeCode,
+                      locale.dateTimeFormatOptions
+                    )}
+                  >
+                    {renderActivityTimestamp(activity.actionTimestamp, locale)}
+                  </Typography>
+                </TimelineContent>
+              </CustomTimelineItem>
+            ))}
+          </InfiniteScroll>
+          {!hasMoreItemsToLoad && (
             <CustomTimelineItem>
               <SizedTimelineSeparator>
-                {hasMoreItemsToLoad ? (
-                  <TimelineDotWithAvatar sx={{ bgcolor: 'unset' }}>
-                    <Tooltip
-                      title={
-                        <FormattedMessage
-                          id="activityDashlet.loadMore"
-                          defaultMessage="Load {limit} more"
-                          values={{ limit }}
-                        />
-                      }
-                    >
-                      <IconButton color="primary" size="small" onClick={loadNextPage}>
-                        <MoreVertRounded />
-                      </IconButton>
-                    </Tooltip>
-                  </TimelineDotWithAvatar>
-                ) : (
-                  <TimelineDotWithoutAvatar />
-                )}
+                <TimelineDotWithoutAvatar />
               </SizedTimelineSeparator>
-              <TimelineContent
-                sx={
-                  hasMoreItemsToLoad
-                    ? { py: '12px', px: 2, display: 'flex', alignItems: 'center' }
-                    : emptyTimelineContentSx
-                }
-              >
-                {hasMoreItemsToLoad && (
-                  <Typography variant="body2" color="text.secondary">
-                    <FormattedMessage
-                      id="activityDashlet.hasMoreItemsToLoadMessage"
-                      defaultMessage="{count} more {count, plural, one {activity} other {activities}} available"
-                      values={{ count: total - (limit + offset) }}
-                    />
-                  </Typography>
-                )}
-              </TimelineContent>
             </CustomTimelineItem>
           )}
         </Timeline>

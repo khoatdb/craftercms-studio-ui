@@ -15,7 +15,7 @@
  */
 
 import { get } from '../utils/ajax';
-import { toQueryString } from '../utils/object';
+import { reversePluckProps, toQueryString } from '../utils/object';
 import { map, pluck } from 'rxjs/operators';
 import { DashboardPublishingPackage, LegacyDashboardItem, LegacyDeploymentHistoryResponse } from '../models/Dashboard';
 import { Observable } from 'rxjs';
@@ -24,6 +24,7 @@ import { Activity } from '../models/Activity';
 import PaginationOptions from '../models/PaginationOptions';
 import { createPagedArray } from '../utils/array';
 import { prepareVirtualItemProps } from '../utils/content';
+import SystemType from '../models/SystemType';
 
 export function fetchLegacyGetGoLiveItems(
   site: string,
@@ -101,6 +102,15 @@ export function fetchLegacyDeploymentHistory(
   return get(`/studio/api/2/publish/history.json${qs}`).pipe(pluck('response'));
 }
 
+function parseDashletOptions(options: FetchUnpublishedOptions | FetchPendingApprovalOptions | FetchScheduledOptions) {
+  const { sortBy, sortOrder, itemType } = options;
+  return {
+    ...reversePluckProps(options, 'itemType', 'sortBy', 'sortOrder'),
+    ...(itemType && { itemType: itemType.join(',') }),
+    ...(sortBy && sortOrder && { sort: `${sortBy} ${sortOrder}` })
+  };
+}
+
 interface FetchActivityOptions extends PaginationOptions {
   actions?: string[];
   usernames?: string[];
@@ -136,11 +146,17 @@ export function fetchMyActivity(siteId: string, options?: FetchMyActivityOptions
   );
 }
 
+export interface FetchPendingApprovalOptions extends PaginationOptions {
+  itemType?: Array<SystemType>;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 export function fetchPendingApproval(
   siteId: string,
-  options?: PaginationOptions
+  options?: FetchPendingApprovalOptions
 ): Observable<PagedArray<DetailedItem>> {
-  const qs = toQueryString({ siteId, ...options });
+  const qs = toQueryString({ siteId, ...parseDashletOptions(options) });
   return get(`/studio/api/2/dashboard/content/pending_approval${qs}`).pipe(
     map(({ response }) =>
       createPagedArray(
@@ -159,8 +175,17 @@ export function fetchPendingApprovalPackageItems(siteId: string, packageId: numb
   );
 }
 
-export function fetchUnpublished(siteId: string, options: PaginationOptions): Observable<PagedArray<SandboxItem>> {
-  const qs = toQueryString({ siteId, ...options });
+export interface FetchUnpublishedOptions extends PaginationOptions {
+  itemType?: Array<SystemType>;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export function fetchUnpublished(
+  siteId: string,
+  options: FetchUnpublishedOptions
+): Observable<PagedArray<SandboxItem>> {
+  const qs = toQueryString({ siteId, ...parseDashletOptions(options) });
   return get(`/studio/api/2/dashboard/content/unpublished${qs}`).pipe(
     map(({ response }) =>
       createPagedArray(
@@ -174,17 +199,22 @@ export function fetchUnpublished(siteId: string, options: PaginationOptions): Ob
 export interface FetchScheduledOptions extends PaginationOptions {
   publishingTarget?: PublishingTargets;
   approver?: string;
-  dateFrom: string;
-  dateTo: string;
+  dateFrom?: string;
+  dateTo?: string;
+  itemType?: Array<SystemType>;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
-export function fetchScheduled(
-  siteId: string,
-  options: FetchScheduledOptions
-): Observable<PagedArray<DashboardPublishingPackage>> {
-  const qs = toQueryString({ siteId, ...options });
+export function fetchScheduled(siteId: string, options: FetchScheduledOptions): Observable<PagedArray<DetailedItem>> {
+  const qs = toQueryString({ siteId, ...parseDashletOptions(options) });
   return get(`/studio/api/2/dashboard/publishing/scheduled${qs}`).pipe(
-    map(({ response }) => createPagedArray(response.publishingPackages, response))
+    map(({ response }) =>
+      createPagedArray(
+        response.publishingItems.map((item) => prepareVirtualItemProps(item)),
+        response
+      )
+    )
   );
 }
 
@@ -206,23 +236,40 @@ export function fetchPublishingHistory(
   );
 }
 
-export function fetchPublishingHistoryPackageItems(siteId: string, packageId: string): Observable<SandboxItem[]> {
-  const qs = toQueryString({ siteId });
+export function fetchPublishingHistoryPackageItems(
+  siteId: string,
+  packageId: string,
+  options?: PaginationOptions
+): Observable<PagedArray<SandboxItem>> {
+  const qs = toQueryString({ siteId, ...options });
   return get(`/studio/api/2/dashboard/publishing/history/${packageId}${qs}`).pipe(
-    pluck('response', 'publishingPackageItems'),
-    map((items) => items.map((item) => prepareVirtualItemProps(item)))
+    map(({ response }) =>
+      createPagedArray(
+        response.publishingPackageItems.map((item) => prepareVirtualItemProps(item)),
+        response
+      )
+    )
   );
 }
 
 export interface ExpiredItem {
   itemName: string;
   itemPath: string;
-  expireDateTime: string;
+  expiredDateTime: string;
+  sandboxItem: SandboxItem;
 }
 
 export function fetchExpired(siteId: string, options?: PaginationOptions): Observable<ExpiredItem[]> {
   const qs = toQueryString({ siteId, ...options });
-  return get(`/studio/api/2/dashboard/content/expired${qs}`).pipe(pluck('response', 'items'));
+  return get(`/studio/api/2/dashboard/content/expired${qs}`).pipe(
+    pluck('response', 'items'),
+    map((items) =>
+      items.map((item) => ({
+        ...item,
+        sandboxItem: prepareVirtualItemProps(item.sandboxItem)
+      }))
+    )
+  );
 }
 
 interface FetchExpiringOptions extends PaginationOptions {
@@ -232,7 +279,15 @@ interface FetchExpiringOptions extends PaginationOptions {
 
 export function fetchExpiring(siteId: string, options: FetchExpiringOptions): Observable<ExpiredItem[]> {
   const qs = toQueryString({ siteId, ...options });
-  return get(`/studio/api/2/dashboard/content/expiring${qs}`).pipe(pluck('response', 'items'));
+  return get(`/studio/api/2/dashboard/content/expiring${qs}`).pipe(
+    pluck('response', 'items'),
+    map((items) =>
+      items.map((item) => ({
+        ...item,
+        sandboxItem: prepareVirtualItemProps(item.sandboxItem)
+      }))
+    )
+  );
 }
 
 export function fetchPublishingStats(siteId: string, days: number): Observable<PublishingStats> {

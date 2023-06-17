@@ -38,6 +38,8 @@ import {
   getCachedModel,
   getCachedModels,
   getCachedSandboxItem,
+  getModelIdFromInheritedField,
+  isInheritedField,
   modelHierarchyMap
 } from '../../contentController';
 import { interval, merge, NEVER, Observable, of, Subscriber } from 'rxjs';
@@ -96,6 +98,7 @@ import { validateActionPolicy } from '@craftercms/studio-ui/services/sites';
 import { processPathMacros } from '@craftercms/studio-ui/utils/path';
 import { uploadDataUrl } from '@craftercms/studio-ui/services/content';
 import { getRequestForgeryToken } from '@craftercms/studio-ui/utils/auth';
+import { ensureSingleSlash } from '@craftercms/studio-ui/utils/string';
 
 const createReader$ = (file: File) =>
   new Observable((subscriber: Subscriber<ProgressEvent<FileReader>>) => {
@@ -224,10 +227,14 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
           const path = models[modelId].craftercms.path ?? models[parentModelId].craftercms.path;
           const cachedSandboxItem = getCachedSandboxItem(path);
 
+          const pathToLock = record.inherited
+            ? models[getModelIdFromInheritedField(modelId, record.fieldId)].craftercms.path
+            : path;
+
           // TODO: In the case of "move", only locking the source dropzone currently.
           // The item unlock happens with write content API
           return beforeWrite$({
-            path,
+            path: pathToLock,
             site: state.activeSite,
             username: state.username,
             localItem: cachedSandboxItem
@@ -322,14 +329,19 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
                       of(desktopAssetDragEnded()),
                       validateActionPolicy(state.activeSite, {
                         type: 'CREATE',
-                        target: path + file.name
+                        target: ensureSingleSlash(`${path}/${file.name}`),
+                        contentMetadata: {
+                          fileSize: file.size
+                        }
                       }).pipe(
                         switchMap(({ allowed, modifiedValue }) => {
                           const aImg = record.element;
                           const originalSrc = aImg.src;
                           if (allowed) {
                             const readerObs = createReader$(file);
-                            const fileName = modifiedValue ? modifiedValue.replace(path, '') : file.name;
+                            const fileName = modifiedValue
+                              ? modifiedValue.replace(path, '').replace(/^\//, '')
+                              : file.name;
                             return readerObs.pipe(
                               switchMap((event) => {
                                 aImg.src = event.target.result;
@@ -530,12 +542,16 @@ const epic = combineEpics<GuestStandardAction, GuestStandardAction, GuestState>(
                 const path = models[parentModelId ?? modelId].craftercms.path;
                 const cachedSandboxItem = getCachedSandboxItem(path);
 
+                const pathToLock = isInheritedField(modelId, field.id)
+                  ? models[getModelIdFromInheritedField(modelId, field.id)].craftercms.path
+                  : path;
+
                 return beforeWrite$({
-                  path,
+                  path: pathToLock,
                   site: state.activeSite,
                   username: state.username,
                   localItem: cachedSandboxItem
-                }).pipe(switchMap(() => initTinyMCE(path, record, validations, type === 'html' ? setup : {})));
+                }).pipe(switchMap(() => initTinyMCE(pathToLock, record, validations, type === 'html' ? setup : {})));
               }
               break;
             }

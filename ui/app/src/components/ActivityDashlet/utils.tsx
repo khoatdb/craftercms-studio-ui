@@ -24,6 +24,7 @@ import moment from 'moment';
 import { messages } from '../ItemTypeIcon/translations';
 import SystemType from '../../models/SystemType';
 import { DashboardPublishingPackage } from '../../models';
+import { isPage } from '../SiteDashboard/utils';
 
 export interface ActivityItem {
   id: number;
@@ -48,11 +49,11 @@ export function renderActivity(
   if (messages[systemType]) {
     systemType = formatMessage(messages[systemType]).toLowerCase();
   }
-  const anchor = ([label, systemType, previewUrl]) => {
-    return systemType !== 'page' && systemType !== 'component' ? (
-      <em>{label}</em>
+  const anchor = ([label, systemType, previewUrl, path]) => {
+    return !isPage(systemType) ? (
+      <em title={path}>{label}</em>
     ) : (
-      <Link sx={{ cursor: 'pointer' }} onClick={(e) => onItemClick(previewUrl, e)}>
+      <Link title={path} sx={{ cursor: 'pointer' }} onClick={(e) => onItemClick(previewUrl, e)}>
         {label}
       </Link>
     );
@@ -75,7 +76,7 @@ export function renderActivity(
         <FormattedMessage
           id="activityDashlet.createActivityMessage"
           defaultMessage="Created <anchor>{item}</anchor> {systemType}"
-          values={{ item: [item.label, item.systemType, item.previewUrl], systemType, anchor }}
+          values={{ item: [item.label, item.systemType, item.previewUrl, item.path], systemType, anchor }}
         />
       );
     case 'UPDATE':
@@ -88,7 +89,7 @@ export function renderActivity(
         <FormattedMessage
           id="activityDashlet.updateActivityMessage"
           defaultMessage="Updated <anchor>{item}</anchor> {systemType}"
-          values={{ item: [item.label, item.systemType, item.previewUrl], systemType, anchor }}
+          values={{ item: [item.label, item.systemType, item.previewUrl, item.path], systemType, anchor }}
         />
       );
     case 'DELETE':
@@ -114,7 +115,7 @@ export function renderActivity(
         <FormattedMessage
           id="activityDashlet.moveActivityMessage"
           defaultMessage="Moved <anchor>{item}</anchor> {systemType}"
-          values={{ item: [item.label, item.systemType, item.previewUrl], anchor, systemType }}
+          values={{ item: [item.label, item.systemType, item.previewUrl, item.path], anchor, systemType }}
         />
       );
     case 'REQUEST_PUBLISH':
@@ -127,7 +128,7 @@ export function renderActivity(
         <FormattedMessage
           id="activityDashlet.requestPublishActivityMessage"
           defaultMessage="Requested publishing for <anchor>{item}</anchor> {systemType}"
-          values={{ item: [item.label, item.systemType, item.previewUrl], anchor, systemType }}
+          values={{ item: [item.label, item.systemType, item.previewUrl, item.path], anchor, systemType }}
         />
       );
     case 'PUBLISH':
@@ -141,7 +142,12 @@ export function renderActivity(
         <FormattedMessage
           id="activityDashlet.approveActivityMessage"
           defaultMessage="Approved <anchor>{item}</anchor> {systemType} as part of <render_package_link>a package</render_package_link>"
-          values={{ item: [item.label, item.systemType, item.previewUrl], anchor, render_package_link, systemType }}
+          values={{
+            item: [item.label, item.systemType, item.previewUrl, item.path],
+            anchor,
+            render_package_link,
+            systemType
+          }}
         />
       );
     case 'REJECT':
@@ -154,7 +160,7 @@ export function renderActivity(
         <FormattedMessage
           id="activityDashlet.rejectActivityMessage"
           defaultMessage="Rejected <anchor>{item}</anchor> {systemType}"
-          values={{ item: [item.label, item.systemType, item.previewUrl], anchor, systemType }}
+          values={{ item: [item.label, item.systemType, item.previewUrl, item.path], anchor, systemType }}
         />
       );
     case 'REVERT':
@@ -167,7 +173,7 @@ export function renderActivity(
         <FormattedMessage
           id="activityDashlet.revertActivityMessage"
           defaultMessage="Reverted <anchor>{item}</anchor> {systemType}"
-          values={{ item: [item.label, item.systemType, item.previewUrl], anchor, systemType }}
+          values={{ item: [item.label, item.systemType, item.previewUrl, item.path], anchor, systemType }}
         />
       );
     case 'PUBLISHED':
@@ -182,18 +188,14 @@ export function renderActivity(
       return (
         <FormattedMessage
           id="activityDashlet.initialPublishActivityMessage"
-          defaultMessage="Performed the site's initial publish"
+          defaultMessage="Performed the project's initial publish"
         />
       );
-    // @ts-ignore
-    case 'UNKNOWN':
+    case 'PUBLISH_ALL':
+      return <FormattedMessage defaultMessage="Published entire project" />;
+    default:
       console.log('[INFO] An unknown activity was received from the server.', activity);
-      return (
-        <FormattedMessage
-          id="activityDashlet.unknownActivityMessage"
-          defaultMessage="An unknown activity was performed."
-        />
-      );
+      return <FormattedMessage defaultMessage="Unlabelled activity" />;
   }
 }
 
@@ -202,7 +204,7 @@ export function renderActivityTimestamp(timestamp: string, locale: GlobalState['
   const date = new Date(timestamp).getTime();
   return now - date < 3.6e7
     ? moment(date).fromNow()
-    : asLocalizedDateTime(date, locale.localeCode, locale.dateTimeFormatOptions);
+    : asLocalizedDateTime(timestamp, locale.localeCode, locale.dateTimeFormatOptions);
 }
 
 export const activityNameLookup: Record<Activities | 'ALL', any> = {
@@ -216,7 +218,8 @@ export const activityNameLookup: Record<Activities | 'ALL', any> = {
   REJECT: <FormattedMessage id="words.reject" defaultMessage="Reject" />,
   REQUEST_PUBLISH: <FormattedMessage id="operations.requestPublish" defaultMessage="Request Publish" />,
   REVERT: <FormattedMessage id="words.revert" defaultMessage="Revert" />,
-  UPDATE: <FormattedMessage id="words.update" defaultMessage="Update" />
+  UPDATE: <FormattedMessage id="words.update" defaultMessage="Update" />,
+  PUBLISH_ALL: <FormattedMessage defaultMessage="Publish All" />
 };
 
 function getSelectedKeys<K extends string>(selection: Partial<Record<K, boolean>>): K[] {

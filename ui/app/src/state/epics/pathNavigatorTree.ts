@@ -47,7 +47,7 @@ import { catchAjaxError } from '../../utils/ajax';
 import { removeStoredPathNavigatorTree, setStoredPathNavigatorTree } from '../../utils/state';
 import { forkJoin, Observable } from 'rxjs';
 import { createPresenceTable } from '../../utils/array';
-import { getFileExtension, getIndividualPaths, getParentPath, getRootPath } from '../../utils/path';
+import { getFileExtension, getIndividualPaths, getParentPath, getRootPath, withIndex } from '../../utils/path';
 import { batchActions } from '../actions/misc';
 import {
   contentEvent,
@@ -135,7 +135,20 @@ export default [
             createGetChildrenOptions(chunk, pluckProps(payload, true, 'limit', 'excludes'))
           )
         ]).pipe(
-          map(([items, children]) => pathNavigatorTreeRestoreComplete({ id, expanded, collapsed, items, children })),
+          map(([items, children]) => {
+            let updatedExpanded = expanded;
+            if (items.missingItems.length) {
+              // remove items.missingItems from expanded
+              updatedExpanded = expanded.filter((expandedPath) => !items.missingItems.includes(expandedPath));
+              const uuid = state.sites.byId[state.sites.active].uuid;
+              setStoredPathNavigatorTree(uuid, state.user.username, id, {
+                expanded: updatedExpanded,
+                collapsed: state.pathNavigatorTree[id].collapsed,
+                keywordByPath: state.pathNavigatorTree[id].keywordByPath
+              });
+            }
+            return pathNavigatorTreeRestoreComplete({ id, expanded: updatedExpanded, collapsed, items, children });
+          }),
           catchAjaxError((error) => {
             if (error.status === 404) {
               const uuid = state.sites.byId[state.sites.active].uuid;
@@ -276,22 +289,25 @@ export default [
             if (
               // If the path corresponds to the root and the root didn't exist, root now exists
               tree.isRootPathMissing &&
-              targetPath === rootPath
+              (targetPath === rootPath || withIndex(targetPath) === rootPath)
             ) {
               actions.push(pathNavigatorTreeRefresh({ id }));
             } else if (
               // If an entry for the path exists, assume it's an update to an existing item
-              targetPath in tree.totalByPath
+              targetPath in tree.totalByPath ||
+              withIndex(targetPath) in tree.totalByPath
             ) {
               // Reloading the item done by content epics
               // actions.push(fetchSandboxItem({ path }));
             } else if (
               // If an entry for the folder exists, fetch
-              parentPath in tree.totalByPath
+              parentPath in tree.totalByPath ||
+              withIndex(parentPath) in tree.totalByPath
             ) {
+              const pathToUpdate = parentPath in tree.totalByPath ? parentPath : withIndex(parentPath);
               // Show the new child
-              parentPath in tree.childrenByParentPath &&
-                actions.push(pathNavigatorTreeFetchPathChildren({ id, path: parentPath, expand: false }));
+              pathToUpdate in tree.childrenByParentPath &&
+                actions.push(pathNavigatorTreeFetchPathChildren({ id, path: pathToUpdate, expand: false }));
               // Update child count done by content epics.
               // fetchSandboxItem({ path: parentPath })
             }
@@ -338,14 +354,18 @@ export default [
             [parentPathOfTargetPath, parentPathOfSourcePath].forEach((path) => {
               if (
                 // If in totalByPath is an item that has been loaded and must update...
-                path in tree.totalByPath
+                // path in totalByPath may be a page, and its path has index.xml, so it needs to be validated too.
+                path in tree.totalByPath ||
+                withIndex(path) in tree.totalByPath
               ) {
+                // Get correct path to fetch (may include index.xml)
+                const fetchPath = path in tree.totalByPath ? path : withIndex(path);
                 // If its children are loaded, then re-fetch to get the new
-                tree.childrenByParentPath[path] &&
+                tree.childrenByParentPath[fetchPath] &&
                   actions.push(
                     pathNavigatorTreeFetchPathChildren({
                       id: id,
-                      path: path,
+                      path: fetchPath,
                       expand: false
                     })
                   );

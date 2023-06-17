@@ -175,7 +175,7 @@ import useUpdateRefs from '../../hooks/useUpdateRefs';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { batchActions, dispatchDOMEvent, editContentTypeTemplate } from '../../state/actions/misc';
 import SocketEventBase from '../../models/SocketEvent';
-import { RefreshRounded } from '@mui/icons-material';
+import RefreshRounded from '@mui/icons-material/RefreshRounded';
 import { getPersonFullName } from '../SiteDashboard';
 import { useTheme } from '@mui/material/styles';
 import { createCustomDocumentEventListener } from '../../utils/dom';
@@ -328,7 +328,6 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
   const [dataSourceActionsListState, setDataSourceActionsListState] = useSpreadState<DataSourcesActionsListProps>(
     dataSourceActionsListInitialState
   );
-  const env = useEnv();
   const conditionallyToggleEditMode = (nextHighlightMode?: HighlightMode) => {
     if (item && !isItemLockedForMe(item, user.username) && hasEditAction(item.availableActions)) {
       dispatch(
@@ -426,8 +425,7 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
           }
           break;
       }
-    },
-    env
+    }
   });
 
   const onRtePickerResult = (payload?: { path: string; name: string }) => {
@@ -556,17 +554,13 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
         formatMessage,
         modelIdByPath,
         enqueueSnackbar,
-        env,
         user
       } = upToDateRefs.current;
       const { type, payload } = action;
       switch (type) {
         case guestSiteLoad.type:
         case guestCheckIn.type:
-          const { version: guestVersion } = payload;
-          const studioVersion = env.version.slice(0, 5);
-
-          if (type === guestCheckIn.type && guestVersion?.slice(0, 5) !== studioVersion) {
+          if (type === guestCheckIn.type && !['4.1.0', '4.0.3'].includes(payload.version.slice(0, 5))) {
             const xbOutdatedValidationDate = getOutdatedXBValidationDate(siteId, user.username);
             // If message has not been shown today or not shown at all
             if (!xbOutdatedValidationDate || !isSameDay(xbOutdatedValidationDate, new Date())) {
@@ -959,11 +953,11 @@ export function PreviewConcierge(props: PropsWithChildren<{}>) {
         case updateFieldValueOperation.type: {
           const { fieldId, index, value } = payload;
           let { modelId, parentModelId } = payload;
-          const path = models[parentModelId ? parentModelId : modelId].craftercms.path;
+          let path = models[parentModelId ? parentModelId : modelId].craftercms.path;
 
           if (isInheritedField(models[modelId], fieldId)) {
             modelId = getModelIdFromInheritedField(models[modelId], fieldId, modelIdByPath);
-            parentModelId = findParentModelId(modelId, hierarchyMap, models);
+            path = models[modelId].craftercms.path;
           }
 
           updateField(
