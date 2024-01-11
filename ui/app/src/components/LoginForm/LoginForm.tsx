@@ -126,6 +126,8 @@ export function LogInForm(props: LogInFormProps) {
           <FormattedMessage id="loginView.forgotPasswordButtonLabel" defaultMessage="Forgot your password?" />
         </Button>
       )}
+
+      <a href="/studio/oauth2/authorization/azure">Azure AD Login</a>
     </form>
   );
 }
