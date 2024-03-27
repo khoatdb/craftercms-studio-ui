@@ -127,7 +127,9 @@ export function LogInForm(props: LogInFormProps) {
         </Button>
       )}
 
-      <a href="/studio/oauth2/authorization/azure">Azure AD Login</a>
+      <a href="/studio/oauth2/authorization/azure" className="mui-8338u2">
+        Login With Microsoft
+      </a>
     </form>
   );
 }

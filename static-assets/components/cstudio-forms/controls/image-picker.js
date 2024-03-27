@@ -23,10 +23,14 @@ CStudioForms.Controls.ImagePicker =
     this.properties = properties;
     this.constraints = constraints;
     this.inputEl = null;
+    this.id = id;
+    /*********/
+    this.altEl = '';
+    this.altId = this.id + '_alt';
+    /*********/
     this.required = false;
     this.value = '_not-set';
     this.form = form;
-    this.id = id;
     this.datasources = null;
     this.upload_dialog = null;
     this.crop_dialog = null;
@@ -37,12 +41,17 @@ CStudioForms.Controls.ImagePicker =
     this.previewBoxHeight = 100;
     this.previewBoxWidth = 300;
     this.external = null;
+    this.fieldName = '';
     this.supportedPostFixes = ['_s'];
 
     return this;
   };
 
 YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
+  getAdditionalFields: function () {
+    return [this.altId];
+  },
+  
   getLabel: function () {
     return CMgs.format(langBundle, 'image');
   },
@@ -64,6 +73,7 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
 
     obj.owner.notifyValidation();
     obj.form.updateModel(obj.id, obj.getValue(), obj.remote);
+    obj.form.updateModel(obj.altId, obj.altEl.value);
   },
 
   _onChangeVal: function (evt, obj) {
@@ -332,6 +342,8 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
 
     if (this.inputEl.value !== '') {
       this.inputEl.value = '';
+      this.altEl.value = '';
+      this.altEl.placeholder = '(' + this.fieldName + ' - Alt Text)';
       this.urlEl.innerHTML = '';
       this.previewEl.style.display = 'none';
       this.previewEl.src = '';
@@ -370,6 +382,8 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     YAHOO.util.Dom.addClass(titleEl, 'cstudio-form-field-title');
     titleEl.textContent = config.title;
 
+    this.fieldName = titleEl.textContent;
+
     var controlWidgetContainerEl = document.createElement('div');
     YAHOO.util.Dom.addClass(controlWidgetContainerEl, 'cstudio-form-control-image-picker-container');
 
@@ -387,6 +401,7 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
 
     var imgInfoContainer = document.createElement('div');
     YAHOO.util.Dom.addClass(imgInfoContainer, 'imgInfoContainer');
+    imgInfoContainer.style.width = '100%';
     controlWidgetContainerEl.appendChild(imgInfoContainer);
 
     var urlEl = document.createElement('div');
@@ -476,6 +491,34 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
 
     ctrlOptionsEl.appendChild(delEl);
 
+    /***********/
+    var altEl = document.createElement('input');
+    altEl.id = this.id + '-alt';
+    //this.altId = altEl.id;
+    altEl.disabled = false;
+    var idParts = this.altId.split('|');
+    if (idParts.length > 1) {
+      altEl.value = this.escapeContent ? CStudioForms.Util.unEscapeXml(this.form.model[idParts[0]][parseInt(idParts[1])][idParts[2]]) : this.form.model[idParts[0]][parseInt(idParts[1])][idParts[2]];
+      //this.altId = idParts[2];
+    } else {
+      altEl.value = this.escapeContent ? CStudioForms.Util.unEscapeXml(this.form.model[this.altId]) : this.form.model[this.altId];
+    }
+
+    if (altEl.value == "undefined") altEl.value = '';
+    if (altEl.value == '')
+    {
+      altEl.placeholder = '(' + this.fieldName + ' - Alt Text)';
+    }
+    this.altEl = altEl;
+
+    //inputEl.setAttributes("data-alt", altEl.value);
+
+    YAHOO.util.Dom.addClass(altEl, 'datum cstudio-form-control-input');
+    altEl.style.marginBottom = '5px';
+    controlWidgetContainerEl.appendChild(altEl);
+
+    /***********/
+
     for (var i = 0; i < config.properties.length; i++) {
       var prop = config.properties[i];
 
@@ -513,6 +556,8 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
         this.readonly = true;
       }
     }
+
+    this.form.registerDynamicField(this.altId);
 
     var helpContainerEl = document.createElement('div');
     YAHOO.util.Dom.addClass(helpContainerEl, 'cstudio-form-field-help-container');
@@ -554,6 +599,16 @@ YAHOO.extend(CStudioForms.Controls.ImagePicker, CStudioForms.CStudioFormField, {
     if (!this.$addBtn.attr('disabled')) {
       this.addImage();
     }
+
+    YAHOO.util.Event.addListener(
+      altEl,
+      'change',
+      function (e) {
+        this._onChangeVal(null, this);
+      },
+      altEl,
+      this
+    );
 
     YAHOO.util.Event.addListener(
       $addBtn[0],
